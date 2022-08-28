@@ -21,6 +21,7 @@ public:
   void convertToStandardForm();
   void makeRightHandSidesNonNegative();
   void addArtificialVariables();
+  std::optional<SimplexBasisData> createBasisFromArtificialVars() const;
 
   size_t initialVariableCountInStandardForm() const {
     return _initialVariableCountInStandardForm;
@@ -41,6 +42,13 @@ public:
     return result;
   }
 
+  const std::vector<RowInfo> &getRowInfos() const { return _rowInfos; }
+  const std::vector<VariableInfo> &getVariableInfos() const {
+    return _variableInfos;
+  }
+  const Matrix<T> &getConstraintMatrix() const { return _constraintMatrix; }
+  const std::vector<T> &getRightHandSides() const { return _rightHandSides; }
+
 private:
   friend struct MpsReader;
 
@@ -58,15 +66,17 @@ private:
     return oss.str();
   }
 
+private:
   std::string _name;
-
   std::vector<RowInfo> _rowInfos;
+
   std::vector<VariableInfo> _variableInfos;
   std::set<std::string> _variableLabelSet;
 
+  std::vector<T> _objectiveCoeffs;
+  RowInfo _objectiveInfo;
   Matrix<T> _constraintMatrix;
   std::vector<T> _rightHandSides;
-  std::vector<T> _objectiveCoeffs;
   int _initialVariableCountInStandardForm{0};
 };
 
@@ -74,7 +84,7 @@ template <typename T> std::string LinearProgram<T>::toString() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
 
   lpPrinter.printLineBreak();
-  lpPrinter.printVariableInfos();
+  lpPrinter.printVariableInfos(std::nullopt);
   lpPrinter.printLineBreak();
   lpPrinter.printMatrixWithRHS({}, _constraintMatrix, _rightHandSides);
   lpPrinter.printLineBreak();
@@ -92,7 +102,7 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
 
   int nonEqualityRows = 0;
   for (const auto &rowInfo : _rowInfos)
-    if (!rowInfo.isEqualityRow() && !rowInfo.isObjectiveRow())
+    if (!rowInfo.isEqualityRow())
       ++nonEqualityRows;
 
   const int variableCountAtTheStart = _variableInfos.size();
@@ -108,7 +118,7 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
 
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     _constraintMatrix[rowIdx].resize(newVariableCount);
-    if (_rowInfos[rowIdx].isEqualityRow() || _rowInfos[rowIdx].isObjectiveRow())
+    if (_rowInfos[rowIdx].isEqualityRow())
       continue;
 
     switch (_rowInfos[rowIdx]._type) {
@@ -137,7 +147,7 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
 }
 
 template <typename T> void LinearProgram<T>::makeRightHandSidesNonNegative() {
-  for (int rowIdx = 1; rowIdx < _rowInfos.size(); ++rowIdx) {
+  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     if (_rightHandSides[rowIdx] < 0.0) {
       for (int variableIdx = 0; variableIdx < _variableInfos.size();
            ++variableIdx)
@@ -150,7 +160,7 @@ template <typename T> void LinearProgram<T>::makeRightHandSidesNonNegative() {
 
 template <typename T> void LinearProgram<T>::addArtificialVariables() {
   const int variableCountAtTheStart = _variableInfos.size();
-  const int newVariableCount = variableCountAtTheStart + _rowInfos.size() - 1;
+  const int newVariableCount = variableCountAtTheStart + _rowInfos.size();
 
   const auto newArtificialLabel = [&](const auto varIdx) {
     const std::string firstPattern = "A" + std::to_string(varIdx);
@@ -161,16 +171,44 @@ template <typename T> void LinearProgram<T>::addArtificialVariables() {
 
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     _constraintMatrix[rowIdx].resize(newVariableCount);
-    if (_rowInfos[rowIdx].isObjectiveRow())
-      continue;
 
-    const auto newVariableIdx = variableCountAtTheStart + rowIdx - 1;
+    const auto newVariableIdx = variableCountAtTheStart + rowIdx;
     _constraintMatrix[rowIdx][newVariableIdx] = 1;
     const auto newArtificialLabelStr = newArtificialLabel(newVariableIdx);
     _variableInfos.push_back(VariableInfo{
-        newArtificialLabelStr, VariableType::CONTINUOUS, false, true, true});
+        newArtificialLabelStr, VariableType::CONTINUOUS, false, true});
     _variableLabelSet.insert(newArtificialLabelStr);
   }
+}
+
+template <typename T>
+std::optional<SimplexBasisData> LinearProgram<T>::createBasisFromArtificialVars() const
+{
+  std::optional<int> firstArtificialIdx;
+  for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx)
+    if (_variableInfos[varIdx]._isArtificial)
+    {
+      firstArtificialIdx = varIdx;
+      break;
+    }
+
+  if (!firstArtificialIdx.has_value())
+  {
+    spdlog::warn("No artificial variable found");
+    return std::nullopt;
+  }
+
+  SimplexBasisData result;
+  result._isBasicColumnIndexBitset.resize(_variableInfos.size());
+
+  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx)
+  {
+    const auto basicColumnIdx = *firstArtificialIdx + rowIdx;
+    result._rowToBasisColumnIdxMap[rowIdx] = basicColumnIdx;
+    result._isBasicColumnIndexBitset[basicColumnIdx] = true;
+  }
+
+  return result;
 }
 
 #endif // GMISOLVER_LINEARPROGRAM_H

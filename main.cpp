@@ -28,66 +28,58 @@ void readLPModelAndProcess(const std::string& modelFileMps)
         return;
     }
 
-//        spdlog::warn("HALOO");
-
-
-    std::cout << "LP at the start\n";
-    std::cout << linearProgram->toString() << '\n';
-    std::cout << linearProgram->toStringLpSolveFormat() << '\n';
+    spdlog::info("LP at the start");
+    spdlog::info(linearProgram->toString());
+    spdlog::info(linearProgram->toStringLpSolveFormat());
 
     linearProgram->convertToStandardForm();
-    std::cout << "LP in standard form\n";
-    std::cout << linearProgram->toString() << '\n';
-    std::cout << linearProgram->toStringLpSolveFormat() << '\n';
+    spdlog::info("LP in standard form");
+    spdlog::info(linearProgram->toString());
+    spdlog::info(linearProgram->toStringLpSolveFormat());
 
     linearProgram->makeRightHandSidesNonNegative();
-    std::cout << "LP in standard form with non-negative RHS\n";
-    std::cout << linearProgram->toString() << '\n';
-    std::cout << linearProgram->toStringLpSolveFormat() << '\n';
+    spdlog::info("LP in standard form with non-negative RHS");
+    spdlog::info(linearProgram->toString());
+    spdlog::info(linearProgram->toStringLpSolveFormat());
 
     linearProgram->addArtificialVariables();
-    std::cout << "LP in standard form with artificial variables\n";
-    std::cout << linearProgram->toString() << '\n';
-    std::cout << linearProgram->toStringLpSolveFormat() << '\n';
+    spdlog::info("LP in standard form with artificial variables");
+    spdlog::info(linearProgram->toString());
+    spdlog::info(linearProgram->toStringLpSolveFormat());
 
     SimplexTableau<T> simplexTableau(*linearProgram, linearProgram->artificialObjectiveRow());
-    std::cout << "Simplex tableau with artificial variables cost\n";
-    std::cout << simplexTableau.toString() << '\n';
-    std::cout << simplexTableau.toStringLpSolveFormat() << '\n';
+    spdlog::info("Simplex tableau with artificial variables cost");
+    spdlog::info(simplexTableau.toString());
+    spdlog::info(simplexTableau.toStringLpSolveFormat());
 
     int iterCount = 1;
     while (true)
     {
-        std::cout << "\nITERATION " << iterCount++ << "\n";
+        spdlog::info("ITERATION {}", iterCount++);
         const bool iterResult = simplexTableau.primalSimplex();
-        std::cout << simplexTableau.toString() << '\n';
+        spdlog::info("{}\n", simplexTableau.toString());
 
         if (iterResult)
             break;
     }
 }
 
-void setFileLogger()
+
+void initFileLogger()
 {
-    auto fileLogger = spdlog::basic_logger_mt("basic_logger", "logs.txt");
+    auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_st>("GMISolver_out.txt", true);
+    auto fileLogger = std::make_shared<spdlog::logger>("fileLogger", fileSink);
     spdlog::set_default_logger(fileLogger);
+
+    const std::string COUT_PATTERN = "%v";
+    spdlog::set_pattern("%^[%Y-%m-%d %H:%M:%S.%e][%L]%$ %v");
+//    spdlog::set_level(spdlog::level::debug);
 }
 
 // TODO: comparing floating numbers with epsilon ?
 
 int main(int argc, char** argv) {
-//    const auto linearProgram = MpsReader::read<double>("/Users/janmelech/Desktop/test_1.mps");
-//    const auto linearProgram = MpsReader::read<double>("/Users/janmelech/Desktop/miplib2017-testscript-v1.0.3/instances/miplib2017_ungzipped/seymour.mps");
-//    absl::ParseCommandLine(argc, argv);
-//    std::ostringstream oss;
-//    auto ostream_sink = std::make_shared<spdlog::sinks::ostream_sink_mt> (oss);
-//    auto logger = std::make_shared<spdlog::logger>("my_logger", ostream_sink);
-//    spdlog::set_default_logger(logger);
-//    spdlog::info("HALOO");
-    //    spdlog::shutdown();
-    std::ofstream outFile("GMISolver_out.txt");
-//    outFile << "";
+    initFileLogger();
     std::this_thread::sleep_for (std::chrono::seconds(1));
-    std::cout.rdbuf(outFile.rdbuf());
     readLPModelAndProcess<double>("/Users/janmelech/Desktop/test_1.mps");
 }

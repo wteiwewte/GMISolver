@@ -87,12 +87,19 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
         break;
       }
 
-      const auto [_, inserted] = rowLabelToRowIdxMap.try_emplace(
+      const RowInfo newRowInfo{rowLabelStr, *readRowType};
+      if (*readRowType == RowType::OBJECTIVE)
+        linearProgram._objectiveInfo = newRowInfo;
+      else
+      {
+        const auto [_, inserted] = rowLabelToRowIdxMap.try_emplace(
           rowLabelStr, linearProgram._rowInfos.size());
-      if (!inserted)
-        spdlog::warn("Duplicated row label {}", rowLabelStr);
+        if (!inserted)
+          spdlog::warn("Duplicated row label {}", rowLabelStr);
 
-      linearProgram._rowInfos.push_back(RowInfo{rowLabelStr, *readRowType});
+        linearProgram._rowInfos.push_back(newRowInfo);
+      }
+
       break;
     }
     case SectionType::COLUMNS: {
@@ -134,6 +141,7 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
                                                ? VariableType::INTEGER
                                                : VariableType::CONTINUOUS});
         linearProgram._variableLabelSet.insert(variableLabelStr);
+        linearProgram._objectiveCoeffs.resize(linearProgram._variableInfos.size());
         linearProgram._constraintMatrix.resize(linearProgram._rowInfos.size());
         for (auto &coeffRow : linearProgram._constraintMatrix)
           coeffRow.resize(linearProgram._variableInfos.size());
@@ -141,6 +149,12 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
 
       const auto updateLpMatrix = [&](const auto &rowLabelStr,
                                       const auto &coefficientValueStr) {
+        if (rowLabelStr == linearProgram._objectiveInfo._label)
+        {
+          linearProgram._objectiveCoeffs[variableIdx] = convert(coefficientValueStr);
+          return;
+        }
+
         const auto foundRowIt = rowLabelToRowIdxMap.find(rowLabelStr);
         if (foundRowIt == rowLabelToRowIdxMap.end()) {
           spdlog::warn(
@@ -269,8 +283,8 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
     return std::nullopt;
   }
 
-  if (linearProgram._rowInfos.front()._type != RowType::OBJECTIVE) {
-    spdlog::warn("First row is expected to be objective");
+  if (linearProgram._objectiveInfo._type != RowType::OBJECTIVE) {
+    spdlog::warn("Could not find objective row");
     return std::nullopt;
   }
 

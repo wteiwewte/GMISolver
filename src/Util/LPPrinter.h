@@ -2,6 +2,7 @@
 #define GMISOLVER_LPPRINTER_H
 
 #include "src/DataModel/CommonTypes.h"
+#include "src/DataModel/SimplexBasisData.h"
 
 #include <map>
 #include <spdlog/spdlog.h>
@@ -9,6 +10,8 @@
 #include <fmt/format.h>
 #include <sstream>
 #include <string>
+#include <optional>
+#include <functional>
 
 struct LPPrinter {
   constexpr static int CONSTRAINT_SIGN_WIDTH = 6;
@@ -28,9 +31,11 @@ struct LPPrinter {
       _maxVariableWidth =
           std::max(_maxVariableWidth, _variableWidths[variableIdx]);
     }
+
+    _oss << '\n';
   }
 
-  void printVariableInfos() {
+  void printVariableInfos(const std::optional<std::reference_wrapper<const SimplexBasisData>> simplexBasisDataRef) {
     _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
     for (int variableIdx = 0; variableIdx < _variableInfos.size();
          ++variableIdx) {
@@ -47,14 +52,34 @@ struct LPPrinter {
     }
     _oss << '\n';
 
+    if (simplexBasisDataRef.has_value())
+    {
+      _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
+      for (int variableIdx = 0; variableIdx < _variableInfos.size();
+           ++variableIdx)
+        _oss << fmt::format("{:^{}}|",
+                            simplexBasisDataRef->get()._isBasicColumnIndexBitset[variableIdx] ? "BASIC"
+                                                                 : "NON-BASIC",
+                            _variableWidths[variableIdx]);
+      _oss << '\n';
+    }
+  }
+
+  template <typename T>
+  void printReducedCostWithObjectiveValue(const std::vector<T>& reducedCosts, const T& objectiveValue)
+  {
     _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
     for (int variableIdx = 0; variableIdx < _variableInfos.size();
          ++variableIdx)
-      _oss << fmt::format("{:^{}}|",
-                          _variableInfos[variableIdx]._isBasic ? "BASIC"
-                                                               : "NON-BASIC",
+      _oss << fmt::format("{:>{}}|",
+                          (' ' + std::to_string(reducedCosts[variableIdx])),
                           _variableWidths[variableIdx]);
-    _oss << '\n';
+
+    _oss << fmt::format("{:^{}}|", "OBJ",
+                      CONSTRAINT_SIGN_WIDTH);
+    _oss << fmt::format("{:>{}}|\n",
+                        (' ' + std::to_string(objectiveValue)),
+                        COEFFICIENT_WIDTH);
   }
 
   template <typename T>
@@ -86,7 +111,7 @@ struct LPPrinter {
 
   template <typename T>
   void printInverseBasisWithDual(const Matrix<T> &basisMatrixInverse) {
-    _oss << "INVERSE BASIS WITH DUAL\n";
+    _oss << "INVERSE BASIS\n";
     for (int rowIdx = 0; rowIdx < basisMatrixInverse.size(); ++rowIdx) {
       for (int variableIdx = 0; variableIdx < basisMatrixInverse.size();
            ++variableIdx)
@@ -126,7 +151,7 @@ struct LPPrinter {
     }
     _oss << ";\n";
 
-    for (int rowIdx = 1; rowIdx < _rowInfos.size(); ++rowIdx) {
+    for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
       for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
         if (matrix[rowIdx][varIdx] != 0.0)
           _oss << fmt::format(" {:+f} {}", matrix[rowIdx][varIdx],

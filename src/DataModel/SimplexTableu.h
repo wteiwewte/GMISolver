@@ -1,6 +1,7 @@
 #ifndef GMISOLVER_SIMPLEXTABLEU_H
 #define GMISOLVER_SIMPLEXTABLEU_H
 
+#include "SimplexBasisData.h"
 #include "src/DataModel/LinearProgram.h"
 #include "src/Util/LPPrinter.h"
 
@@ -10,63 +11,55 @@ template <typename T> class SimplexTableau {
 public:
   SimplexTableau(const LinearProgram<T> &linearProgram,
                  const std::vector<T> &objectiveRow)
-      : _variableInfos(linearProgram._variableInfos),
+      : _initialProgram(linearProgram), _initialObjectiveRow(objectiveRow),
+        _variableInfos(linearProgram._variableInfos),
         _rowInfos(linearProgram._rowInfos),
         _constraintMatrix(linearProgram._constraintMatrix),
         _rightHandSides(linearProgram._rightHandSides) {
-    _constraintMatrix.front() = objectiveRow;
-
     _basisMatrixInverse.resize(linearProgram._rowInfos.size());
-    _basisMatrixInverse[0].resize(_basisMatrixInverse.size());
-    _basisMatrixInverse[0][0] = 1;
-    for (int columnIdx = 1; columnIdx < _basisMatrixInverse.size(); ++columnIdx)
-      _basisMatrixInverse[0][columnIdx] =
+    _y.resize(_basisMatrixInverse.size());
+    for (int columnIdx = 0; columnIdx < _basisMatrixInverse.size(); ++columnIdx)
+      _y[columnIdx] =
           objectiveRow[linearProgram.initialVariableCountInStandardForm() +
-                       columnIdx - 1] *
+                       columnIdx] *
           _constraintMatrix[columnIdx]
                            [linearProgram.initialVariableCountInStandardForm() +
-                            columnIdx - 1];
+                            columnIdx];
 
-    for (int rowIdx = 1; rowIdx < _basisMatrixInverse.size(); ++rowIdx) {
+    for (int rowIdx = 0; rowIdx < _basisMatrixInverse.size(); ++rowIdx) {
       _basisMatrixInverse[rowIdx].resize(_basisMatrixInverse.size());
       _basisMatrixInverse[rowIdx][rowIdx] =
           _constraintMatrix[rowIdx]
                            [linearProgram.initialVariableCountInStandardForm() +
-                            rowIdx - 1];
+                            rowIdx];
     }
 
     _reducedCosts.resize(_variableInfos.size());
     for (int columnIdx = 0; columnIdx < _variableInfos.size(); ++columnIdx) {
-      T yAn = _constraintMatrix[0][columnIdx];
-      for (int i = 1; i < _rowInfos.size(); ++i)
-        yAn -= _basisMatrixInverse[0][i] * _constraintMatrix[i][columnIdx];
+      T yAn = objectiveRow[columnIdx];
+      for (int i = 0; i < _rowInfos.size(); ++i)
+        yAn -= _y[i] * _constraintMatrix[i][columnIdx];
 
       _reducedCosts[columnIdx] = yAn;
     }
-    _constraintMatrix[0] = _reducedCosts;
+    auto simplexBasisData = linearProgram.createBasisFromArtificialVars();
+    if (simplexBasisData.has_value())
+      _simplexBasisData = std::move(*simplexBasisData);
 
-    auto &d = _rightHandSides[0];
-    for (int i = 0; i < _rowInfos.size() - 1; ++i)
-      d += _basisMatrixInverse[0][i + 1] * _rightHandSides[i + 1];
-
-    int currentBasicIdx = 1;
-    for (int j = 0; j < _variableInfos.size(); ++j) {
-      if (_variableInfos[j]._isBasic)
-        _rowToBasisColumnIdxMap[currentBasicIdx++] = j;
-    }
+    calculateCurrentObjectiveValue();
   }
 
   std::string toString() const {
     LPPrinter lpPrinter(_variableInfos, _rowInfos);
     lpPrinter.printLineBreak();
-    lpPrinter.printVariableInfos();
+    lpPrinter.printVariableInfos(std::cref(_simplexBasisData));
     lpPrinter.printLineBreak();
-    lpPrinter.printMatrixWithRHS(_rowToBasisColumnIdxMap, _constraintMatrix,
-                                 _rightHandSides);
+    lpPrinter.printReducedCostWithObjectiveValue(_reducedCosts,
+                                                 _objectiveValue);
+    lpPrinter.printMatrixWithRHS(_simplexBasisData._rowToBasisColumnIdxMap,
+                                 _constraintMatrix, _rightHandSides);
     lpPrinter.printLineBreak();
     lpPrinter.printInverseBasisWithDual(_basisMatrixInverse);
-    lpPrinter.printLineBreak();
-    lpPrinter.printReducedCosts(_reducedCosts);
     lpPrinter.printLineBreak();
 
     return lpPrinter.toString();
@@ -84,15 +77,15 @@ public:
       //            if (_reducedCosts[varIdx] < 0.0 &&
       //            _variableInfos[varIdx]._isBasic)
       //                spdlog::warn
-      std::cout << "VARIABLE IDX " << varIdx << ' '
-                << _constraintMatrix[0][varIdx] << '\n';
-      if (_constraintMatrix[0][varIdx] < 0.0 &&
-          !_variableInfos[varIdx]._isBasic) {
+      spdlog::debug("VARIABLE IDX {} {}", varIdx, _reducedCosts[varIdx]);
+      if (_reducedCosts[varIdx] < 0.0 &&
+          !_simplexBasisData._isBasicColumnIndexBitset[varIdx]) {
         enteringVarIdx = varIdx;
-        std::cout << "ENTERING VARIABLE IDX " << *enteringVarIdx << '\n';
+
+        spdlog::debug("ENTERING VARIABLE IDX {}", *enteringVarIdx);
 
         std::optional<int> leavingRowIdx;
-        for (int rowIdx = 1; rowIdx < _rowInfos.size(); ++rowIdx)
+        for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx)
           if (_constraintMatrix[rowIdx][*enteringVarIdx] > 0.0)
             if (!leavingRowIdx.has_value() ||
                 _rightHandSides[rowIdx] *
@@ -110,40 +103,43 @@ public:
             1.0 / _constraintMatrix[*leavingRowIdx][*enteringVarIdx];
 
         for (int i = 0; i < _rowInfos.size(); ++i) {
-          if (i != *leavingRowIdx) {
-            const auto commonCoeff =
-                _constraintMatrix[i][*enteringVarIdx] * pivotingTermInverse;
-            for (int j = 0; j < _variableInfos.size(); ++j)
-              _constraintMatrix[i][j] -=
-                  commonCoeff * _constraintMatrix[*leavingRowIdx][j];
+          if (i == leavingRowIdx)
+            continue;
 
-            //                        if (i == 0)
-            //                            std::cout << "COMMON COEFF " <<
-            //                            commonCoeff << " " <<
-            //                            _rightHandSides[*leavingRowIdx] << " "
-            //                             << _rightHandSides[i] << '\n';
-            // ???
-            if (i == 0)
-              _rightHandSides[i] +=
-                  commonCoeff * _rightHandSides[*leavingRowIdx];
-            else
-              _rightHandSides[i] -=
-                  commonCoeff * _rightHandSides[*leavingRowIdx];
-          }
+          const auto commonCoeff =
+              _constraintMatrix[i][*enteringVarIdx] * pivotingTermInverse;
+
+          for (int j = 0; j < _variableInfos.size(); ++j)
+            _constraintMatrix[i][j] -=
+                commonCoeff * _constraintMatrix[*leavingRowIdx][j];
+
+          _rightHandSides[i] -= commonCoeff * _rightHandSides[*leavingRowIdx];
         }
+
+        const auto commonCoeffReducedCost =
+            _reducedCosts[*enteringVarIdx] * pivotingTermInverse;
+        for (int j = 0; j < _variableInfos.size(); ++j)
+          _reducedCosts[j] -=
+              commonCoeffReducedCost * _constraintMatrix[*leavingRowIdx][j];
+        //        _objectiveValue += commonCoeffReducedCost * _objectiveValue;
 
         for (int j = 0; j < _variableInfos.size(); ++j)
           _constraintMatrix[*leavingRowIdx][j] *= pivotingTermInverse;
 
         _rightHandSides[*leavingRowIdx] *= pivotingTermInverse;
 
-        _variableInfos[*enteringVarIdx]._isBasic = true;
-        std::cout << "LEAVING VARIABLE ROW IDX " << *leavingRowIdx << '\n';
-        std::cout << "LEAVING VARIABLE COLUMN IDX "
-                  << _rowToBasisColumnIdxMap[*leavingRowIdx] << '\n';
-        _variableInfos[_rowToBasisColumnIdxMap[*leavingRowIdx]]._isBasic =
+
+        auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset] =
+            _simplexBasisData;
+        spdlog::debug("LEAVING VARIABLE ROW IDX {} COLUMN IDX", *leavingRowIdx,
+                      rowToBasisColumnIdxMap[*leavingRowIdx]);
+
+        isBasicColumnIndexBitset[*enteringVarIdx] = true;
+        isBasicColumnIndexBitset[rowToBasisColumnIdxMap[*leavingRowIdx]] =
             false;
-        _rowToBasisColumnIdxMap[*leavingRowIdx] = *enteringVarIdx;
+        rowToBasisColumnIdxMap[*leavingRowIdx] = *enteringVarIdx;
+        calculateCurrentObjectiveValue();
+
         return false;
       }
     }
@@ -153,6 +149,17 @@ public:
   }
 
 private:
+  void calculateCurrentObjectiveValue() {
+    _objectiveValue = T{};
+    for (int i = 0; i < _rowInfos.size(); ++i)
+      _objectiveValue +=
+          _rightHandSides[i] *
+          _initialObjectiveRow[_simplexBasisData._rowToBasisColumnIdxMap[i]];
+  }
+
+  const LinearProgram<T>& _initialProgram;
+  const std::vector<T> _initialObjectiveRow;
+
   std::vector<VariableInfo> _variableInfos;
   std::vector<RowInfo> _rowInfos;
   Matrix<T> _constraintMatrix;
@@ -160,8 +167,10 @@ private:
 
   std::vector<std::vector<T>> _basisMatrixInverse;
   std::vector<T> _reducedCosts;
+  std::vector<T> _y;
+  T _objectiveValue{};
 
-  std::map<int, int> _rowToBasisColumnIdxMap;
+  SimplexBasisData _simplexBasisData;
 
   LPOptimizationResult _result;
 };

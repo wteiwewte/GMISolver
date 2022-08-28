@@ -7,13 +7,14 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 #include <thread>
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_sinks.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/ostream_sink.h"
+#include <fmt/format.h>
 
 //ABSL_FLAG(std::string, model_file, "/Users/janmelech/Downloads/bm23.mps", "File with lp model`");
 

@@ -3,10 +3,9 @@
 
 #include <string>
 
-struct Constants
-{
-    static inline std::string SLACK_SUFFIX = "_SLACK";
-    static inline std::string ARTIFICIAL_SUFFIX = "_ARTIFICIAL";
+struct Constants {
+  static inline std::string SLACK_SUFFIX = "_SLACK";
+  static inline std::string ARTIFICIAL_SUFFIX = "_ARTIFICIAL";
 };
 
-#endif //GMISOLVER_COMMONCONSTANTS_H
+#endif // GMISOLVER_COMMONCONSTANTS_H

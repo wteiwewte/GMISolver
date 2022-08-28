@@ -1,64 +1,58 @@
 #include "src/DataModel/EnumTypes.h"
 
-std::optional<SectionType> stringToSectionType(const std::string& string)
-{
-    if (string == "NAME")
-        return SectionType::NAME;
-    else if (string == "ROWS")
-        return SectionType::ROWS;
-    else if (string == "COLUMNS")
-        return SectionType::COLUMNS;
-    else if (string == "RHS")
-        return SectionType::RHS;
-    else if (string == "BOUNDS")
-        return SectionType::BOUNDS;
-    else if (string == "ENDATA")
-        return SectionType::END;
+std::optional<SectionType> stringToSectionType(const std::string &string) {
+  if (string == "NAME")
+    return SectionType::NAME;
+  else if (string == "ROWS")
+    return SectionType::ROWS;
+  else if (string == "COLUMNS")
+    return SectionType::COLUMNS;
+  else if (string == "RHS")
+    return SectionType::RHS;
+  else if (string == "BOUNDS")
+    return SectionType::BOUNDS;
+  else if (string == "ENDATA")
+    return SectionType::END;
 
-    return std::nullopt;
+  return std::nullopt;
 }
-std::optional<RowType> stringToRowType(const std::string& string)
-{
-    if (string[0] == static_cast<char>(RowType::EQUALITY))
-        return RowType::EQUALITY;
-    if (string[0] == static_cast<char>(RowType::LESS_THAN_OR_EQUAL))
-        return RowType::LESS_THAN_OR_EQUAL;
-    if (string[0] == static_cast<char>(RowType::GREATER_THAN_OR_EQUAL))
-        return RowType::GREATER_THAN_OR_EQUAL;
-    if (string[0] == static_cast<char>(RowType::OBJECTIVE))
-        return RowType::OBJECTIVE;
+std::optional<RowType> stringToRowType(const std::string &string) {
+  if (string[0] == static_cast<char>(RowType::EQUALITY))
+    return RowType::EQUALITY;
+  if (string[0] == static_cast<char>(RowType::LESS_THAN_OR_EQUAL))
+    return RowType::LESS_THAN_OR_EQUAL;
+  if (string[0] == static_cast<char>(RowType::GREATER_THAN_OR_EQUAL))
+    return RowType::GREATER_THAN_OR_EQUAL;
+  if (string[0] == static_cast<char>(RowType::OBJECTIVE))
+    return RowType::OBJECTIVE;
 
-    return std::nullopt;
+  return std::nullopt;
 }
 
-std::optional<BoundType> stringToBoundType(const std::string& string)
-{
-    if (string == "LO")
-        return BoundType::LOWER_BOUND;
-    else if (string == "UP")
-        return BoundType::UPPER_BOUND;
-//    else if (string == "FX")
-//        return BoundType::FREE_VARIABLE;
-    else if (string == "BV")
-        return BoundType::BINARY_VARIABLE;
+std::optional<BoundType> stringToBoundType(const std::string &string) {
+  if (string == "LO")
+    return BoundType::LOWER_BOUND;
+  else if (string == "UP")
+    return BoundType::UPPER_BOUND;
+  //    else if (string == "FX")
+  //        return BoundType::FREE_VARIABLE;
+  else if (string == "BV")
+    return BoundType::BINARY_VARIABLE;
 
-    return std::nullopt;
+  return std::nullopt;
 }
 
+std::string rowTypeToStr(const RowType rowType) {
+  switch (rowType) {
+  case RowType::EQUALITY:
+    return "=";
+  case RowType::LESS_THAN_OR_EQUAL:
+    return "<=";
+  case RowType::GREATER_THAN_OR_EQUAL:
+    return ">=";
+  case RowType::OBJECTIVE:
+    return "OBJ";
+  }
 
-std::string rowTypeToStr(const RowType rowType)
-{
-    switch (rowType)
-    {
-        case RowType::EQUALITY:
-            return "=";
-        case RowType::LESS_THAN_OR_EQUAL:
-            return "<=";
-        case RowType::GREATER_THAN_OR_EQUAL:
-            return ">=";
-        case RowType::OBJECTIVE:
-            return "OBJ";
-    }
-
-    return "";
+  return "";
 }

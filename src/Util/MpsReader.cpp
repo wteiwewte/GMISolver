@@ -141,7 +141,7 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
                                                ? VariableType::INTEGER
                                                : VariableType::CONTINUOUS});
         linearProgram._variableLabelSet.insert(variableLabelStr);
-        linearProgram._objectiveCoeffs.resize(linearProgram._variableInfos.size());
+        linearProgram._objective.resize(linearProgram._variableInfos.size());
         linearProgram._constraintMatrix.resize(linearProgram._rowInfos.size());
         for (auto &coeffRow : linearProgram._constraintMatrix)
           coeffRow.resize(linearProgram._variableInfos.size());
@@ -151,7 +151,7 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
                                       const auto &coefficientValueStr) {
         if (rowLabelStr == linearProgram._objectiveInfo._label)
         {
-          linearProgram._objectiveCoeffs[variableIdx] = convert(coefficientValueStr);
+          linearProgram._objective[variableIdx] = convert(coefficientValueStr);
           return;
         }
 

@@ -1,4 +1,5 @@
-#include "src/DataModel/SimplexTableu.h"
+#include "src/Algorithms/SimplexTableau.h"
+#include "src/Algorithms/PrimalSimplex.h"
 #include "src/Util/MpsReader.h"
 
 //#include <absl/flags/flag.h>
@@ -42,28 +43,16 @@ void readLPModelAndProcess(const std::string& modelFileMps)
     spdlog::info(linearProgram->toString());
     spdlog::info(linearProgram->toStringLpSolveFormat());
 
-    linearProgram->addArtificialVariables();
-    spdlog::info("LP in standard form with artificial variables");
-    spdlog::info(linearProgram->toString());
-    spdlog::info(linearProgram->toStringLpSolveFormat());
-
-    SimplexTableau<T> simplexTableau(*linearProgram, linearProgram->artificialObjectiveRow());
+    SimplexTableau<T> simplexTableau(*linearProgram);
     spdlog::info("Simplex tableau with artificial variables cost");
     spdlog::info(simplexTableau.toString());
     spdlog::info(simplexTableau.toStringLpSolveFormat());
 
-    int iterCount = 1;
-    while (true)
-    {
-        spdlog::info("ITERATION {}", iterCount++);
-        const bool iterResult = simplexTableau.primalSimplex();
-        spdlog::info("{}\n", simplexTableau.toString());
-
-        if (iterResult)
-            break;
-    }
+    PrimalSimplex<T>(simplexTableau).runPhaseOne();
+    spdlog::info("Simplex tableau after phase one");
+    spdlog::info(simplexTableau.toString());
+    spdlog::info(simplexTableau.toStringLpSolveFormat());
 }
-
 
 void initFileLogger()
 {
@@ -73,7 +62,7 @@ void initFileLogger()
 
     const std::string COUT_PATTERN = "%v";
     spdlog::set_pattern("%^[%Y-%m-%d %H:%M:%S.%e][%L]%$ %v");
-//    spdlog::set_level(spdlog::level::debug);
+    spdlog::set_level(spdlog::level::debug);
 }
 
 // TODO: comparing floating numbers with epsilon ?
@@ -81,5 +70,6 @@ void initFileLogger()
 int main(int argc, char** argv) {
     initFileLogger();
     std::this_thread::sleep_for (std::chrono::seconds(1));
-    readLPModelAndProcess<double>("/Users/janmelech/Desktop/test_1.mps");
+    readLPModelAndProcess<double>("/Users/janmelech/Downloads/bm23.mps");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/test_1.mps");
 }

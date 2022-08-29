@@ -38,6 +38,14 @@ struct VariableInfo {
   bool _isArtificial{false};
 };
 
+template <typename T>
+struct PivotData
+{
+  const int _leavingRowIdx;
+  const int _enteringColumnIdx;
+  const T _pivotingTermInverse;
+};
+
 template <typename T> using Matrix = std::vector<std::vector<T>>;
 
 #endif // GMISOLVER_COMMONTYPES_H

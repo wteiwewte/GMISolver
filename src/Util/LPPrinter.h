@@ -83,16 +83,15 @@ struct LPPrinter {
   }
 
   template <typename T>
-  void printMatrixWithRHS(const std::map<int, int> &rowToBasisColumnIdxMap,
+  void printMatrixWithRHS(const std::vector<int> &rowToBasisColumnIdxMap,
                           const Matrix<T> &matrix,
                           const std::vector<T> &rightHandSides) {
     for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
-      const auto columnBasicIdxIt = rowToBasisColumnIdxMap.find(rowIdx);
-      if (columnBasicIdxIt == rowToBasisColumnIdxMap.end())
+      if (rowIdx >= rowToBasisColumnIdxMap.size())
         _oss << fmt::format("{:^{}}|", "NOT FOUND", _maxVariableWidth);
       else
         _oss << fmt::format("{:^{}}|",
-                            _variableInfos[columnBasicIdxIt->second]._label,
+                            _variableInfos[rowToBasisColumnIdxMap[rowIdx]]._label,
                             _maxVariableWidth);
 
       for (int variableIdx = 0; variableIdx < _variableInfos.size();
@@ -110,8 +109,8 @@ struct LPPrinter {
   }
 
   template <typename T>
-  void printInverseBasisWithDual(const Matrix<T> &basisMatrixInverse) {
-    _oss << "INVERSE BASIS\n";
+  void printInverseBasis(const Matrix<T> &basisMatrixInverse) {
+    _oss << "BASIS MATRIX INVERSE\n";
     for (int rowIdx = 0; rowIdx < basisMatrixInverse.size(); ++rowIdx) {
       for (int variableIdx = 0; variableIdx < basisMatrixInverse.size();
            ++variableIdx)
@@ -122,16 +121,38 @@ struct LPPrinter {
       _oss << '\n';
     }
   }
-
   template <typename T>
-  void printReducedCosts(const std::vector<T> &reducedCosts) {
-    _oss << "REDUCED COSTS\n";
-    for (int columnIdx = 0; columnIdx < reducedCosts.size(); ++columnIdx)
-      _oss << fmt::format("{:>{}}|",
-                          (' ' + std::to_string(reducedCosts[columnIdx])),
-                          COEFFICIENT_WIDTH);
+  void printDual(const std::vector<T> & y) {
+    _oss << "DUAL\n";
+    for (int i = 0; i < y.size(); ++i) {
+        _oss << fmt::format(
+            "{:>{}}|",
+            (' ' + std::to_string(y[i])),
+            COEFFICIENT_WIDTH);
+    }
     _oss << '\n';
   }
+
+  template <typename T>
+  void printSolution(const std::vector<T> & x) {
+    _oss << "SOLUTION\n";
+    _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
+    for (int variableIdx = 0; variableIdx < _variableInfos.size();
+         ++variableIdx) {
+      _oss << fmt::format("{:^{}}|", _variableInfos[variableIdx]._label,
+                          _variableWidths[variableIdx]);
+    }
+    _oss << '\n';
+    _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
+    for (int i = 0; i < x.size(); ++i) {
+      _oss << fmt::format(
+          "{:>{}}|",
+          (' ' + std::to_string(x[i])),
+          COEFFICIENT_WIDTH);
+    }
+    _oss << '\n';
+  }
+
 
   void printLineBreak() {
     _oss.width(_totalWidth);
@@ -142,11 +163,12 @@ struct LPPrinter {
 
   template <typename T>
   void printInLpSolveFormat(const Matrix<T> &matrix,
+                            const std::vector<T>& objective,
                             const std::vector<T> &rightHandSides) {
     _oss << "min: ";
     for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
-      if (matrix[0][varIdx] != 0.0)
-        _oss << fmt::format(" {:+f} {}", matrix[0][varIdx],
+      if (objective[varIdx] != 0.0)
+        _oss << fmt::format(" {:+f} {}", objective[varIdx],
                             _variableInfos[varIdx]._label);
     }
     _oss << ";\n";

@@ -7,7 +7,7 @@
 #include <spdlog/spdlog.h>
 
 struct SimplexBasisData {
-  std::map<int, int> _rowToBasisColumnIdxMap;
+  std::vector<int> _rowToBasisColumnIdxMap;
   std::vector<bool> _isBasicColumnIndexBitset;
 };
 

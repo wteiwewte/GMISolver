@@ -27,10 +27,8 @@ public:
   }
   const std::vector<RowInfo> &getRowInfos() const { return _rowInfos; }
 
-
 private:
-  template <typename U, typename ComparisonTraitsT>
-  friend class PrimalSimplex;
+  template <typename U, typename ComparisonTraitsT> friend class PrimalSimplex;
 
   template <typename U, typename ComparisonTraitsT>
   friend class RevisedPrimalSimplexPFI;
@@ -40,10 +38,10 @@ private:
   void initBasisMatrixInverse();
   void initDual();
 
-  void calculateReducedCosts();
-  void updateBasisData(const PivotData<T>& pivotData);
+  void calculateReducedCostsBasedOnDual();
+  void updateBasisData(const PivotData<T> &pivotData);
 
-  const LinearProgram<T>& _initialProgram;
+  const LinearProgram<T> &_initialProgram;
   std::vector<VariableInfo> _variableInfos;
   std::vector<RowInfo> _rowInfos;
 

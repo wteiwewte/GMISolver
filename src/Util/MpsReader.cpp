@@ -90,10 +90,9 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
       const RowInfo newRowInfo{rowLabelStr, *readRowType};
       if (*readRowType == RowType::OBJECTIVE)
         linearProgram._objectiveInfo = newRowInfo;
-      else
-      {
+      else {
         const auto [_, inserted] = rowLabelToRowIdxMap.try_emplace(
-          rowLabelStr, linearProgram._rowInfos.size());
+            rowLabelStr, linearProgram._rowInfos.size());
         if (!inserted)
           spdlog::warn("Duplicated row label {}", rowLabelStr);
 
@@ -149,8 +148,7 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
 
       const auto updateLpMatrix = [&](const auto &rowLabelStr,
                                       const auto &coefficientValueStr) {
-        if (rowLabelStr == linearProgram._objectiveInfo._label)
-        {
+        if (rowLabelStr == linearProgram._objectiveInfo._label) {
           linearProgram._objective[variableIdx] = convert(coefficientValueStr);
           return;
         }

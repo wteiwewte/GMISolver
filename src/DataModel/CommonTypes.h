@@ -38,9 +38,7 @@ struct VariableInfo {
   bool _isArtificial{false};
 };
 
-template <typename T>
-struct PivotData
-{
+template <typename T> struct PivotData {
   const int _leavingRowIdx;
   const int _enteringColumnIdx;
   const T _pivotingTermInverse;

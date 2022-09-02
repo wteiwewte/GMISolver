@@ -73,7 +73,8 @@ template <typename T> std::string LinearProgram<T>::toString() const {
 template <typename T>
 std::string LinearProgram<T>::toStringLpSolveFormat() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
-  lpPrinter.printInLpSolveFormat(_constraintMatrix, _objective,_rightHandSides);
+  lpPrinter.printInLpSolveFormat(_constraintMatrix, _objective,
+                                 _rightHandSides);
   return lpPrinter.toString();
 }
 

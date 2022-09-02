@@ -22,8 +22,7 @@ template <typename T> void SimplexTableau<T>::addArtificialVariables() {
   const auto newArtificialLabel = [&](const auto varIdx) {
     return "A" + std::to_string(varIdx);
   };
-  
-  
+
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     _constraintMatrix[rowIdx].resize(newVariableCount);
 
@@ -39,8 +38,7 @@ template <typename T>
 std::vector<T> SimplexTableau<T>::artificialObjectiveRow() const {
   std::vector<T> result(_constraintMatrix.front().size());
 
-  for (int variableIdx = 0; variableIdx < _variableInfos.size();
-       ++variableIdx)
+  for (int variableIdx = 0; variableIdx < _variableInfos.size(); ++variableIdx)
     if (_variableInfos[variableIdx]._isArtificial)
       result[variableIdx] = 1;
 
@@ -48,18 +46,16 @@ std::vector<T> SimplexTableau<T>::artificialObjectiveRow() const {
 }
 
 template <typename T>
-std::optional<SimplexBasisData> SimplexTableau<T>::createBasisFromArtificialVars() const
-{
+std::optional<SimplexBasisData>
+SimplexTableau<T>::createBasisFromArtificialVars() const {
   std::optional<int> firstArtificialIdx;
   for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx)
-    if (_variableInfos[varIdx]._isArtificial)
-    {
+    if (_variableInfos[varIdx]._isArtificial) {
       firstArtificialIdx = varIdx;
       break;
     }
 
-  if (!firstArtificialIdx.has_value())
-  {
+  if (!firstArtificialIdx.has_value()) {
     spdlog::warn("No artificial variable found");
     return std::nullopt;
   }
@@ -68,8 +64,7 @@ std::optional<SimplexBasisData> SimplexTableau<T>::createBasisFromArtificialVars
   result._isBasicColumnIndexBitset.resize(_variableInfos.size());
   result._rowToBasisColumnIdxMap.resize(_variableInfos.size());
 
-  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx)
-  {
+  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     const auto basicColumnIdx = *firstArtificialIdx + rowIdx;
     result._rowToBasisColumnIdxMap[rowIdx] = basicColumnIdx;
     result._isBasicColumnIndexBitset[basicColumnIdx] = true;
@@ -82,22 +77,20 @@ template <typename T> void SimplexTableau<T>::init() {
   if (auto simplexBasisData = createBasisFromArtificialVars();
       simplexBasisData.has_value())
     _simplexBasisData = std::move(*simplexBasisData);
-  
+
   initDual();
   initBasisMatrixInverse();
-  calculateReducedCosts();
+  calculateReducedCostsBasedOnDual();
   calculateCurrentObjectiveValue();
   calculateSolution();
 }
 
 template <typename T> std::string SimplexTableau<T>::toString() const {
-  LPPrinter lpPrinter(_variableInfos,
-                      _rowInfos);
+  LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printLineBreak();
   lpPrinter.printVariableInfos(std::cref(_simplexBasisData));
   lpPrinter.printLineBreak();
-  lpPrinter.printReducedCostWithObjectiveValue(_reducedCosts,
-                                               _objectiveValue);
+  lpPrinter.printReducedCostWithObjectiveValue(_reducedCosts, _objectiveValue);
   lpPrinter.printMatrixWithRHS(_simplexBasisData._rowToBasisColumnIdxMap,
                                _constraintMatrix, _rightHandSides);
   lpPrinter.printLineBreak();
@@ -111,13 +104,11 @@ template <typename T> std::string SimplexTableau<T>::toString() const {
   return lpPrinter.toString();
 }
 template <typename T> std::string SimplexTableau<T>::toStringShort() const {
-  LPPrinter lpPrinter(_variableInfos,
-                      _rowInfos);
+  LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printLineBreak();
   lpPrinter.printVariableInfos(std::cref(_simplexBasisData));
   lpPrinter.printLineBreak();
-  lpPrinter.printReducedCostWithObjectiveValue(_reducedCosts,
-                                               _objectiveValue);
+  lpPrinter.printReducedCostWithObjectiveValue(_reducedCosts, _objectiveValue);
   lpPrinter.printMatrixWithRHS(_simplexBasisData._rowToBasisColumnIdxMap,
                                _constraintMatrix, _rightHandSides);
   lpPrinter.printLineBreak();
@@ -126,7 +117,8 @@ template <typename T> std::string SimplexTableau<T>::toStringShort() const {
 template <typename T>
 std::string SimplexTableau<T>::toStringLpSolveFormat() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
-  lpPrinter.printInLpSolveFormat(_constraintMatrix, _objectiveRow,_rightHandSides);
+  lpPrinter.printInLpSolveFormat(_constraintMatrix, _objectiveRow,
+                                 _rightHandSides);
   return lpPrinter.toString();
 }
 
@@ -159,7 +151,8 @@ template <typename T> void SimplexTableau<T>::initDual() {
     _y[rowIdx] = _objectiveRow[basicColumnIdx];
   }
 }
-template <typename T> void SimplexTableau<T>::calculateReducedCosts() {
+template <typename T>
+void SimplexTableau<T>::calculateReducedCostsBasedOnDual() {
   _reducedCosts.resize(_variableInfos.size());
   for (int columnIdx = 0; columnIdx < _variableInfos.size(); ++columnIdx) {
     T yAn = _objectiveRow[columnIdx];
@@ -172,15 +165,13 @@ template <typename T> void SimplexTableau<T>::calculateReducedCosts() {
 
 template <typename T>
 void SimplexTableau<T>::updateBasisData(const PivotData<T> &pivotData) {
-  const auto& [leavingRowIdx, enteringColumnIdx, _] = pivotData;
-  auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset] =
-      _simplexBasisData;
+  const auto &[leavingRowIdx, enteringColumnIdx, _] = pivotData;
+  auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset] = _simplexBasisData;
   spdlog::debug("LEAVING VARIABLE ROW IDX {} COLUMN IDX", leavingRowIdx,
                 rowToBasisColumnIdxMap[leavingRowIdx]);
 
   isBasicColumnIndexBitset[enteringColumnIdx] = true;
-  isBasicColumnIndexBitset[rowToBasisColumnIdxMap[leavingRowIdx]] =
-      false;
+  isBasicColumnIndexBitset[rowToBasisColumnIdxMap[leavingRowIdx]] = false;
   rowToBasisColumnIdxMap[leavingRowIdx] = enteringColumnIdx;
 }
 

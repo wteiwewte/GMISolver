@@ -8,10 +8,10 @@
 #include <spdlog/spdlog.h>
 // fmt must be included after spdlog - weird bug
 #include <fmt/format.h>
+#include <functional>
+#include <optional>
 #include <sstream>
 #include <string>
-#include <optional>
-#include <functional>
 
 struct LPPrinter {
   constexpr static int CONSTRAINT_SIGN_WIDTH = 6;
@@ -35,7 +35,9 @@ struct LPPrinter {
     _oss << '\n';
   }
 
-  void printVariableInfos(const std::optional<std::reference_wrapper<const SimplexBasisData>> simplexBasisDataRef) {
+  void printVariableInfos(
+      const std::optional<std::reference_wrapper<const SimplexBasisData>>
+          simplexBasisDataRef) {
     _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
     for (int variableIdx = 0; variableIdx < _variableInfos.size();
          ++variableIdx) {
@@ -52,22 +54,23 @@ struct LPPrinter {
     }
     _oss << '\n';
 
-    if (simplexBasisDataRef.has_value())
-    {
+    if (simplexBasisDataRef.has_value()) {
       _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
       for (int variableIdx = 0; variableIdx < _variableInfos.size();
            ++variableIdx)
-        _oss << fmt::format("{:^{}}|",
-                            simplexBasisDataRef->get()._isBasicColumnIndexBitset[variableIdx] ? "BASIC"
-                                                                 : "NON-BASIC",
-                            _variableWidths[variableIdx]);
+        _oss << fmt::format(
+            "{:^{}}|",
+            simplexBasisDataRef->get()._isBasicColumnIndexBitset[variableIdx]
+                ? "BASIC"
+                : "NON-BASIC",
+            _variableWidths[variableIdx]);
       _oss << '\n';
     }
   }
 
   template <typename T>
-  void printReducedCostWithObjectiveValue(const std::vector<T>& reducedCosts, const T& objectiveValue)
-  {
+  void printReducedCostWithObjectiveValue(const std::vector<T> &reducedCosts,
+                                          const T &objectiveValue) {
     _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
     for (int variableIdx = 0; variableIdx < _variableInfos.size();
          ++variableIdx)
@@ -75,10 +78,8 @@ struct LPPrinter {
                           (' ' + std::to_string(reducedCosts[variableIdx])),
                           _variableWidths[variableIdx]);
 
-    _oss << fmt::format("{:^{}}|", "OBJ",
-                      CONSTRAINT_SIGN_WIDTH);
-    _oss << fmt::format("{:>{}}|\n",
-                        (' ' + std::to_string(objectiveValue)),
+    _oss << fmt::format("{:^{}}|", "OBJ", CONSTRAINT_SIGN_WIDTH);
+    _oss << fmt::format("{:>{}}|\n", (' ' + std::to_string(objectiveValue)),
                         COEFFICIENT_WIDTH);
   }
 
@@ -90,9 +91,9 @@ struct LPPrinter {
       if (rowIdx >= rowToBasisColumnIdxMap.size())
         _oss << fmt::format("{:^{}}|", "NOT FOUND", _maxVariableWidth);
       else
-        _oss << fmt::format("{:^{}}|",
-                            _variableInfos[rowToBasisColumnIdxMap[rowIdx]]._label,
-                            _maxVariableWidth);
+        _oss << fmt::format(
+            "{:^{}}|", _variableInfos[rowToBasisColumnIdxMap[rowIdx]]._label,
+            _maxVariableWidth);
 
       for (int variableIdx = 0; variableIdx < _variableInfos.size();
            ++variableIdx)
@@ -121,20 +122,16 @@ struct LPPrinter {
       _oss << '\n';
     }
   }
-  template <typename T>
-  void printDual(const std::vector<T> & y) {
+  template <typename T> void printDual(const std::vector<T> &y) {
     _oss << "DUAL\n";
     for (int i = 0; i < y.size(); ++i) {
-        _oss << fmt::format(
-            "{:>{}}|",
-            (' ' + std::to_string(y[i])),
-            COEFFICIENT_WIDTH);
+      _oss << fmt::format("{:>{}}|", (' ' + std::to_string(y[i])),
+                          COEFFICIENT_WIDTH);
     }
     _oss << '\n';
   }
 
-  template <typename T>
-  void printSolution(const std::vector<T> & x) {
+  template <typename T> void printSolution(const std::vector<T> &x) {
     _oss << "SOLUTION\n";
     _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
     for (int variableIdx = 0; variableIdx < _variableInfos.size();
@@ -145,14 +142,11 @@ struct LPPrinter {
     _oss << '\n';
     _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
     for (int i = 0; i < x.size(); ++i) {
-      _oss << fmt::format(
-          "{:>{}}|",
-          (' ' + std::to_string(x[i])),
-          COEFFICIENT_WIDTH);
+      _oss << fmt::format("{:>{}}|", (' ' + std::to_string(x[i])),
+                          COEFFICIENT_WIDTH);
     }
     _oss << '\n';
   }
-
 
   void printLineBreak() {
     _oss.width(_totalWidth);
@@ -163,7 +157,7 @@ struct LPPrinter {
 
   template <typename T>
   void printInLpSolveFormat(const Matrix<T> &matrix,
-                            const std::vector<T>& objective,
+                            const std::vector<T> &objective,
                             const std::vector<T> &rightHandSides) {
     _oss << "min: ";
     for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {

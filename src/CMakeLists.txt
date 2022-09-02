@@ -1,4 +1,4 @@
-add_library(Algorithms Algorithms/PrimalSimplex.cpp Algorithms/PrimalSimplex.h)
+add_library(Algorithms Algorithms/PrimalSimplex.cpp Algorithms/PrimalSimplex.h Algorithms/RevisedPrimalSimplexPFI.cpp Algorithms/RevisedPrimalSimplexPFI.h)
 target_link_libraries(Algorithms DataModel Util)
 
 add_library(DataModel DataModel/LinearProgram.cpp DataModel/LinearProgram.h DataModel/EnumTypes.h DataModel/EnumTypes.cpp Algorithms/SimplexTableau.cpp Algorithms/SimplexTableau.h DataModel/CommonTypes.h DataModel/CommonConstants.h DataModel/SimplexBasisData.h)

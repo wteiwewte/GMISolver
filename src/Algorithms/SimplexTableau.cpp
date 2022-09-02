@@ -169,41 +169,7 @@ template <typename T> void SimplexTableau<T>::calculateReducedCosts() {
     _reducedCosts[columnIdx] = yAn;
   }
 }
-template <typename T>
-void SimplexTableau<T>::updateReducedCosts(const PivotData<T> &pivotData) {
-  const auto& [leavingRowIdx, enteringColumnIdx, pivotingTermInverse] = pivotData;
-  const auto commonCoeffReducedCost =
-      _reducedCosts[pivotData._enteringColumnIdx] * pivotingTermInverse;
-  for (int j = 0; j < _variableInfos.size(); ++j)
-    _reducedCosts[j] -=
-        commonCoeffReducedCost * _constraintMatrix[leavingRowIdx][j];
-}
-template <typename T>
-void SimplexTableau<T>::updateConstraintMatrixWithRHS(
-    const PivotData<T> &pivotData) {
-  const auto& [leavingRowIdx, enteringColumnIdx, pivotingTermInverse] = pivotData;
 
-  for (int i = 0; i < _rowInfos.size(); ++i) {
-    if (i == leavingRowIdx)
-    {
-      for (int j = 0; j < _variableInfos.size(); ++j)
-        _constraintMatrix[leavingRowIdx][j] *= pivotingTermInverse;
-
-      _rightHandSides[leavingRowIdx] *= pivotingTermInverse;
-    }
-    else
-    {
-      const auto commonCoeff =
-          _constraintMatrix[i][enteringColumnIdx] * pivotingTermInverse;
-
-      for (int j = 0; j < _variableInfos.size(); ++j)
-        _constraintMatrix[i][j] -=
-            commonCoeff * _constraintMatrix[leavingRowIdx][j];
-
-      _rightHandSides[i] -= commonCoeff * _rightHandSides[leavingRowIdx];
-    }
-  }
-}
 template <typename T>
 void SimplexTableau<T>::updateBasisData(const PivotData<T> &pivotData) {
   const auto& [leavingRowIdx, enteringColumnIdx, _] = pivotData;

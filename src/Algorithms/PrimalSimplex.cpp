@@ -18,9 +18,9 @@ void PrimalSimplex<T, ComparisonTraitsT>::runPhaseOne() {
                  "initial program is infeasible");
     return;
   }
-//
-//  setInitialObjective();
-//  run();
+
+  setInitialObjective();
+  run();
 }
 
 template <typename T, typename ComparisonTraitsT>
@@ -71,9 +71,66 @@ void PrimalSimplex<T, ComparisonTraitsT>::pivot(const int rowIdx, const int ente
                      1.0 / _simplexTableau._constraintMatrix[rowIdx][enteringColumnIdx]};
   spdlog::info("PIVOT COEFF {}, INV {}", _simplexTableau._constraintMatrix[rowIdx][enteringColumnIdx], 1.0 / _simplexTableau._constraintMatrix[rowIdx][enteringColumnIdx]);
   spdlog::info("RHS {}", _simplexTableau._rightHandSides[rowIdx]);
-  _simplexTableau.updateReducedCosts(pivotData);
-  _simplexTableau.updateConstraintMatrixWithRHS(pivotData);
+  updateReducedCosts(pivotData);
+  updateConstraintMatrixWithRHS(pivotData);
   _simplexTableau.updateBasisData(pivotData);
+}
+
+template <typename T, typename ComparisonTraitsT>
+void PrimalSimplex<T, ComparisonTraitsT>::updateReducedCosts(const PivotData<T> &pivotData) {
+  const auto& [leavingRowIdx, enteringColumnIdx, pivotingTermInverse] = pivotData;
+  const auto commonCoeffReducedCost =
+      _simplexTableau._reducedCosts[enteringColumnIdx] * pivotingTermInverse;
+  for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j)
+    _simplexTableau._reducedCosts[j] -=
+        commonCoeffReducedCost * _simplexTableau._constraintMatrix[leavingRowIdx][j];
+}
+
+template <typename T, typename ComparisonTraitsT>
+void PrimalSimplex<T, ComparisonTraitsT>::updateConstraintMatrixWithRHS(
+    const PivotData<T> &pivotData) {
+//  const auto& [leavingRowIdx, enteringColumnIdx, pivotingTermInverse] = pivotData;
+//
+//  for (int i = 0; i < _simplexTableau._rowInfos.size(); ++i) {
+//    if (i == leavingRowIdx)
+//    {
+//      for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j)
+//        _simplexTableau._constraintMatrix[leavingRowIdx][j] *= pivotingTermInverse;
+//
+//      _simplexTableau._rightHandSides[leavingRowIdx] *= pivotingTermInverse;
+//    }
+//    else
+//    {
+//      const auto commonCoeff =
+//          _simplexTableau._constraintMatrix[i][enteringColumnIdx] * pivotingTermInverse;
+//
+//      for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j)
+//        _simplexTableau._constraintMatrix[i][j] -=
+//            commonCoeff * _simplexTableau._constraintMatrix[leavingRowIdx][j];
+//
+//      _simplexTableau._rightHandSides[i] -= commonCoeff * _simplexTableau._rightHandSides[leavingRowIdx];
+//    }
+//  }
+  const auto& [leavingRowIdx, enteringColumnIdx, pivotingTermInverse] = pivotData;
+
+  for (int i = 0; i < _simplexTableau._rowInfos.size(); ++i) {
+    if (i == leavingRowIdx)
+      continue;
+
+    const auto commonCoeff =
+        _simplexTableau._constraintMatrix[i][enteringColumnIdx] * pivotingTermInverse;
+
+    for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j)
+      _simplexTableau._constraintMatrix[i][j] -=
+          commonCoeff * _simplexTableau._constraintMatrix[leavingRowIdx][j];
+
+    _simplexTableau._rightHandSides[i] -= commonCoeff * _simplexTableau._rightHandSides[leavingRowIdx];
+  }
+
+  for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j)
+    _simplexTableau._constraintMatrix[leavingRowIdx][j] *= pivotingTermInverse;
+
+  _simplexTableau._rightHandSides[leavingRowIdx] *= pivotingTermInverse;
 }
 
 template <typename T, typename ComparisonTraitsT>
@@ -123,6 +180,8 @@ void PrimalSimplex<T, ComparisonTraitsT>::removeArtificialVariablesFromBasis() {
     if (!_simplexTableau._variableInfos[basicVarIdx]._isArtificial)
       continue;
 
+    spdlog::info("FOUND BASIC ARTIFICIAL COLUMN IDX {}", basicVarIdx);
+
     std::optional<int> nonZeroEntryColumnIndex;
     for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j)
     {
@@ -142,8 +201,8 @@ void PrimalSimplex<T, ComparisonTraitsT>::removeArtificialVariablesFromBasis() {
       spdlog::warn("Redundant constraints in lp formulation!");
       removeRow(rowIdx);
     }
-
-    pivot(rowIdx, *nonZeroEntryColumnIndex);
+    else
+      pivot(rowIdx, *nonZeroEntryColumnIndex);
   }
 }
 template <typename T, typename ComparisonTraitsT>

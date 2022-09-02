@@ -1,5 +1,6 @@
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Algorithms/PrimalSimplex.h"
+#include "src/Algorithms/RevisedPrimalSimplexPFI.h"
 #include "src/Util/MpsReader.h"
 
 //#include <absl/flags/flag.h>
@@ -48,7 +49,8 @@ void readLPModelAndProcess(const std::string& modelFileMps)
     spdlog::info(simplexTableau.toString());
     spdlog::info(simplexTableau.toStringLpSolveFormat());
 
-    PrimalSimplex<T>(simplexTableau).runPhaseOne();
+    RevisedPrimalSimplexPFI<T>(simplexTableau).runPhaseOne();
+//    PrimalSimplex<T>(simplexTableau).runPhaseOne();
     spdlog::info("Simplex tableau after phase one");
     spdlog::info(simplexTableau.toString());
     spdlog::info(simplexTableau.toStringLpSolveFormat());

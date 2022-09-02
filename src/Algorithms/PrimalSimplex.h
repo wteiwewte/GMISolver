@@ -1,6 +1,7 @@
 #ifndef GMISOLVER_PRIMALSIMPLEX_H
 #define GMISOLVER_PRIMALSIMPLEX_H
 
+#include "src/DataModel/CommonTypes.h"
 #include "src/Util/ComparisonTraits.h"
 
 #include <optional>
@@ -19,6 +20,9 @@ public:
 private:
   std::optional<int> chooseRowIdx(const int enteringColumnIdx);
   void pivot(const int rowIdx, const int enteringColumnIdx);
+
+  void updateReducedCosts(const PivotData<T>& pivotData);
+  void updateConstraintMatrixWithRHS(const PivotData<T>& pivotData);
 
   void removeArtificialVariablesFromBasis();
   void removeArtificialVariablesFromProgram();

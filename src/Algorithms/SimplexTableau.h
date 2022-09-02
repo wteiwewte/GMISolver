@@ -32,14 +32,15 @@ private:
   template <typename U, typename ComparisonTraitsT>
   friend class PrimalSimplex;
 
+  template <typename U, typename ComparisonTraitsT>
+  friend class RevisedPrimalSimplexPFI;
+
   std::optional<SimplexBasisData> createBasisFromArtificialVars() const;
 
   void initBasisMatrixInverse();
   void initDual();
 
   void calculateReducedCosts();
-  void updateReducedCosts(const PivotData<T>& pivotData);
-  void updateConstraintMatrixWithRHS(const PivotData<T>& pivotData);
   void updateBasisData(const PivotData<T>& pivotData);
 
   const LinearProgram<T>& _initialProgram;

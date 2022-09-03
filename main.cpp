@@ -31,29 +31,28 @@ void readLPModelAndProcess(const std::string& modelFileMps)
     }
 
     spdlog::info("LP at the start");
-    spdlog::info(linearProgram->toString());
-    spdlog::info(linearProgram->toStringLpSolveFormat());
+//    spdlog::info(linearProgram->toString());
+//    spdlog::info(linearProgram->toStringLpSolveFormat());
 
     linearProgram->convertToStandardForm();
     spdlog::info("LP in standard form");
-    spdlog::info(linearProgram->toString());
-    spdlog::info(linearProgram->toStringLpSolveFormat());
+//    spdlog::info(linearProgram->toString());
+//    spdlog::info(linearProgram->toStringLpSolveFormat());
 
     linearProgram->makeRightHandSidesNonNegative();
     spdlog::info("LP in standard form with non-negative RHS");
-    spdlog::info(linearProgram->toString());
-    spdlog::info(linearProgram->toStringLpSolveFormat());
+//    spdlog::info(linearProgram->toString());
+//    spdlog::info(linearProgram->toStringLpSolveFormat());
 
     SimplexTableau<T> simplexTableau(*linearProgram);
     spdlog::info("Simplex tableau with artificial variables cost");
-    spdlog::info(simplexTableau.toString());
-    spdlog::info(simplexTableau.toStringLpSolveFormat());
+//    spdlog::info(simplexTableau.toString());
+//    spdlog::info(simplexTableau.toStringLpSolveFormat());
 
     RevisedPrimalSimplexPFI<T>(simplexTableau).runPhaseOne();
 //    PrimalSimplex<T>(simplexTableau).runPhaseOne();
-    spdlog::info("Simplex tableau after phase one");
-    spdlog::info(simplexTableau.toString());
-    spdlog::info(simplexTableau.toStringLpSolveFormat());
+//    spdlog::info("Simplex tableau after phase one");
+//    spdlog::info(simplexTableau.toString());?
 }
 
 void initFileLogger()
@@ -65,6 +64,7 @@ void initFileLogger()
     const std::string COUT_PATTERN = "%v";
     spdlog::set_pattern("%^[%Y-%m-%d %H:%M:%S.%e][%L]%$ %v");
     spdlog::set_level(spdlog::level::debug);
+    spdlog::flush_every(std::chrono::seconds(5));
 }
 
 // TODO: comparing floating numbers with epsilon ?
@@ -73,5 +73,8 @@ int main(int argc, char** argv) {
     initFileLogger();
     std::this_thread::sleep_for (std::chrono::seconds(1));
     readLPModelAndProcess<double>("/Users/janmelech/Downloads/bm23.mps");
+//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/mod010");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/miplib2017-testscript-v1.0.3/instances/miplib2017_ungzipped/air05.mps");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/miplib2017-testscript-v1.0.3/instances/miplib2017_ungzipped/tr12-30.mps");
 //    readLPModelAndProcess<double>("/Users/janmelech/Desktop/test_1.mps");
 }

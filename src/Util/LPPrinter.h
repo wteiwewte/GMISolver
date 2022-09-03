@@ -4,6 +4,7 @@
 #include "src/DataModel/CommonTypes.h"
 #include "src/DataModel/SimplexBasisData.h"
 
+#include <iomanip>
 #include <map>
 #include <spdlog/spdlog.h>
 // fmt must be included after spdlog - weird bug
@@ -146,6 +147,28 @@ struct LPPrinter {
                           COEFFICIENT_WIDTH);
     }
     _oss << '\n';
+  }
+
+  template <typename T> void printCurrentObjectiveValue(const LPOptimizationResult lpResult,
+                                                        const T& objectiveValue)
+  {
+    const auto lpResultStr = [&]{
+      switch (lpResult)
+      {
+        case LPOptimizationResult::UNBOUNDED:
+          return "UNBOUNDED";
+        case LPOptimizationResult::INFEASIBLE:
+          return "INFEASIBLE";
+        case LPOptimizationResult::BOUNDED_AND_FEASIBLE:
+          return "BOUNDED_AND_FEASIBLE";
+      }
+
+      return "";
+    };
+    _oss << std::setprecision(std::numeric_limits<T>::digits10 + 1);
+    _oss << "LP RESULT -" << lpResultStr() << "\n";
+//    if (lpResult == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
+    _oss << "CURRENT VALUE " << objectiveValue << '\n';
   }
 
   void printLineBreak() {

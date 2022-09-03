@@ -105,13 +105,8 @@ template <typename T> std::string SimplexTableau<T>::toString() const {
 }
 template <typename T> std::string SimplexTableau<T>::toStringShort() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
-  lpPrinter.printLineBreak();
-  lpPrinter.printVariableInfos(std::cref(_simplexBasisData));
-  lpPrinter.printLineBreak();
-  lpPrinter.printReducedCostWithObjectiveValue(_reducedCosts, _objectiveValue);
-  lpPrinter.printMatrixWithRHS(_simplexBasisData._rowToBasisColumnIdxMap,
-                               _constraintMatrix, _rightHandSides);
-  lpPrinter.printLineBreak();
+//  lpPrinter.printSolution(_x);
+  lpPrinter.printCurrentObjectiveValue(_result, _objectiveValue);
   return lpPrinter.toString();
 }
 template <typename T>

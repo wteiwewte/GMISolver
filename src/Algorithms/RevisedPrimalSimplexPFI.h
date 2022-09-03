@@ -33,6 +33,7 @@ private:
                                   const std::vector<T> &enteringColumn);
   void calculateDual();
   void reinversion();
+  void calculateRHS();
 
   void removeArtificialVariablesFromBasis();
   void removeArtificialVariablesFromProgram();

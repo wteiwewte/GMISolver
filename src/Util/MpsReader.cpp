@@ -172,6 +172,10 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
       break;
     }
     case SectionType::RHS: {
+      if (linearProgram._rightHandSides.empty())
+        spdlog::info("VARIABLE COUNT {}, ROW COUNT {} BEFORE RHS",
+                     linearProgram._variableInfos.size(),
+                     linearProgram._rowInfos.size());
       if (lineParts.size() != 3 && lineParts.size() != 5) {
         spdlog::warn("Unexpected number of elements in rhs line {}", readLine);
         break;
@@ -285,6 +289,10 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
     spdlog::warn("Could not find objective row");
     return std::nullopt;
   }
+
+  spdlog::info("VARIABLE COUNT {}, ROW COUNT {} AT THE END",
+               linearProgram._variableInfos.size(),
+               linearProgram._rowInfos.size());
 
   // TODO - add more integrity checks
   return linearProgram;

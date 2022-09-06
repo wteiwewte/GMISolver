@@ -22,6 +22,7 @@ public:
 
   void convertToStandardForm();
   void makeRightHandSidesNonNegative();
+  void addBoundsToMatrix();
 
   const std::vector<RowInfo> &getRowInfos() const { return _rowInfos; }
   const std::vector<VariableInfo> &getVariableInfos() const {
@@ -51,6 +52,8 @@ private:
   std::vector<RowInfo> _rowInfos;
 
   std::vector<VariableInfo> _variableInfos;
+  std::vector<std::optional<T>> _variableLowerBounds;
+  std::vector<std::optional<T>> _variableUpperBounds;
   std::set<std::string> _variableLabelSet;
 
   std::vector<T> _objective;
@@ -120,6 +123,8 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
     _variableInfos.push_back(
         VariableInfo{newSlackLabelStr, VariableType::CONTINUOUS, true});
     _variableLabelSet.insert(newSlackLabelStr);
+    _variableLowerBounds.push_back(0.0);
+    _variableUpperBounds.push_back(std::nullopt);
     ++newVariableIdx;
     _rowInfos[rowIdx]._type = RowType::EQUALITY;
   }
@@ -127,12 +132,41 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
 
 template <typename T> void LinearProgram<T>::makeRightHandSidesNonNegative() {
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
-    if (_rightHandSides[rowIdx] < 0.0) {
+    T sum{0.0};
+    for (int variableIdx = 0; variableIdx < _variableInfos.size();
+         ++variableIdx)
+      sum += _variableLowerBounds[variableIdx].value() *
+             _constraintMatrix[rowIdx][variableIdx];
+
+    const T diff = _rightHandSides[rowIdx] - sum;
+
+    if (diff < 0.0) {
       for (int variableIdx = 0; variableIdx < _variableInfos.size();
            ++variableIdx)
         _constraintMatrix[rowIdx][variableIdx] =
             -_constraintMatrix[rowIdx][variableIdx];
       _rightHandSides[rowIdx] = -_rightHandSides[rowIdx];
+    }
+  }
+}
+template <typename T> void LinearProgram<T>::addBoundsToMatrix() {
+  for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx)
+  {
+    if (const auto lowerBound = _variableLowerBounds[varIdx]; lowerBound.has_value())
+    {
+        _constraintMatrix.emplace_back(_variableInfos.size())[varIdx] = 1;
+        _rightHandSides.push_back(*lowerBound);
+        _rowInfos.push_back(
+            RowInfo{{}, RowType::GREATER_THAN_OR_EQUAL});
+    }
+
+    if (const auto upperBound = _variableUpperBounds[varIdx];
+        upperBound.has_value())
+    {
+        _constraintMatrix.emplace_back(_variableInfos.size())[varIdx] = 1;
+        _rightHandSides.push_back(*upperBound);
+        _rowInfos.push_back(
+            RowInfo{{}, RowType::LESS_THAN_OR_EQUAL});
     }
   }
 }

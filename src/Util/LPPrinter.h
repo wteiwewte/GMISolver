@@ -56,14 +56,17 @@ struct LPPrinter {
     _oss << '\n';
 
     if (simplexBasisDataRef.has_value()) {
+      const auto &simplexBasisData = simplexBasisDataRef->get();
       _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
       for (int variableIdx = 0; variableIdx < _variableInfos.size();
            ++variableIdx)
         _oss << fmt::format(
             "{:^{}}|",
-            simplexBasisDataRef->get()._isBasicColumnIndexBitset[variableIdx]
+            simplexBasisData._isBasicColumnIndexBitset[variableIdx]
                 ? "BASIC"
-                : "NON-BASIC",
+                : (simplexBasisData._isColumnAtLowerBoundBitset[variableIdx]
+                       ? "LOWER_BOUND"
+                       : "UPPER_BOUND"),
             _variableWidths[variableIdx]);
       _oss << '\n';
     }
@@ -89,12 +92,9 @@ struct LPPrinter {
                           const Matrix<T> &matrix,
                           const std::vector<T> &rightHandSides) {
     for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
-      if (rowIdx >= rowToBasisColumnIdxMap.size())
-        _oss << fmt::format("{:^{}}|", "NOT FOUND", _maxVariableWidth);
-      else
-        _oss << fmt::format(
-            "{:^{}}|", _variableInfos[rowToBasisColumnIdxMap[rowIdx]]._label,
-            _maxVariableWidth);
+      _oss << fmt::format("{:^{}}|",
+                          _variableInfos[rowToBasisColumnIdxMap[rowIdx]]._label,
+                          _maxVariableWidth);
 
       for (int variableIdx = 0; variableIdx < _variableInfos.size();
            ++variableIdx)
@@ -149,26 +149,53 @@ struct LPPrinter {
     _oss << '\n';
   }
 
-  template <typename T> void printCurrentObjectiveValue(const LPOptimizationResult lpResult,
-                                                        const T& objectiveValue)
-  {
-    const auto lpResultStr = [&]{
-      switch (lpResult)
-      {
-        case LPOptimizationResult::UNBOUNDED:
-          return "UNBOUNDED";
-        case LPOptimizationResult::INFEASIBLE:
-          return "INFEASIBLE";
-        case LPOptimizationResult::BOUNDED_AND_FEASIBLE:
-          return "BOUNDED_AND_FEASIBLE";
+  template <typename T>
+  void printCurrentObjectiveValue(const LPOptimizationResult lpResult,
+                                  const T &objectiveValue) {
+    const auto lpResultStr = [&] {
+      switch (lpResult) {
+      case LPOptimizationResult::UNBOUNDED:
+        return "UNBOUNDED";
+      case LPOptimizationResult::INFEASIBLE:
+        return "INFEASIBLE";
+      case LPOptimizationResult::BOUNDED_AND_FEASIBLE:
+        return "BOUNDED_AND_FEASIBLE";
       }
 
       return "";
     };
     _oss << std::setprecision(std::numeric_limits<T>::digits10 + 1);
     _oss << "LP RESULT -" << lpResultStr() << "\n";
-//    if (lpResult == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
+    //    if (lpResult == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
     _oss << "CURRENT VALUE " << objectiveValue << '\n';
+  }
+
+  template <typename T>
+  void printVariableBounds(
+      const std::vector<std::optional<T>> &variableLowerBounds,
+      const std::vector<std::optional<T>> &variableUpperBounds) {
+    const auto boundStr = [](const std::optional<T> &bound) -> std::string {
+      if (bound.has_value())
+        return std::to_string(bound.value());
+
+      return "NO_BOUND";
+    };
+
+    _oss << fmt::format("{:^{}}|", "LOWER BOUNDS", _maxVariableWidth);
+    for (int variableIdx = 0; variableIdx < _variableInfos.size();
+         ++variableIdx)
+      _oss << fmt::format("{:>{}}|",
+                          (' ' + boundStr(variableLowerBounds[variableIdx])),
+                          _variableWidths[variableIdx]);
+    _oss << '\n';
+
+    _oss << fmt::format("{:^{}}|", "UPPER BOUNDS", _maxVariableWidth);
+    for (int variableIdx = 0; variableIdx < _variableInfos.size();
+         ++variableIdx)
+      _oss << fmt::format("{:>{}}|",
+                          (' ' + boundStr(variableUpperBounds[variableIdx])),
+                          _variableWidths[variableIdx]);
+    _oss << '\n';
   }
 
   void printLineBreak() {
@@ -179,9 +206,11 @@ struct LPPrinter {
   }
 
   template <typename T>
-  void printInLpSolveFormat(const Matrix<T> &matrix,
-                            const std::vector<T> &objective,
-                            const std::vector<T> &rightHandSides) {
+  void printInLpSolveFormat(
+      const Matrix<T> &matrix, const std::vector<T> &objective,
+      const std::vector<T> &rightHandSides,
+      const std::vector<std::optional<T>> &variableLowerBounds,
+      const std::vector<std::optional<T>> &variableUpperBounds) {
     _oss << "min: ";
     for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
       if (objective[varIdx] != 0.0)
@@ -198,6 +227,18 @@ struct LPPrinter {
       }
       _oss << ' ' << rowTypeToStr(_rowInfos[rowIdx]._type);
       _oss << fmt::format(" {:+f}", rightHandSides[rowIdx]) << ";\n";
+    }
+
+    for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
+      if (variableLowerBounds[varIdx].has_value())
+        _oss << fmt::format(" {} >= {:+f}", _variableInfos[varIdx]._label,
+                            variableLowerBounds[varIdx].value())
+             << ";\n";
+
+      if (variableUpperBounds[varIdx].has_value())
+        _oss << fmt::format(" {} <= {:+f}", _variableInfos[varIdx]._label,
+                            variableUpperBounds[varIdx].value())
+             << ";\n";
     }
   }
 

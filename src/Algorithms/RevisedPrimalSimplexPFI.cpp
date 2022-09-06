@@ -38,17 +38,17 @@ void RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::run() {
     _simplexTableau.calculateSolution();
     spdlog::info("{}\n", _simplexTableau.toStringShort());
 
-//    if (iterCount < 10)
-//      spdlog::info("{}\n", _simplexTableau.toString());
+    //    if (iterCount < 10)
+    //      spdlog::info("{}\n", _simplexTableau.toString());
 
-//    reinversion();
-//    _simplexTableau.calculateCurrentObjectiveValue();
-//    _simplexTableau.calculateSolution();
+    //    reinversion();
+    //    _simplexTableau.calculateCurrentObjectiveValue();
+    //    _simplexTableau.calculateSolution();
 
-//    if (iterCount < 10)
-//      spdlog::info("{}\n", _simplexTableau.toString());
+    //    if (iterCount < 10)
+    //      spdlog::info("{}\n", _simplexTableau.toString());
   }
-//  spdlog::info("{}\n", _simplexTableau.toString());
+  //  spdlog::info("{}\n", _simplexTableau.toString());
   spdlog::info("{}\n", _simplexTableau.toStringShort());
   spdlog::info("SIMPLEX ENDED");
 }
@@ -301,19 +301,19 @@ void RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::reinversion() {
   const auto basisSize = _simplexTableau._rowInfos.size();
   std::vector<int> columnIndexesMapping(basisSize);
   std::vector<std::vector<T>> basisColumns(basisSize);
-  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx)
-  {
-    const auto basicColumnIdx = _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
+  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
+    const auto basicColumnIdx =
+        _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
     columnIndexesMapping[rowIdx] = basicColumnIdx;
     basisColumns[rowIdx].resize(basisSize);
     for (int j = 0; j < basisSize; ++j)
-      basisColumns[rowIdx][j] = _simplexTableau._constraintMatrix[j][basicColumnIdx];
+      basisColumns[rowIdx][j] =
+          _simplexTableau._constraintMatrix[j][basicColumnIdx];
   }
 
   std::vector<std::vector<T>> newBasisMatrixInverse(basisSize);
   std::vector<T> newRHS = _simplexTableau._initialProgram.getRightHandSides();
-  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx)
-  {
+  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
     newBasisMatrixInverse[rowIdx].resize(basisSize);
     newBasisMatrixInverse[rowIdx][rowIdx] = 1.0;
   }
@@ -322,35 +322,34 @@ void RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::reinversion() {
 
   const auto findPivotColumn = [&](const int rowIdx) -> std::optional<int> {
     for (int colIdx = 0; colIdx < basisSize; ++colIdx)
-      if (isUnusedColumn[colIdx] && !ComparisonTraitsT::equal(basisColumns[colIdx][rowIdx], 0.0))
+      if (isUnusedColumn[colIdx] &&
+          !ComparisonTraitsT::equal(basisColumns[colIdx][rowIdx], 0.0))
         return colIdx;
 
     return std::nullopt;
   };
 
-  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx)
-  {
+  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
     const auto pivotColumnIdx = findPivotColumn(rowIdx);
-    if (!pivotColumnIdx.has_value())
-    {
+    if (!pivotColumnIdx.has_value()) {
       spdlog::warn("Basis matrix reinversion failed for row {}!", rowIdx);
       return;
     }
 
     const T pivotingTermInverse{1.0 / basisColumns[*pivotColumnIdx][rowIdx]};
-//    spdlog::debug("REINVERSION PIVOT {}", pivotingTermInverse);
-    for (int j = 0; j < basisSize; ++j)
-    {
+    //    spdlog::debug("REINVERSION PIVOT {}", pivotingTermInverse);
+    for (int j = 0; j < basisSize; ++j) {
       if (j == rowIdx)
         continue; // !!
 
       if (ComparisonTraitsT::equal(basisColumns[*pivotColumnIdx][j], 0.0))
         continue;
 
-      const auto commonCoeff = pivotingTermInverse * basisColumns[*pivotColumnIdx][j];
+      const auto commonCoeff =
+          pivotingTermInverse * basisColumns[*pivotColumnIdx][j];
       for (int k = 0; k < basisSize; ++k)
-        newBasisMatrixInverse[j][k] -= commonCoeff
-            * newBasisMatrixInverse[rowIdx][k];
+        newBasisMatrixInverse[j][k] -=
+            commonCoeff * newBasisMatrixInverse[rowIdx][k];
 
       newRHS[j] -= commonCoeff * newRHS[rowIdx];
     }
@@ -361,21 +360,21 @@ void RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::reinversion() {
     newRHS[rowIdx] *= pivotingTermInverse;
 
     isUnusedColumn[*pivotColumnIdx] = false;
-    _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[rowIdx] = columnIndexesMapping[*pivotColumnIdx];
+    _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[rowIdx] =
+        columnIndexesMapping[*pivotColumnIdx];
 
     for (int colIdx = 0; colIdx < basisSize; ++colIdx)
-      if (isUnusedColumn[colIdx])
-      {
+      if (isUnusedColumn[colIdx]) {
         if (ComparisonTraitsT::equal(basisColumns[colIdx][rowIdx], 0.0))
           continue;
 
-        for (int k = 0; k < basisSize; ++k)
-        {
+        for (int k = 0; k < basisSize; ++k) {
           if (k == rowIdx)
             continue;
 
-          basisColumns[colIdx][k] -= pivotingTermInverse * basisColumns[*pivotColumnIdx][k] *
-            basisColumns[colIdx][rowIdx];
+          basisColumns[colIdx][k] -= pivotingTermInverse *
+                                     basisColumns[*pivotColumnIdx][k] *
+                                     basisColumns[colIdx][rowIdx];
         }
 
         basisColumns[colIdx][rowIdx] *= pivotingTermInverse;
@@ -386,12 +385,12 @@ void RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::reinversion() {
   _simplexTableau._rightHandSides = newRHS;
   spdlog::info("REINVERSION SUCCESS");
 }
-//template <typename T, typename ComparisonTraitsT>
-//void RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::calculateRHS() {
-//  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx)
-//  {
+// template <typename T, typename ComparisonTraitsT>
+// void RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::calculateRHS() {
+//   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx)
+//   {
 //
-//  }
-//}
+//   }
+// }
 
 template class RevisedPrimalSimplexPFI<double>;

@@ -226,7 +226,7 @@ void PrimalSimplex<T, ComparisonTraitsT>::removeArtificialVariablesFromBasis() {
 }
 template <typename T, typename ComparisonTraitsT>
 void PrimalSimplex<T, ComparisonTraitsT>::removeRow(const int rowIdx) {
-  auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset] =
+  auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset, _1, _2] =
       _simplexTableau._simplexBasisData;
   isBasicColumnIndexBitset[rowToBasisColumnIdxMap[rowIdx]] = false;
   for (int i = rowIdx; i < _simplexTableau._rowInfos.size() - 1; ++i)

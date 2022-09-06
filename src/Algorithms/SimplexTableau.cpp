@@ -8,10 +8,14 @@ template <typename T>
 SimplexTableau<T>::SimplexTableau(const LinearProgram<T> &linearProgram)
     : _initialProgram(linearProgram),
       _variableInfos(linearProgram._variableInfos),
+      _variableLowerBounds(linearProgram._variableLowerBounds),
+      _variableUpperBounds(linearProgram._variableUpperBounds),
       _rowInfos(linearProgram._rowInfos),
       _constraintMatrix(linearProgram._constraintMatrix),
       _rightHandSides(linearProgram._rightHandSides),
-      _objectiveRow((addArtificialVariables(), artificialObjectiveRow())) {
+      _initialRightHandSides(linearProgram._rightHandSides),
+      _objectiveRow((addArtificialVariables(), artificialObjectiveRow())),
+      _result(LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
   init();
 }
 
@@ -29,6 +33,8 @@ template <typename T> void SimplexTableau<T>::addArtificialVariables() {
     const auto newVariableIdx = variableCountAtTheStart + rowIdx;
     _constraintMatrix[rowIdx][newVariableIdx] = 1;
     const auto newArtificialLabelStr = newArtificialLabel(newVariableIdx);
+    _variableLowerBounds.push_back(0.0);
+    _variableUpperBounds.push_back(std::nullopt);
     _variableInfos.push_back(VariableInfo{
         newArtificialLabelStr, VariableType::CONTINUOUS, false, true});
   }
@@ -62,12 +68,15 @@ SimplexTableau<T>::createBasisFromArtificialVars() const {
 
   SimplexBasisData result;
   result._isBasicColumnIndexBitset.resize(_variableInfos.size());
+  result._isColumnAtLowerBoundBitset.resize(_variableInfos.size(), true);
+  result._isColumnAtUpperBoundBitset.resize(_variableInfos.size(), false);
   result._rowToBasisColumnIdxMap.resize(_variableInfos.size());
 
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     const auto basicColumnIdx = *firstArtificialIdx + rowIdx;
     result._rowToBasisColumnIdxMap[rowIdx] = basicColumnIdx;
     result._isBasicColumnIndexBitset[basicColumnIdx] = true;
+    result._isColumnAtLowerBoundBitset[basicColumnIdx] = false;
   }
 
   return result;
@@ -93,6 +102,7 @@ template <typename T> std::string SimplexTableau<T>::toString() const {
   lpPrinter.printReducedCostWithObjectiveValue(_reducedCosts, _objectiveValue);
   lpPrinter.printMatrixWithRHS(_simplexBasisData._rowToBasisColumnIdxMap,
                                _constraintMatrix, _rightHandSides);
+  lpPrinter.printVariableBounds(_variableLowerBounds, _variableUpperBounds);
   lpPrinter.printLineBreak();
   lpPrinter.printInverseBasis(_basisMatrixInverse);
   lpPrinter.printLineBreak();
@@ -105,7 +115,14 @@ template <typename T> std::string SimplexTableau<T>::toString() const {
 }
 template <typename T> std::string SimplexTableau<T>::toStringShort() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
-//  lpPrinter.printSolution(_x);
+  //  lpPrinter.printSolution(_x);
+  lpPrinter.printCurrentObjectiveValue(_result, _objectiveValue);
+  return lpPrinter.toString();
+}
+template <typename T>
+std::string SimplexTableau<T>::toStringShortWithSolution() const {
+  LPPrinter lpPrinter(_variableInfos, _rowInfos);
+  lpPrinter.printSolution(_x);
   lpPrinter.printCurrentObjectiveValue(_result, _objectiveValue);
   return lpPrinter.toString();
 }
@@ -113,7 +130,8 @@ template <typename T>
 std::string SimplexTableau<T>::toStringLpSolveFormat() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printInLpSolveFormat(_constraintMatrix, _objectiveRow,
-                                 _rightHandSides);
+                                 _rightHandSides, _variableLowerBounds,
+                                 _variableUpperBounds);
   return lpPrinter.toString();
 }
 
@@ -161,7 +179,8 @@ void SimplexTableau<T>::calculateReducedCostsBasedOnDual() {
 template <typename T>
 void SimplexTableau<T>::updateBasisData(const PivotData<T> &pivotData) {
   const auto &[leavingRowIdx, enteringColumnIdx, _] = pivotData;
-  auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset] = _simplexBasisData;
+  auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset, _1, _2] =
+      _simplexBasisData;
   spdlog::debug("LEAVING VARIABLE ROW IDX {} COLUMN IDX", leavingRowIdx,
                 rowToBasisColumnIdxMap[leavingRowIdx]);
 

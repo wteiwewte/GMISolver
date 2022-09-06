@@ -25,6 +25,20 @@ std::vector<std::string> splitString(const std::string &str) {
 }
 
 double convert(const std::string &str) { return std::stod(str); }
+
+template <typename T>
+bool checkIfAllBoundAreSpeficied(
+    const std::vector<VariableInfo> &variableInfos,
+    const std::vector<std::optional<T>> &variableLowerBounds,
+    const std::vector<std::optional<T>> &variableUpperBounds) {
+  return (variableLowerBounds.size() == variableInfos.size()) &&
+         std::all_of(
+             variableLowerBounds.begin(), variableLowerBounds.end(),
+             [](const std::optional<T> &lb) { return lb.has_value(); }) &&
+         (variableUpperBounds.size() == variableInfos.size()) &&
+         std::all_of(variableUpperBounds.begin(), variableUpperBounds.end(),
+                     [](const std::optional<T> &up) { return up.has_value(); });
+}
 } // namespace
 
 template <typename T>
@@ -229,26 +243,28 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
       const auto variableIdx = foundVariableIt->second;
       const auto &coefficientValueStr = lineParts[3];
 
-      linearProgram._constraintMatrix.emplace_back(
-          linearProgram._variableInfos.size())[variableIdx] = 1;
+      linearProgram._variableLowerBounds.resize(
+          linearProgram._variableInfos.size());
+      linearProgram._variableUpperBounds.resize(
+          linearProgram._variableInfos.size());
       switch (*readBoundType) {
       // TODO: optimize handling bounds
       case BoundType::LOWER_BOUND: {
-        linearProgram._rightHandSides.push_back(convert(coefficientValueStr));
-        linearProgram._rowInfos.push_back(
-            RowInfo{{}, RowType::GREATER_THAN_OR_EQUAL});
+        linearProgram._variableLowerBounds[variableIdx] =
+            convert(coefficientValueStr);
         break;
       }
       case BoundType::UPPER_BOUND: {
-        linearProgram._rightHandSides.push_back(convert(coefficientValueStr));
-        linearProgram._rowInfos.push_back(
-            RowInfo{{}, RowType::LESS_THAN_OR_EQUAL});
+        if (!linearProgram._variableLowerBounds[variableIdx].has_value())
+          linearProgram._variableLowerBounds[variableIdx] = 0.0;
+
+        linearProgram._variableUpperBounds[variableIdx] =
+            convert(coefficientValueStr);
         break;
       }
       case BoundType::BINARY_VARIABLE: {
-        linearProgram._rightHandSides.push_back(1);
-        linearProgram._rowInfos.push_back(
-            RowInfo{{}, RowType::LESS_THAN_OR_EQUAL});
+        linearProgram._variableLowerBounds[variableIdx] = 0.0;
+        linearProgram._variableUpperBounds[variableIdx] = 0.1;
         linearProgram._variableInfos[variableIdx]._type = VariableType::INTEGER;
         break;
       }
@@ -287,6 +303,13 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
 
   if (linearProgram._objectiveInfo._type != RowType::OBJECTIVE) {
     spdlog::warn("Could not find objective row");
+    return std::nullopt;
+  }
+
+  if (!checkIfAllBoundAreSpeficied(linearProgram._variableInfos,
+                                   linearProgram._variableLowerBounds,
+                                   linearProgram._variableUpperBounds)) {
+    spdlog::warn("Every variable must have defined bounds");
     return std::nullopt;
   }
 

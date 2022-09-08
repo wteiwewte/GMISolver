@@ -5,7 +5,8 @@
 #include "src/Util/LPPrinter.h"
 
 template <typename T>
-SimplexTableau<T>::SimplexTableau(const LinearProgram<T> &linearProgram)
+SimplexTableau<T>::SimplexTableau(const LinearProgram<T> &linearProgram,
+                                  const bool isPrimalSimplex)
     : _initialProgram(linearProgram),
       _variableInfos(linearProgram._variableInfos),
       _variableLowerBounds(linearProgram._variableLowerBounds),
@@ -14,9 +15,11 @@ SimplexTableau<T>::SimplexTableau(const LinearProgram<T> &linearProgram)
       _constraintMatrix(linearProgram._constraintMatrix),
       _rightHandSides(linearProgram._rightHandSides),
       _initialRightHandSides(linearProgram._rightHandSides),
-      _objectiveRow((addArtificialVariables(), artificialObjectiveRow())),
+      _objectiveRow((addArtificialVariables(),
+                     isPrimalSimplex ? initialPrimalSimplexObjective()
+                                     : initialDualSimplexObjective())),
       _result(LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
-  init();
+  init(isPrimalSimplex);
 }
 
 template <typename T> void SimplexTableau<T>::addArtificialVariables() {
@@ -41,7 +44,7 @@ template <typename T> void SimplexTableau<T>::addArtificialVariables() {
 }
 
 template <typename T>
-std::vector<T> SimplexTableau<T>::artificialObjectiveRow() const {
+std::vector<T> SimplexTableau<T>::initialPrimalSimplexObjective() const {
   std::vector<T> result(_constraintMatrix.front().size());
 
   for (int variableIdx = 0; variableIdx < _variableInfos.size(); ++variableIdx)
@@ -52,8 +55,16 @@ std::vector<T> SimplexTableau<T>::artificialObjectiveRow() const {
 }
 
 template <typename T>
+std::vector<T> SimplexTableau<T>::initialDualSimplexObjective() const {
+  std::vector<T> result = _initialProgram.getObjective();
+  result.resize(_variableInfos.size());
+  return result;
+}
+
+template <typename T>
 std::optional<SimplexBasisData>
-SimplexTableau<T>::createBasisFromArtificialVars() const {
+SimplexTableau<T>::createBasisFromArtificialVars(
+    const bool isPrimalSimplex) const {
   std::optional<int> firstArtificialIdx;
   for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx)
     if (_variableInfos[varIdx]._isArtificial) {
@@ -82,14 +93,16 @@ SimplexTableau<T>::createBasisFromArtificialVars() const {
   return result;
 }
 
-template <typename T> void SimplexTableau<T>::init() {
-  if (auto simplexBasisData = createBasisFromArtificialVars();
+template <typename T> void SimplexTableau<T>::init(const bool isPrimalSimplex) {
+  if (auto simplexBasisData = createBasisFromArtificialVars(isPrimalSimplex);
       simplexBasisData.has_value())
     _simplexBasisData = std::move(*simplexBasisData);
 
   initDual();
   initBasisMatrixInverse();
   calculateReducedCostsBasedOnDual();
+  if (!isPrimalSimplex)
+    initBoundsForDualSimplex();
   calculateCurrentObjectiveValue();
   calculateSolution();
 }
@@ -187,6 +200,18 @@ void SimplexTableau<T>::updateBasisData(const PivotData<T> &pivotData) {
   isBasicColumnIndexBitset[enteringColumnIdx] = true;
   isBasicColumnIndexBitset[rowToBasisColumnIdxMap[leavingRowIdx]] = false;
   rowToBasisColumnIdxMap[leavingRowIdx] = enteringColumnIdx;
+}
+template <typename T> void SimplexTableau<T>::initBoundsForDualSimplex() {
+  for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
+    if (_reducedCosts[varIdx] < 0.0) {
+      _simplexBasisData._isColumnAtLowerBoundBitset[varIdx] = false;
+      _simplexBasisData._isColumnAtUpperBoundBitset[varIdx] = true;
+    }
+
+    if (_variableInfos[varIdx]._isArtificial) {
+      _variableUpperBounds[varIdx] = 0.0;
+    }
+  }
 }
 
 template class SimplexTableau<double>;

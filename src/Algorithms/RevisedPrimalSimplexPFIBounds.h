@@ -8,13 +8,6 @@
 
 template <typename T> class SimplexTableau;
 
-template <typename T> struct PivotRowData {
-  std::optional<int> _pivotRowIdx;
-  std::optional<T> _minRatio;
-  bool _departingIdxBecomesLowerBound{false};
-  bool _noBasisChangeNeeded{false};
-};
-
 template <typename T,
           typename ComparisonTraitsT = ApproximateComparisonTraits<T>>
 class RevisedPrimalSimplexPFIBounds {

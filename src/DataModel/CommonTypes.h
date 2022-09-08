@@ -44,6 +44,13 @@ template <typename T> struct PivotData {
   const T _pivotingTermInverse;
 };
 
+template <typename T> struct PivotRowData {
+  std::optional<int> _pivotRowIdx;
+  std::optional<T> _minRatio;
+  bool _departingIdxBecomesLowerBound{false};
+  bool _noBasisChangeNeeded{false};
+};
+
 template <typename T> using Matrix = std::vector<std::vector<T>>;
 
 #endif // GMISOLVER_COMMONTYPES_H

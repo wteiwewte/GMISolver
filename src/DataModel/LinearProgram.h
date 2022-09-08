@@ -150,23 +150,19 @@ template <typename T> void LinearProgram<T>::makeRightHandSidesNonNegative() {
   }
 }
 template <typename T> void LinearProgram<T>::addBoundsToMatrix() {
-  for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx)
-  {
-    if (const auto lowerBound = _variableLowerBounds[varIdx]; lowerBound.has_value())
-    {
-        _constraintMatrix.emplace_back(_variableInfos.size())[varIdx] = 1;
-        _rightHandSides.push_back(*lowerBound);
-        _rowInfos.push_back(
-            RowInfo{{}, RowType::GREATER_THAN_OR_EQUAL});
+  for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
+    if (const auto lowerBound = _variableLowerBounds[varIdx];
+        lowerBound.has_value()) {
+      _constraintMatrix.emplace_back(_variableInfos.size())[varIdx] = 1;
+      _rightHandSides.push_back(*lowerBound);
+      _rowInfos.push_back(RowInfo{{}, RowType::GREATER_THAN_OR_EQUAL});
     }
 
     if (const auto upperBound = _variableUpperBounds[varIdx];
-        upperBound.has_value())
-    {
-        _constraintMatrix.emplace_back(_variableInfos.size())[varIdx] = 1;
-        _rightHandSides.push_back(*upperBound);
-        _rowInfos.push_back(
-            RowInfo{{}, RowType::LESS_THAN_OR_EQUAL});
+        upperBound.has_value()) {
+      _constraintMatrix.emplace_back(_variableInfos.size())[varIdx] = 1;
+      _rightHandSides.push_back(*upperBound);
+      _rowInfos.push_back(RowInfo{{}, RowType::LESS_THAN_OR_EQUAL});
     }
   }
 }

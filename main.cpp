@@ -1,6 +1,7 @@
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Algorithms/PrimalSimplex.h"
 #include "src/Algorithms/RevisedPrimalSimplexPFI.h"
+#include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "src/Util/MpsReader.h"
 
@@ -19,7 +20,7 @@
 #include "spdlog/sinks/ostream_sink.h"
 #include <fmt/format.h>
 
-//ABSL_FLAG(std::string, model_file, "/Users/janmelech/Downloads/bm23.mps", "File with lp model`");
+//ABSL_FLAG(std::string, model_file, "/Users/janmelech/Desktop/magisterka/dane testowe/bm23.mps", "File with lp model`");
 
 template <typename T>
 void runPrimalSimplex(LinearProgram<T>& linearProgram)
@@ -35,7 +36,7 @@ void runPrimalSimplex(LinearProgram<T>& linearProgram)
   //    spdlog::info(linearProgram->toString());
   //    spdlog::info(linearProgram->toStringLpSolveFormat());
 
-  SimplexTableau<T> simplexTableau(linearProgram);
+  SimplexTableau<T> simplexTableau(linearProgram, true);
   spdlog::info("Simplex tableau with artificial variables cost");
   //    spdlog::info(simplexTableau.toString());
   //    spdlog::info(simplexTableau.toStringLpSolveFormat());
@@ -61,7 +62,7 @@ void runPrimalSimplexWithImplicitBounds(LinearProgram<T>& linearProgram)
   //    spdlog::info(linearProgram->toString());
   //    spdlog::info(linearProgram->toStringLpSolveFormat());
 
-  SimplexTableau<T> simplexTableau(linearProgram);
+  SimplexTableau<T> simplexTableau(linearProgram, true);
   spdlog::info("Simplex tableau with artificial variables cost");
   //    spdlog::info(simplexTableau.toString());
   //    spdlog::info(simplexTableau.toStringLpSolveFormat());
@@ -77,27 +78,27 @@ void runPrimalSimplexWithImplicitBounds(LinearProgram<T>& linearProgram)
 template <typename T>
 void runDualSimplexWithImplicitBounds(LinearProgram<T>& linearProgram)
 {
-//  linearProgram.convertToStandardForm();
+  linearProgram.convertToStandardForm();
 //  spdlog::info("LP in standard form");
 //  //    spdlog::info(linearProgram->toString());
-//  //    spdlog::info(linearProgram->toStringLpSolveFormat());
+//  spdlog::info(linearProgram.toStringLpSolveFormat());
 //
 //  linearProgram.makeRightHandSidesNonNegative();
 //  spdlog::info("LP in standard form with non-negative RHS");
 //  //    spdlog::info(linearProgram->toString());
 //  //    spdlog::info(linearProgram->toStringLpSolveFormat());
 //
-//  SimplexTableau<T> simplexTableau(linearProgram);
+  SimplexTableau<T> simplexTableau(linearProgram, false);
 //  spdlog::info("Simplex tableau with artificial variables cost");
 //  //    spdlog::info(simplexTableau.toString());
-//  //    spdlog::info(simplexTableau.toStringLpSolveFormat());
+//  spdlog::info(simplexTableau.toStringLpSolveFormat());
 //
-//  RevisedPrimalSimplexPFIBounds<T>(simplexTableau).runPhaseOne();
 //  //    RevisedPrimalSimplexPFI<T>(simplexTableau).runPhaseOne();
 //  //    PrimalSimplex<T>(simplexTableau).runPhaseOne();
 //  spdlog::info("Simplex tableau after primal simplex");
 //  //    spdlog::info(simplexTableau.toString());
-//  spdlog::info(simplexTableau.toStringShortWithSolution());
+  RevisedDualSimplexPFIBounds<T>(simplexTableau).run();
+  spdlog::info(simplexTableau.toStringShortWithSolution());
 }
 
 template <typename T>
@@ -114,8 +115,9 @@ void readLPModelAndProcess(const std::string& modelFileMps)
     //    spdlog::info(linearProgram->toString());
     //    spdlog::info(linearProgram->toStringLpSolveFormat());
 
-    runPrimalSimplex(*linearProgram);
+//    runPrimalSimplex(*linearProgram);
 //    runPrimalSimplexWithImplicitBounds(*linearProgram);
+    runDualSimplexWithImplicitBounds(*linearProgram);
 }
 
 void initFileLogger()
@@ -135,18 +137,16 @@ void initFileLogger()
 int main(int argc, char** argv) {
     initFileLogger();
     std::this_thread::sleep_for (std::chrono::seconds(1));
-    readLPModelAndProcess<double>("/Users/janmelech/Downloads/bm23.mps");
-//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/air01");
-//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/air02");
-//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/air03");
-//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/air04");
-//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/air05");
-//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/diamond");
-//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/bell5");
-//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/fixnet4");
-//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/sentoy");
-//    readLPModelAndProcess<double>("/Users/janmelech/Downloads/miplib2/miplib/mod010");
-//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/miplib2017-testscript-v1.0.3/instances/miplib2017_ungzipped/air05.mps");
-//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/miplib2017-testscript-v1.0.3/instances/miplib2017_ungzipped/tr12-30.mps");
 //    readLPModelAndProcess<double>("/Users/janmelech/Desktop/test_1.mps");
+    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/bm23");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air01");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air02");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air03");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air04");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air05");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/diamond");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/bell5");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/fixnet4");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/sentoy");
+//    readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/mod010");
 }

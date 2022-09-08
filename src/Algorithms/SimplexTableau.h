@@ -9,12 +9,14 @@
 
 template <typename T> class SimplexTableau {
 public:
-  SimplexTableau(const LinearProgram<T> &linearProgram);
+  SimplexTableau(const LinearProgram<T> &linearProgram,
+                 const bool isPrimalSimplex);
 
   void addArtificialVariables();
-  void init();
+  void init(const bool isPrimalSimplex);
 
-  std::vector<T> artificialObjectiveRow() const;
+  std::vector<T> initialPrimalSimplexObjective() const;
+  std::vector<T> initialDualSimplexObjective() const;
   void calculateCurrentObjectiveValue();
   void calculateSolution();
 
@@ -35,11 +37,15 @@ private:
   friend class RevisedPrimalSimplexPFI;
   template <typename U, typename ComparisonTraitsT>
   friend class RevisedPrimalSimplexPFIBounds;
+  template <typename U, typename ComparisonTraitsT>
+  friend class RevisedDualSimplexPFIBounds;
 
-  std::optional<SimplexBasisData> createBasisFromArtificialVars() const;
+  std::optional<SimplexBasisData>
+  createBasisFromArtificialVars(const bool isPrimalSimplex) const;
 
   void initBasisMatrixInverse();
   void initDual();
+  void initBoundsForDualSimplex();
 
   void calculateReducedCostsBasedOnDual();
   void updateBasisData(const PivotData<T> &pivotData);

@@ -13,12 +13,12 @@ RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::RevisedDualSimplexPFIBounds(
 
 template <typename T, typename ComparisonTraitsT>
 void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::run() {
-  spdlog::info("BASIS SIZE {}", _simplexTableau._rowInfos.size());
-  //  spdlog::info("{}\n", _simplexTableau.toString());
+  SPDLOG_INFO("BASIS SIZE {}", _simplexTableau._rowInfos.size());
+  SPDLOG_TRACE("{}\n", _simplexTableau.toString());
 
-  int iterCount = 1;
+  [[maybe_unused]] int iterCount = 1;
   while (true) {
-    spdlog::info("ITERATION {}", iterCount++);
+    SPDLOG_DEBUG("ITERATION {}", iterCount++);
     const bool iterResult = runOneIteration();
     if (iterResult)
       break;
@@ -26,11 +26,10 @@ void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::run() {
     calculateCurrentObjectiveValue();
     calculateSolution();
 
-    //    spdlog::info("{}\n", _simplexTableau.toString());
-    spdlog::info("{}\n", _simplexTableau.toStringShort());
+    SPDLOG_TRACE("{}\n", _simplexTableau.toString());
+    SPDLOG_DEBUG("{}\n", _simplexTableau.toStringShort());
   }
-  spdlog::info("{}\n", _simplexTableau.toStringShort());
-  spdlog::info("SIMPLEX ENDED");
+  SPDLOG_INFO("DUAL SIMPLEX ENDED");
 }
 
 template <typename T, typename ComparisonTraitsT>
@@ -43,8 +42,8 @@ bool RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::runOneIteration() {
     return true;
   }
 
-  spdlog::debug("PIVOT ROW IDX {} RHS VALUE {}", *pivotRowIdx,
-                _simplexTableau._rightHandSides[*pivotRowIdx]);
+  SPDLOG_DEBUG("PIVOT ROW IDX {} RHS VALUE {}", *pivotRowIdx,
+               _simplexTableau._rightHandSides[*pivotRowIdx]);
   const std::vector<T> pivotRow = computePivotRow(*pivotRowIdx);
   const auto basicColumnIdx =
       _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[*pivotRowIdx];
@@ -235,8 +234,8 @@ void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::pivot(
   auto &isColumnAtUpperBoundBitset =
       _simplexTableau._simplexBasisData._isColumnAtUpperBoundBitset;
 
-  spdlog::debug("PIVOT - ENTERING COLUMN IDX {}, ROW IDX {}", enteringColumnIdx,
-                pivotRowIdx);
+  SPDLOG_DEBUG("PIVOT - ENTERING COLUMN IDX {}, ROW IDX {}", enteringColumnIdx,
+               pivotRowIdx);
   const auto leavingBasicColumnIdx =
       _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[pivotRowIdx];
   const auto leavingColumn = computeEnteringColumn(leavingBasicColumnIdx);
@@ -274,7 +273,7 @@ void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::executePivot(
   const PivotData<T> pivotData{rowIdx, enteringColumnIdx,
                                1.0 / enteringColumn[rowIdx]};
   updateReducedCosts(pivotData, computePivotRow(rowIdx));
-  spdlog::info("PIVOT VALUE {},  INV {}", enteringColumn[rowIdx],
+  SPDLOG_DEBUG("PIVOT VALUE {},  INV {}", enteringColumn[rowIdx],
                1.0 / enteringColumn[rowIdx]);
   updateInverseMatrixWithRHS(pivotData, enteringColumn);
   //    calculateDual();
@@ -442,7 +441,7 @@ void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::
 //    T sum{};
 //
 //    for (int k = 0; k < _simplexTableau._rowInfos.size(); ++k) {
-//      spdlog::info("{} {} {}", k,
+//      SPDLOG_INFO("{} {} {}", k,
 //                   _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[k],
 //                   _simplexTableau._objectiveRow.size());
 //      sum += _simplexTableau._objectiveRow[_simplexTableau._simplexBasisData
@@ -591,12 +590,12 @@ void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::initRHS() {
 //   for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
 //     const auto pivotColumnIdx = findPivotColumn(rowIdx);
 //     if (!pivotColumnIdx.has_value()) {
-//       spdlog::warn("Basis matrix reinversion failed for row {}!", rowIdx);
+//       SPDLOG_WARN("Basis matrix reinversion failed for row {}!", rowIdx);
 //       return;
 //     }
 //
 //     const T pivotingTermInverse{1.0 / basisColumns[*pivotColumnIdx][rowIdx]};
-//     //    spdlog::debug("REINVERSION PIVOT {}", pivotingTermInverse);
+//     //    SPDLOG_DEBUG("REINVERSION PIVOT {}", pivotingTermInverse);
 //     for (int j = 0; j < basisSize; ++j) {
 //       if (j == rowIdx)
 //         continue; // !!
@@ -643,7 +642,7 @@ void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::initRHS() {
 //   _simplexTableau._basisMatrixInverse = newBasisMatrixInverse;
 //   //  _simplexTableau._rightHandSides = newRHS;
 //   calculateRHS();
-//   spdlog::info("REINVERSION SUCCESS");
+//   SPDLOG_INFO("REINVERSION SUCCESS");
 // }
 
 template class RevisedDualSimplexPFIBounds<double>;

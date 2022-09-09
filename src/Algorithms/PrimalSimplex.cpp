@@ -14,9 +14,8 @@ void PrimalSimplex<T, ComparisonTraitsT>::runPhaseOne() {
   removeArtificialVariablesFromProgram();
 
   if (ComparisonTraitsT::greater(_simplexTableau._objectiveValue, 0.0)) {
-    spdlog::info(
-        "Program with artificial variable has optimum greater than 0 - "
-        "initial program is infeasible");
+    SPDLOG_INFO("Program with artificial variable has optimum greater than 0 - "
+                "initial program is infeasible");
     return;
   }
 
@@ -28,14 +27,14 @@ template <typename T, typename ComparisonTraitsT>
 void PrimalSimplex<T, ComparisonTraitsT>::run() {
   int iterCount = 1;
   while (true) {
-    spdlog::info("ITERATION {}", iterCount++);
+    SPDLOG_INFO("ITERATION {}", iterCount++);
     const bool iterResult = runOneIteration();
     if (iterResult)
       break;
 
     _simplexTableau.calculateCurrentObjectiveValue();
     _simplexTableau.calculateSolution();
-    //      spdlog::info("{}\n", _simplexTableau.toStringShort());
+    //      SPDLOG_INFO("{}\n", _simplexTableau.toStringShort());
   }
 }
 template <typename T, typename ComparisonTraitsT>
@@ -51,8 +50,8 @@ bool PrimalSimplex<T, ComparisonTraitsT>::runOneIteration() {
         ComparisonTraitsT::less(_simplexTableau._reducedCosts[columnIdx],
                                 0.0)) {
       enteringColumnIdx = columnIdx;
-      spdlog::debug("ENTERING COLUMN IDX {} REDUCED COST {}", columnIdx,
-                    _simplexTableau._reducedCosts[columnIdx]);
+      SPDLOG_DEBUG("ENTERING COLUMN IDX {} REDUCED COST {}", columnIdx,
+                   _simplexTableau._reducedCosts[columnIdx]);
 
       const std::optional<int> rowIdx = chooseRowIdx(*enteringColumnIdx);
       if (!rowIdx.has_value()) {
@@ -75,11 +74,11 @@ void PrimalSimplex<T, ComparisonTraitsT>::pivot(const int rowIdx,
   const PivotData<T> pivotData{
       rowIdx, enteringColumnIdx,
       1.0 / _simplexTableau._constraintMatrix[rowIdx][enteringColumnIdx]};
-  spdlog::info(
-      "PIVOT COEFF {}, INV {}",
-      _simplexTableau._constraintMatrix[rowIdx][enteringColumnIdx],
-      1.0 / _simplexTableau._constraintMatrix[rowIdx][enteringColumnIdx]);
-  spdlog::info("RHS {}", _simplexTableau._rightHandSides[rowIdx]);
+  SPDLOG_INFO("PIVOT COEFF {}, INV {}",
+              _simplexTableau._constraintMatrix[rowIdx][enteringColumnIdx],
+              1.0 /
+                  _simplexTableau._constraintMatrix[rowIdx][enteringColumnIdx]);
+  SPDLOG_INFO("RHS {}", _simplexTableau._rightHandSides[rowIdx]);
   updateReducedCosts(pivotData);
   updateConstraintMatrixWithRHS(pivotData);
   _simplexTableau.updateBasisData(pivotData);
@@ -170,7 +169,7 @@ PrimalSimplex<T, ComparisonTraitsT>::chooseRowIdx(const int enteringColumnIdx) {
                   _simplexTableau._constraintMatrix[rowIdx][enteringColumnIdx]))
         leavingRowIdx = rowIdx;
 
-  //    spdlog::debug("PIVOT ROW IDX {}"
+  //    SPDLOG_DEBUG("PIVOT ROW IDX {}"
 
   return leavingRowIdx;
 }
@@ -202,7 +201,7 @@ void PrimalSimplex<T, ComparisonTraitsT>::removeArtificialVariablesFromBasis() {
     if (!_simplexTableau._variableInfos[basicVarIdx]._isArtificial)
       continue;
 
-    spdlog::info("FOUND BASIC ARTIFICIAL COLUMN IDX {}", basicVarIdx);
+    SPDLOG_INFO("FOUND BASIC ARTIFICIAL COLUMN IDX {}", basicVarIdx);
 
     std::optional<int> nonZeroEntryColumnIndex;
     for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j) {
@@ -218,7 +217,7 @@ void PrimalSimplex<T, ComparisonTraitsT>::removeArtificialVariablesFromBasis() {
     }
 
     if (!nonZeroEntryColumnIndex.has_value()) {
-      spdlog::warn("Redundant constraints in lp formulation!");
+      SPDLOG_WARN("Redundant constraints in lp formulation!");
       removeRow(rowIdx);
     } else
       pivot(rowIdx, *nonZeroEntryColumnIndex);

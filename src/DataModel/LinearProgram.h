@@ -82,7 +82,6 @@ std::string LinearProgram<T>::toStringLpSolveFormat() const {
 }
 
 template <typename T> void LinearProgram<T>::convertToStandardForm() {
-
   int nonEqualityRows = 0;
   for (const auto &rowInfo : _rowInfos)
     if (!rowInfo.isEqualityRow())

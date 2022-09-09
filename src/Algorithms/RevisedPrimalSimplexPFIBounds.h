@@ -14,9 +14,10 @@ class RevisedPrimalSimplexPFIBounds {
 public:
   explicit RevisedPrimalSimplexPFIBounds(SimplexTableau<T> &simplexTableau);
 
-  void runPhaseOne();
-
   void run();
+  bool runPhaseOne();
+  void runPhaseTwo();
+  void runImpl();
   bool runOneIteration();
 
 private:

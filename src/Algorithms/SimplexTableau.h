@@ -12,6 +12,9 @@ public:
   SimplexTableau(const LinearProgram<T> &linearProgram,
                  const bool isPrimalSimplex);
 
+  void convertToStandardForm();
+  void makeRightHandSidesNonNegative();
+  void addBoundsToMatrix();
   void addArtificialVariables();
   void init(const bool isPrimalSimplex);
 
@@ -54,11 +57,13 @@ private:
   std::vector<VariableInfo> _variableInfos;
   std::vector<std::optional<T>> _variableLowerBounds;
   std::vector<std::optional<T>> _variableUpperBounds;
+  std::set<std::string> _variableLabelSet;
   std::vector<RowInfo> _rowInfos;
 
   Matrix<T> _constraintMatrix;
   std::vector<T> _rightHandSides;
   std::vector<T> _initialRightHandSides;
+  std::vector<T> _initialObjectiveRow;
   std::vector<T> _objectiveRow;
 
   std::vector<std::vector<T>> _basisMatrixInverse;

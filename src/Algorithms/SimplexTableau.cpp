@@ -11,15 +11,31 @@ SimplexTableau<T>::SimplexTableau(const LinearProgram<T> &linearProgram,
       _variableInfos(linearProgram._variableInfos),
       _variableLowerBounds(linearProgram._variableLowerBounds),
       _variableUpperBounds(linearProgram._variableUpperBounds),
+      _variableLabelSet(linearProgram._variableLabelSet),
       _rowInfos(linearProgram._rowInfos),
       _constraintMatrix(linearProgram._constraintMatrix),
       _rightHandSides(linearProgram._rightHandSides),
       _initialRightHandSides(linearProgram._rightHandSides),
-      _objectiveRow((addArtificialVariables(),
-                     isPrimalSimplex ? initialPrimalSimplexObjective()
-                                     : initialDualSimplexObjective())),
+      _initialObjectiveRow(linearProgram._objective),
       _result(LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+  SPDLOG_INFO("Converting LP to standard form");
+  convertToStandardForm();
+  SPDLOG_TRACE(toString());
+
+  if (isPrimalSimplex) {
+    SPDLOG_INFO("Making RHS non-negative");
+    makeRightHandSidesNonNegative();
+    SPDLOG_TRACE(toString());
+  }
+
+  SPDLOG_INFO("Adding artificial variables");
+  addArtificialVariables();
+  _objectiveRow = isPrimalSimplex ? initialPrimalSimplexObjective()
+                                  : initialDualSimplexObjective();
   init(isPrimalSimplex);
+  SPDLOG_TRACE("Simplex tableau with artificial variables");
+  SPDLOG_TRACE(simplexTableau.toString());
+  SPDLOG_TRACE(simplexTableau.toStringLpSolveFormat());
 }
 
 template <typename T> void SimplexTableau<T>::addArtificialVariables() {
@@ -73,7 +89,7 @@ SimplexTableau<T>::createBasisFromArtificialVars(
     }
 
   if (!firstArtificialIdx.has_value()) {
-    spdlog::warn("No artificial variable found");
+    SPDLOG_WARN("No artificial variable found");
     return std::nullopt;
   }
 
@@ -194,8 +210,8 @@ void SimplexTableau<T>::updateBasisData(const PivotData<T> &pivotData) {
   const auto &[leavingRowIdx, enteringColumnIdx, _] = pivotData;
   auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset, _1, _2] =
       _simplexBasisData;
-  spdlog::debug("LEAVING VARIABLE ROW IDX {} COLUMN IDX", leavingRowIdx,
-                rowToBasisColumnIdxMap[leavingRowIdx]);
+  SPDLOG_DEBUG("LEAVING VARIABLE ROW IDX {} COLUMN IDX", leavingRowIdx,
+               rowToBasisColumnIdxMap[leavingRowIdx]);
 
   isBasicColumnIndexBitset[enteringColumnIdx] = true;
   isBasicColumnIndexBitset[rowToBasisColumnIdxMap[leavingRowIdx]] = false;
@@ -210,6 +226,75 @@ template <typename T> void SimplexTableau<T>::initBoundsForDualSimplex() {
 
     if (_variableInfos[varIdx]._isArtificial) {
       _variableUpperBounds[varIdx] = 0.0;
+    }
+  }
+}
+
+template <typename T> void SimplexTableau<T>::convertToStandardForm() {
+  int nonEqualityRows = 0;
+  for (const auto &rowInfo : _rowInfos)
+    if (!rowInfo.isEqualityRow())
+      ++nonEqualityRows;
+
+  const int variableCountAtTheStart = _variableInfos.size();
+  const int newVariableCount = variableCountAtTheStart + nonEqualityRows;
+  int newVariableIdx = variableCountAtTheStart;
+
+  const auto newSlackLabel = [&]() {
+    const std::string firstPattern = "S" + std::to_string(newVariableIdx);
+    return (_variableLabelSet.find(firstPattern) == _variableLabelSet.end())
+               ? firstPattern
+               : firstPattern + Constants::SLACK_SUFFIX;
+  };
+
+  _initialObjectiveRow.resize(newVariableCount);
+  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
+    _constraintMatrix[rowIdx].resize(newVariableCount);
+    if (_rowInfos[rowIdx].isEqualityRow())
+      continue;
+
+    switch (_rowInfos[rowIdx]._type) {
+    // TODO - check variable type integer or continuous
+    // TODO - fix slack labeling
+    case RowType::LESS_THAN_OR_EQUAL: {
+      _constraintMatrix[rowIdx][newVariableIdx] = 1;
+      break;
+    }
+    case RowType::GREATER_THAN_OR_EQUAL: {
+      _constraintMatrix[rowIdx][newVariableIdx] = -1;
+      break;
+    }
+    default:
+      break;
+    }
+    const auto newSlackLabelStr = newSlackLabel();
+    _variableInfos.push_back(
+        VariableInfo{newSlackLabelStr, VariableType::CONTINUOUS, true});
+    _variableLabelSet.insert(newSlackLabelStr);
+    _variableLowerBounds.push_back(0.0);
+    _variableUpperBounds.push_back(std::nullopt);
+    ++newVariableIdx;
+    _rowInfos[rowIdx]._type = RowType::EQUALITY;
+  }
+}
+
+template <typename T> void SimplexTableau<T>::makeRightHandSidesNonNegative() {
+  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
+    T sum{0.0};
+    for (int variableIdx = 0; variableIdx < _variableInfos.size();
+         ++variableIdx)
+      sum += _variableLowerBounds[variableIdx].value() *
+             _constraintMatrix[rowIdx][variableIdx];
+
+    const T diff = _rightHandSides[rowIdx] - sum;
+
+    if (diff < 0.0) {
+      for (int variableIdx = 0; variableIdx < _variableInfos.size();
+           ++variableIdx)
+        _constraintMatrix[rowIdx][variableIdx] =
+            -_constraintMatrix[rowIdx][variableIdx];
+      _rightHandSides[rowIdx] = -_rightHandSides[rowIdx];
+      _initialRightHandSides[rowIdx] = -_initialRightHandSides[rowIdx];
     }
   }
 }

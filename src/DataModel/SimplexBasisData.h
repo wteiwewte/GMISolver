@@ -1,9 +1,7 @@
 #ifndef GMISOLVER_SIMPLEXBASISDATA_H
 #define GMISOLVER_SIMPLEXBASISDATA_H
 
-#include <iostream>
-#include <map>
-#include <spdlog/spdlog.h>
+#include <vector>
 
 struct SimplexBasisData {
   std::vector<int> _rowToBasisColumnIdxMap;

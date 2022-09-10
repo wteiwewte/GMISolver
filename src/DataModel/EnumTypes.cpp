@@ -34,8 +34,8 @@ std::optional<BoundType> stringToBoundType(const std::string &string) {
     return BoundType::LOWER_BOUND;
   else if (string == "UP")
     return BoundType::UPPER_BOUND;
-  //    else if (string == "FX")
-  //        return BoundType::FREE_VARIABLE;
+  else if (string == "FX")
+      return BoundType::FREE_VARIABLE;
   else if (string == "BV")
     return BoundType::BINARY_VARIABLE;
 
@@ -52,6 +52,30 @@ std::string rowTypeToStr(const RowType rowType) {
     return ">=";
   case RowType::OBJECTIVE:
     return "OBJ";
+  }
+
+  return "";
+}
+
+std::string primalSimplexColumnPivotRuleToStr(const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule)
+{
+  switch (primalSimplexColumnPivotRule) {
+  case PrimalSimplexColumnPivotRule::FIRST_ELIGIBLE:
+    return "FIRST_ELIGIBLE";
+  case PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST:
+    return "BIGGEST_ABSOLUTE_REDUCED_COST";
+  }
+
+  return "";
+}
+
+std::string dualSimplexRowPivotRuleToStr(const DualSimplexRowPivotRule dualSimplexRowPivotRule)
+{
+  switch (dualSimplexRowPivotRule) {
+  case DualSimplexRowPivotRule::FIRST_ELIGIBLE:
+    return "FIRST_ELIGIBLE";
+  case DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION:
+    return "BIGGEST_BOUND_VIOLATION";
   }
 
   return "";

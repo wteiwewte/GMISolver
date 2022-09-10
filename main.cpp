@@ -1,33 +1,38 @@
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_INFO
-#include "src/Algorithms/SimplexTableau.h"
 #include "src/Algorithms/PrimalSimplex.h"
-#include "src/Algorithms/RevisedPrimalSimplexPFI.h"
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
+#include "src/Algorithms/RevisedPrimalSimplexPFI.h"
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
+#include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/MpsReader.h"
+#include "src/Util/SpdlogHeader.h"
 
-#include <iostream>
 #include <filesystem>
-#include <fstream>
 #include <optional>
 #include <vector>
-#include <spdlog/spdlog.h>
 #include <thread>
 
 #include <absl/flags/flag.h>
 #include <absl/flags/parse.h>
-#include <spdlog/sinks/basic_file_sink.h>
 
 ABSL_FLAG(std::string, log_level, "info", "log level");
 ABSL_FLAG(std::string, log_file, "GMISolver_out.txt", "log file");
+ABSL_FLAG(std::vector<std::string>, benchmark_simplex_types,
+          std::vector<std::string>({"primal", "dual"}),
+          "List of simplex algorithms to benchmark");
 ABSL_FLAG(std::optional<std::string>, lp_model_file, std::nullopt, "Path to single lp model");
 ABSL_FLAG(std::optional<std::string>, lp_models_directory, std::nullopt, "Path to directory with lp models");
+
+bool contains(const std::vector<std::string>& vec, const std::string& str)
+{
+  return std::find(vec.begin(), vec.end(), str) != vec.end();
+}
 
 template <typename T>
 void runPrimalSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
 {
   SimplexTableau<T> simplexTableau(linearProgram, true);
-  RevisedPrimalSimplexPFIBounds<T>(simplexTableau).run();
+  RevisedPrimalSimplexPFIBounds<T>(simplexTableau,
+      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST).run();
   SPDLOG_INFO(simplexTableau.toStringShortWithSolution());
 }
 
@@ -35,7 +40,7 @@ template <typename T>
 void runDualSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
 {
   SimplexTableau<T> simplexTableau(linearProgram, false);
-  RevisedDualSimplexPFIBounds<T>(simplexTableau).run();
+  RevisedDualSimplexPFIBounds<T>(simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION).run();
   SPDLOG_INFO(simplexTableau.toStringShortWithSolution());
 }
 
@@ -50,8 +55,12 @@ void readLPModelAndProcess(const std::string& modelFileMps)
       return;
   }
 
-  runPrimalSimplexWithImplicitBounds(*linearProgram);
-  runDualSimplexWithImplicitBounds(*linearProgram);
+  const auto simplexTypesToBenchmark = absl::GetFlag(FLAGS_benchmark_simplex_types);
+  if (contains(simplexTypesToBenchmark, "primal"))
+    runPrimalSimplexWithImplicitBounds(*linearProgram);
+
+  if (contains(simplexTypesToBenchmark, "dual"))
+    runDualSimplexWithImplicitBounds(*linearProgram);
 }
 
 void initFileLogger()

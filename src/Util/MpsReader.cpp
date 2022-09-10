@@ -1,7 +1,8 @@
 #include "src/Util/MpsReader.h"
 
+#include "src/Util/SpdlogHeader.h"
+
 #include <fstream>
-#include <spdlog/spdlog.h>
 #include <sstream>
 #include <string_view>
 
@@ -266,6 +267,12 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
         linearProgram._variableLowerBounds[variableIdx] = 0.0;
         linearProgram._variableUpperBounds[variableIdx] = 0.1;
         linearProgram._variableInfos[variableIdx]._type = VariableType::INTEGER;
+        break;
+      }
+      case BoundType::FREE_VARIABLE: {
+        // TODO - maybe opt it
+        linearProgram._variableLowerBounds[variableIdx] =  linearProgram._variableUpperBounds[variableIdx] =
+            convert(coefficientValueStr);
         break;
       }
       }

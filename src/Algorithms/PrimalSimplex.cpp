@@ -1,6 +1,8 @@
 #include "src/Algorithms/PrimalSimplex.h"
 
 #include "src/Algorithms/SimplexTableau.h"
+#include "src/Util/SpdlogHeader.h"
+
 
 template <typename T, typename ComparisonTraitsT>
 PrimalSimplex<T, ComparisonTraitsT>::PrimalSimplex(

@@ -12,7 +12,8 @@ template <typename T,
           typename ComparisonTraitsT = ApproximateComparisonTraits<T>>
 class RevisedPrimalSimplexPFIBounds {
 public:
-  explicit RevisedPrimalSimplexPFIBounds(SimplexTableau<T> &simplexTableau);
+  RevisedPrimalSimplexPFIBounds(SimplexTableau<T> &simplexTableau,
+                                         const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule);
 
   void run();
   bool runPhaseOne();
@@ -21,22 +22,17 @@ public:
   bool runOneIteration();
 
 private:
-  std::optional<int> chooseEnteringColumnIdx();
-  std::optional<int> chooseEnteringColumnIdxBiggestReducedCost();
-  std::vector<T> computeEnteringColumn(const int enteringColumnIdx);
-  std::vector<T> computePivotRow(const int rowIdx);
+  std::optional<int> chooseEnteringColumn();
+  std::optional<int> chooseEnteringColumnFirstEligible();
+  std::optional<int> chooseEnteringColumnBiggestAbsReducedCost();
+
   std::optional<PivotRowData<T>>
   chooseRowIdx(const int enteringColumnIdx,
                const std::vector<T> &enteringColumn);
-  void pivot(const PivotRowData<T> &pivotRowData, const int enteringColumnIdx,
+  void changeTableau(const PivotRowData<T> &pivotRowData, const int enteringColumnIdx,
              const std::vector<T> &enteringColumn);
-  void executePivot(const int rowIdx, const int enteringColumnIdx,
-                    const std::vector<T> &enteringColumn,
-                    const std::vector<T> &pivotRow);
-  void updateReducedCosts(const PivotData<T> &pivotData,
-                          const std::vector<T> &pivotRow);
-  void updateInverseMatrixWithRHS(const PivotData<T> &pivotData,
-                                  const std::vector<T> &enteringColumn);
+  void moveVarFromOneBoundToAnother(const PivotRowData<T> &pivotRowData, const int enteringColumnIdx,
+                                    const std::vector<T> &enteringColumn);
   void calculateDual();
   void reinversion();
   //  void calculateRHS();
@@ -52,6 +48,7 @@ private:
   //  void initSolution();
 
   SimplexTableau<T> &_simplexTableau;
+  PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
 };
 
 #endif // GMISOLVER_REVISEDPRIMALSIMPLEXPFIBOUNDS_H

@@ -3,10 +3,10 @@
 
 #include "src/DataModel/CommonTypes.h"
 #include "src/DataModel/SimplexBasisData.h"
+#include "src/Util/SpdlogHeader.h"
 
 #include <iomanip>
 #include <map>
-#include <spdlog/spdlog.h>
 // fmt must be included after spdlog - weird bug
 #include <fmt/format.h>
 #include <functional>
@@ -92,7 +92,8 @@ struct LPPrinter {
                           const Matrix<T> &matrix,
                           const std::vector<T> &rightHandSides) {
     for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
-      _oss << fmt::format("{:^{}}|",
+      if (!rowToBasisColumnIdxMap.empty())
+        _oss << fmt::format("{:^{}}|",
                           _variableInfos[rowToBasisColumnIdxMap[rowIdx]]._label,
                           _maxVariableWidth);
 

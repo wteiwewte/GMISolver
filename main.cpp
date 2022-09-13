@@ -21,6 +21,8 @@ ABSL_FLAG(std::vector<std::string>, benchmark_simplex_types,
           "List of simplex algorithms to benchmark");
 ABSL_FLAG(std::optional<std::string>, lp_model_file, std::nullopt, "Path to single lp model");
 ABSL_FLAG(std::optional<std::string>, lp_models_directory, std::nullopt, "Path to directory with lp models");
+ABSL_FLAG(int32_t, obj_value_logging_frequency, 100, "Current objective value should be logged every nth iteration of simplex");
+ABSL_FLAG(int32_t, reinversion_frequency, 300, "Basis matrix inversion should be reinverted every nth iteration of simplex");
 
 bool contains(const std::vector<std::string>& vec, const std::string& str)
 {
@@ -32,16 +34,24 @@ void runPrimalSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
 {
   SimplexTableau<T> simplexTableau(linearProgram, true);
   RevisedPrimalSimplexPFIBounds<T>(simplexTableau,
-      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST).run();
-  SPDLOG_INFO(simplexTableau.toStringShortWithSolution());
+      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+                                   absl::GetFlag(FLAGS_obj_value_logging_frequency),
+                                   absl::GetFlag(FLAGS_reinversion_frequency)
+                                   ).run();
+  SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
+  SPDLOG_DEBUG(simplexTableau.toStringSolution());
 }
 
 template <typename T>
 void runDualSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
 {
   SimplexTableau<T> simplexTableau(linearProgram, false);
-  RevisedDualSimplexPFIBounds<T>(simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION).run();
-  SPDLOG_INFO(simplexTableau.toStringShortWithSolution());
+  RevisedDualSimplexPFIBounds<T>(simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+                                 absl::GetFlag(FLAGS_obj_value_logging_frequency),
+                                 absl::GetFlag(FLAGS_reinversion_frequency)
+                                     ).run();
+  SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
+  SPDLOG_DEBUG(simplexTableau.toStringSolution());
 }
 
 template <typename T>

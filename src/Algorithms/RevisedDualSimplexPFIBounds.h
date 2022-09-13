@@ -13,7 +13,10 @@ template <typename T,
 class RevisedDualSimplexPFIBounds {
 public:
   RevisedDualSimplexPFIBounds(SimplexTableau<T> &simplexTableau,
-                                       const DualSimplexRowPivotRule dualSimplexRowPivotRule);
+                                       const DualSimplexRowPivotRule dualSimplexRowPivotRule,
+                              const int32_t objValueLoggingFrequency,
+                              const int32_t reinversionFrequency
+  );
 
   void run();
   bool runOneIteration();
@@ -44,6 +47,8 @@ private:
 
   SimplexTableau<T> &_simplexTableau;
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;
+  const int32_t _objValueLoggingFrequency;
+  const int32_t _reinversionFrequency;
 };
 
 #endif // GMISOLVER_REVISEDDUALSIMPLEXPFIBOUNDS_H

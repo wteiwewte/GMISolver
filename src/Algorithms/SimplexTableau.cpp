@@ -148,17 +148,15 @@ template <typename T> std::string SimplexTableau<T>::toString() const {
 
   return lpPrinter.toString();
 }
-template <typename T> std::string SimplexTableau<T>::toStringShort() const {
+template <typename T> std::string SimplexTableau<T>::toStringObjectiveValue() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
-  //  lpPrinter.printSolution(_x);
   lpPrinter.printCurrentObjectiveValue(_result, _objectiveValue);
   return lpPrinter.toString();
 }
 template <typename T>
-std::string SimplexTableau<T>::toStringShortWithSolution() const {
+std::string SimplexTableau<T>::toStringSolution() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printSolution(_x);
-  lpPrinter.printCurrentObjectiveValue(_result, _objectiveValue);
   return lpPrinter.toString();
 }
 template <typename T>
@@ -378,6 +376,31 @@ void SimplexTableau<T>::pivot(
   updateReducedCosts(pivotData, pivotRow);
   updateInverseMatrixWithRHS(pivotData, enteringColumn);
   updateBasisData(pivotData);
+}
+
+template <typename T>
+void SimplexTableau<T>::pivotImplicitBounds(
+    const int rowIdx, const int enteringColumnIdx,
+    const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow,
+    const bool leavingVarBecomesLowerBound)
+{
+  const auto leavingBasicColumnIdx = basicColumnIdx(rowIdx);
+  pivot(rowIdx, enteringColumnIdx, enteringColumn, pivotRow);
+
+  auto &isColumnAtLowerBoundBitset =
+      _simplexBasisData._isColumnAtLowerBoundBitset;
+  auto &isColumnAtUpperBoundBitset =
+      _simplexBasisData._isColumnAtUpperBoundBitset;
+
+  (leavingVarBecomesLowerBound
+       ? isColumnAtLowerBoundBitset[leavingBasicColumnIdx]
+       : isColumnAtUpperBoundBitset[leavingBasicColumnIdx]) = true;
+
+  if (isColumnAtLowerBoundBitset[enteringColumnIdx])
+    isColumnAtLowerBoundBitset[enteringColumnIdx] = false;
+
+  if (isColumnAtUpperBoundBitset[enteringColumnIdx])
+    isColumnAtUpperBoundBitset[enteringColumnIdx] = false;
 }
 
 template <typename T>

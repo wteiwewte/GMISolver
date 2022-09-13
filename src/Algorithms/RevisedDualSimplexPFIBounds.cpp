@@ -6,9 +6,13 @@
 template <typename T, typename ComparisonTraitsT>
 RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::RevisedDualSimplexPFIBounds(
     SimplexTableau<T> &simplexTableau,
-    const DualSimplexRowPivotRule dualSimplexRowPivotRule)
+    const DualSimplexRowPivotRule dualSimplexRowPivotRule,
+    const int32_t objValueLoggingFrequency,
+    const int32_t reinversionFrequency)
     : _simplexTableau(simplexTableau),
-_dualSimplexRowPivotRule(dualSimplexRowPivotRule){
+_dualSimplexRowPivotRule(dualSimplexRowPivotRule),
+_objValueLoggingFrequency(objValueLoggingFrequency),
+_reinversionFrequency(reinversionFrequency){
   initRHS();
   calculateCurrentObjectiveValue();
   calculateSolution();
@@ -22,7 +26,6 @@ void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::run() {
 
   [[maybe_unused]] int iterCount = 1;
   while (true) {
-    SPDLOG_DEBUG("ITERATION {}", iterCount++);
     const bool iterResult = runOneIteration();
     if (iterResult)
       break;
@@ -30,8 +33,13 @@ void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::run() {
     calculateCurrentObjectiveValue();
     calculateSolution();
 
-    SPDLOG_TRACE("{}\n", _simplexTableau.toString());
-    SPDLOG_DEBUG("{}\n", _simplexTableau.toStringShort());
+    ++iterCount;
+    if (_objValueLoggingFrequency && (iterCount % _objValueLoggingFrequency == 0))
+    {
+      SPDLOG_INFO("ITERATION {}", iterCount);
+      SPDLOG_INFO("{}\n", _simplexTableau.toStringObjectiveValue());
+    }
+    SPDLOG_DEBUG("{}\n", _simplexTableau.toStringObjectiveValue());
   }
   SPDLOG_INFO("DUAL SIMPLEX ENDED");
 }
@@ -206,8 +214,6 @@ void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::pivot(
     const bool isPivotRowUnderLowerBound) {
   auto &isColumnAtLowerBoundBitset =
       _simplexTableau._simplexBasisData._isColumnAtLowerBoundBitset;
-  auto &isColumnAtUpperBoundBitset =
-      _simplexTableau._simplexBasisData._isColumnAtUpperBoundBitset;
 
   SPDLOG_DEBUG("PIVOT - ENTERING COLUMN IDX {}, ROW IDX {}", enteringColumnIdx,
                pivotRowIdx);
@@ -229,16 +235,8 @@ void RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::pivot(
         leavingColumn[rowIdx];
   }
 
-  _simplexTableau.pivot(pivotRowIdx, enteringColumnIdx, enteringColumn, pivotRow);
-  (isPivotRowUnderLowerBound
-       ? isColumnAtLowerBoundBitset[leavingBasicColumnIdx]
-       : isColumnAtUpperBoundBitset[leavingBasicColumnIdx]) = true;
-
-  if (isColumnAtLowerBoundBitset[enteringColumnIdx])
-    isColumnAtLowerBoundBitset[enteringColumnIdx] = false;
-
-  if (isColumnAtUpperBoundBitset[enteringColumnIdx])
-    isColumnAtUpperBoundBitset[enteringColumnIdx] = false;
+  _simplexTableau.pivotImplicitBounds(pivotRowIdx, enteringColumnIdx, enteringColumn, pivotRow,
+                        isPivotRowUnderLowerBound);
 }
 
 //

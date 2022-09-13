@@ -13,7 +13,10 @@ template <typename T,
 class RevisedPrimalSimplexPFIBounds {
 public:
   RevisedPrimalSimplexPFIBounds(SimplexTableau<T> &simplexTableau,
-                                         const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule);
+                                         const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
+                                const int32_t objValueLoggingFrequency,
+                                const int32_t reinversionFrequency
+                                );
 
   void run();
   bool runPhaseOne();
@@ -31,15 +34,19 @@ private:
                const std::vector<T> &enteringColumn);
   void changeTableau(const PivotRowData<T> &pivotRowData, const int enteringColumnIdx,
              const std::vector<T> &enteringColumn);
+  void moveVarInsideBasis(const int pivotRowIdx, const int enteringColumnIdx,
+                          const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow,
+                          const bool leavingVarBecomesLowerBound);
   void moveVarFromOneBoundToAnother(const PivotRowData<T> &pivotRowData, const int enteringColumnIdx,
                                     const std::vector<T> &enteringColumn);
   void calculateDual();
-  void reinversion();
+  bool reinversion();
   //  void calculateRHS();
   //
-  void removeArtificialVariablesFromBasis();
+  bool removeArtificialVariablesFromBasis();
   void removeArtificialVariablesFromProgram();
-  void removeRow(const int rowIdx);
+  void removeRows(const std::vector<bool>& shouldRowBeRemoved);
+
   void setInitialObjective();
   void calculateCurrentObjectiveValue();
   void calculateSolution();
@@ -48,7 +55,9 @@ private:
   //  void initSolution();
 
   SimplexTableau<T> &_simplexTableau;
-  PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
+  const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
+  const int32_t _objValueLoggingFrequency;
+  const int32_t _reinversionFrequency;
 };
 
 #endif // GMISOLVER_REVISEDPRIMALSIMPLEXPFIBOUNDS_H

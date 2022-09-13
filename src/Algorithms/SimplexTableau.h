@@ -24,8 +24,8 @@ public:
   void calculateSolution();
 
   std::string toString() const;
-  std::string toStringShort() const;
-  std::string toStringShortWithSolution() const;
+  std::string toStringObjectiveValue() const;
+  std::string toStringSolution() const;
   std::string toStringLpSolveFormat() const;
 
   const std::vector<VariableInfo> &getVariableInfos() const {
@@ -56,6 +56,10 @@ private:
   void pivot(
       const int rowIdx, const int enteringColumnIdx,
       const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow);
+  void pivotImplicitBounds(
+      const int rowIdx, const int enteringColumnIdx,
+      const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow,
+      const bool leavingVarBecomesLowerBound);
   void updateReducedCosts(const PivotData<T> &pivotData,
                           const std::vector<T> &pivotRow);
   void updateInverseMatrixWithRHS(const PivotData<T> &pivotData,

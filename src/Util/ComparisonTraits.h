@@ -10,7 +10,7 @@
 template <typename T> struct ApproximateComparisonTraits {
   static_assert(!std::numeric_limits<T>::is_integer);
 
-  constexpr static T ABSOLUTE_EPSILON = 1e-9;
+  constexpr static T ABSOLUTE_EPSILON = 1e-6;
   //  constexpr static T ABSOLUTE_EPSILON = std::numeric_limits<T>::epsilon();
   constexpr static T RELATIVE_EPSILON = std::numeric_limits<T>::epsilon();
   constexpr static size_t ULP_COUNT = 4;

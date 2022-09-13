@@ -161,6 +161,8 @@ struct LPPrinter {
         return "INFEASIBLE";
       case LPOptimizationResult::BOUNDED_AND_FEASIBLE:
         return "BOUNDED_AND_FEASIBLE";
+      case LPOptimizationResult::FAILED_REINVERSION:
+        return "FAILED_REINVERSION";
       }
 
       return "";

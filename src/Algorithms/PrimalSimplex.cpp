@@ -36,7 +36,7 @@ void PrimalSimplex<T, ComparisonTraitsT>::run() {
 
     _simplexTableau.calculateCurrentObjectiveValue();
     _simplexTableau.calculateSolution();
-    //      SPDLOG_INFO("{}\n", _simplexTableau.toStringShort());
+    //      SPDLOG_INFO("{}\n", _simplexTableau.toStringObjectiveValue());
   }
 }
 template <typename T, typename ComparisonTraitsT>

@@ -37,7 +37,7 @@ void RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::run() {
 
     _simplexTableau.calculateCurrentObjectiveValue();
     _simplexTableau.calculateSolution();
-    SPDLOG_INFO("{}\n", _simplexTableau.toStringShort());
+    SPDLOG_INFO("{}\n", _simplexTableau.toStringObjectiveValue());
 
     //    if (iterCount < 10)
     //      SPDLOG_INFO("{}\n", _simplexTableau.toString());
@@ -50,7 +50,7 @@ void RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::run() {
     //      SPDLOG_INFO("{}\n", _simplexTableau.toString());
   }
   //  SPDLOG_INFO("{}\n", _simplexTableau.toString());
-  SPDLOG_INFO("{}\n", _simplexTableau.toStringShort());
+  SPDLOG_INFO("{}\n", _simplexTableau.toStringObjectiveValue());
   SPDLOG_INFO("SIMPLEX ENDED");
 }
 template <typename T, typename ComparisonTraitsT>

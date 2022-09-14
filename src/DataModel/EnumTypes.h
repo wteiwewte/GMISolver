@@ -38,14 +38,12 @@ enum class LPOptimizationResult : int8_t {
   FAILED_REINVERSION
 };
 
-enum class PrimalSimplexColumnPivotRule : int8_t
-{
+enum class PrimalSimplexColumnPivotRule : int8_t {
   FIRST_ELIGIBLE = 0,
   BIGGEST_ABSOLUTE_REDUCED_COST
 };
 
-enum class DualSimplexRowPivotRule : int8_t
-{
+enum class DualSimplexRowPivotRule : int8_t {
   FIRST_ELIGIBLE = 0,
   BIGGEST_BOUND_VIOLATION
 };
@@ -54,7 +52,9 @@ std::optional<SectionType> stringToSectionType(const std::string &string);
 std::optional<RowType> stringToRowType(const std::string &string);
 std::optional<BoundType> stringToBoundType(const std::string &string);
 std::string rowTypeToStr(const RowType rowType);
-std::string primalSimplexColumnPivotRuleToStr(const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule);
-std::string dualSimplexRowPivotRuleToStr(const DualSimplexRowPivotRule dualSimplexRowPivotRule);
+std::string primalSimplexColumnPivotRuleToStr(
+    const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule);
+std::string dualSimplexRowPivotRuleToStr(
+    const DualSimplexRowPivotRule dualSimplexRowPivotRule);
 
 #endif // GMISOLVER_ENUMTYPES_H

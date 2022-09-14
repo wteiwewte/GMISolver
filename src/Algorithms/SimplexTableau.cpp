@@ -126,14 +126,14 @@ template <typename T> std::string SimplexTableau<T>::toString() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printLineBreak();
 
-  if (!_simplexBasisData._rowToBasisColumnIdxMap.empty())
-  {
+  if (!_simplexBasisData._rowToBasisColumnIdxMap.empty()) {
     lpPrinter.printVariableInfos(std::cref(_simplexBasisData));
     lpPrinter.printLineBreak();
   }
 
   if (!_reducedCosts.empty())
-    lpPrinter.printReducedCostWithObjectiveValue(_reducedCosts, _objectiveValue);
+    lpPrinter.printReducedCostWithObjectiveValue(_reducedCosts,
+                                                 _objectiveValue);
 
   lpPrinter.printMatrixWithRHS(_simplexBasisData._rowToBasisColumnIdxMap,
                                _constraintMatrix, _rightHandSides);
@@ -148,13 +148,13 @@ template <typename T> std::string SimplexTableau<T>::toString() const {
 
   return lpPrinter.toString();
 }
-template <typename T> std::string SimplexTableau<T>::toStringObjectiveValue() const {
+template <typename T>
+std::string SimplexTableau<T>::toStringObjectiveValue() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printCurrentObjectiveValue(_result, _objectiveValue);
   return lpPrinter.toString();
 }
-template <typename T>
-std::string SimplexTableau<T>::toStringSolution() const {
+template <typename T> std::string SimplexTableau<T>::toStringSolution() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printSolution(_x);
   return lpPrinter.toString();
@@ -321,10 +321,10 @@ template <typename T> void SimplexTableau<T>::addBoundsToMatrix() {
   }
 }
 
-
 template <typename T>
 bool SimplexTableau<T>::isColumnAllowedToEnterBasis(const int colIdx) {
-  return !_variableInfos[colIdx]._isArtificial && !_simplexBasisData._isBasicColumnIndexBitset[colIdx];
+  return !_variableInfos[colIdx]._isArtificial &&
+         !_simplexBasisData._isBasicColumnIndexBitset[colIdx];
 }
 template <typename T>
 std::vector<T>
@@ -334,21 +334,19 @@ SimplexTableau<T>::computeTableauColumn(const int enteringColumnIdx) {
   // TODO - maybe add kahan summation algo, maybe opt order
   for (int i = 0; i < _rowInfos.size(); ++i) {
     for (int k = 0; k < _rowInfos.size(); ++k)
-      result[i] += _basisMatrixInverse[i][k] *
-                   _constraintMatrix[k][enteringColumnIdx];
+      result[i] +=
+          _basisMatrixInverse[i][k] * _constraintMatrix[k][enteringColumnIdx];
   }
 
   return result;
 }
 
 template <typename T>
-std::vector<T>
-SimplexTableau<T>::computeTableauRow(const int rowIdx) {
+std::vector<T> SimplexTableau<T>::computeTableauRow(const int rowIdx) {
   std::vector<T> result(_variableInfos.size());
 
   // TODO - maybe add kahan summation algo, maybe opt order
-  const int columnBasicIdx =
-      _simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
+  const int columnBasicIdx = _simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
   for (int j = 0; j < _variableInfos.size(); ++j) {
     if (j == columnBasicIdx)
       result[j] = 1.0;
@@ -357,22 +355,21 @@ SimplexTableau<T>::computeTableauRow(const int rowIdx) {
       result[j] = 0.0;
     else
       for (int k = 0; k < _rowInfos.size(); ++k)
-        result[j] += _basisMatrixInverse[rowIdx][k] *
-                     _constraintMatrix[k][j];
+        result[j] += _basisMatrixInverse[rowIdx][k] * _constraintMatrix[k][j];
   }
 
   return result;
 }
 
 template <typename T>
-void SimplexTableau<T>::pivot(
-    const int rowIdx, const int enteringColumnIdx,
-    const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow) {
+void SimplexTableau<T>::pivot(const int rowIdx, const int enteringColumnIdx,
+                              const std::vector<T> &enteringColumn,
+                              const std::vector<T> &pivotRow) {
   const PivotData<T> pivotData{rowIdx, enteringColumnIdx,
                                1.0 / enteringColumn[rowIdx]};
   SPDLOG_DEBUG("PIVOT VALUE {},  INV {}", enteringColumn[rowIdx],
                1.0 / enteringColumn[rowIdx]);
-  
+
   updateReducedCosts(pivotData, pivotRow);
   updateInverseMatrixWithRHS(pivotData, enteringColumn);
   updateBasisData(pivotData);
@@ -382,8 +379,7 @@ template <typename T>
 void SimplexTableau<T>::pivotImplicitBounds(
     const int rowIdx, const int enteringColumnIdx,
     const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow,
-    const bool leavingVarBecomesLowerBound)
-{
+    const bool leavingVarBecomesLowerBound) {
   const auto leavingBasicColumnIdx = basicColumnIdx(rowIdx);
   pivot(rowIdx, enteringColumnIdx, enteringColumn, pivotRow);
 
@@ -404,8 +400,8 @@ void SimplexTableau<T>::pivotImplicitBounds(
 }
 
 template <typename T>
-void SimplexTableau<T>::updateReducedCosts(
-    const PivotData<T> &pivotData, const std::vector<T> &pivotRow) {
+void SimplexTableau<T>::updateReducedCosts(const PivotData<T> &pivotData,
+                                           const std::vector<T> &pivotRow) {
   const auto &[leavingRowIdx, enteringColumnIdx, pivotingTermInverse] =
       pivotData;
   const auto commonCoeffReducedCost =
@@ -415,9 +411,8 @@ void SimplexTableau<T>::updateReducedCosts(
 }
 
 template <typename T>
-void SimplexTableau<T>::
-    updateInverseMatrixWithRHS(const PivotData<T> &pivotData,
-                               const std::vector<T> &enteringColumn) {
+void SimplexTableau<T>::updateInverseMatrixWithRHS(
+    const PivotData<T> &pivotData, const std::vector<T> &enteringColumn) {
   const auto &[leavingRowIdx, enteringColumnIdx, pivotingTermInverse] =
       pivotData;
 
@@ -431,13 +426,11 @@ void SimplexTableau<T>::
       _basisMatrixInverse[i][j] -=
           commonCoeff * _basisMatrixInverse[leavingRowIdx][j];
 
-    _rightHandSides[i] -=
-        commonCoeff * _rightHandSides[leavingRowIdx];
+    _rightHandSides[i] -= commonCoeff * _rightHandSides[leavingRowIdx];
   }
 
   for (int j = 0; j < _basisMatrixInverse.size(); ++j)
-    _basisMatrixInverse[leavingRowIdx][j] *=
-        pivotingTermInverse;
+    _basisMatrixInverse[leavingRowIdx][j] *= pivotingTermInverse;
 
   _rightHandSides[leavingRowIdx] *= pivotingTermInverse;
 }

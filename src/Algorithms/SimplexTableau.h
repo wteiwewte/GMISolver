@@ -43,23 +43,24 @@ private:
   template <typename U, typename ComparisonTraitsT>
   friend class RevisedDualSimplexPFIBounds;
 
-  std::optional<SimplexBasisData>
-  createBasisFromArtificialVars() const;
+  std::optional<SimplexBasisData> createBasisFromArtificialVars() const;
 
-  int basicColumnIdx(const int rowIdx) const { return _simplexBasisData._rowToBasisColumnIdxMap[rowIdx]; }
+  int basicColumnIdx(const int rowIdx) const {
+    return _simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
+  }
   bool isColumnAllowedToEnterBasis(const int colIdx);
   std::optional<T> curSatisfiedBound(const int varIdx);
 
   std::vector<T> computeTableauColumn(const int enteringColumnIdx);
   std::vector<T> computeTableauRow(const int rowIdx);
 
-  void pivot(
-      const int rowIdx, const int enteringColumnIdx,
-      const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow);
-  void pivotImplicitBounds(
-      const int rowIdx, const int enteringColumnIdx,
-      const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow,
-      const bool leavingVarBecomesLowerBound);
+  void pivot(const int rowIdx, const int enteringColumnIdx,
+             const std::vector<T> &enteringColumn,
+             const std::vector<T> &pivotRow);
+  void pivotImplicitBounds(const int rowIdx, const int enteringColumnIdx,
+                           const std::vector<T> &enteringColumn,
+                           const std::vector<T> &pivotRow,
+                           const bool leavingVarBecomesLowerBound);
   void updateReducedCosts(const PivotData<T> &pivotData,
                           const std::vector<T> &pivotRow);
   void updateInverseMatrixWithRHS(const PivotData<T> &pivotData,

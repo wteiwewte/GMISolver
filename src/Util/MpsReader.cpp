@@ -271,8 +271,9 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
       }
       case BoundType::FREE_VARIABLE: {
         // TODO - maybe opt it
-        linearProgram._variableLowerBounds[variableIdx] =  linearProgram._variableUpperBounds[variableIdx] =
-            convert(coefficientValueStr);
+        linearProgram._variableLowerBounds[variableIdx] =
+            linearProgram._variableUpperBounds[variableIdx] =
+                convert(coefficientValueStr);
         break;
       }
       }

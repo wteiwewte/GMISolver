@@ -93,9 +93,9 @@ struct LPPrinter {
                           const std::vector<T> &rightHandSides) {
     for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
       if (!rowToBasisColumnIdxMap.empty())
-        _oss << fmt::format("{:^{}}|",
-                          _variableInfos[rowToBasisColumnIdxMap[rowIdx]]._label,
-                          _maxVariableWidth);
+        _oss << fmt::format(
+            "{:^{}}|", _variableInfos[rowToBasisColumnIdxMap[rowIdx]]._label,
+            _maxVariableWidth);
 
       for (int variableIdx = 0; variableIdx < _variableInfos.size();
            ++variableIdx)

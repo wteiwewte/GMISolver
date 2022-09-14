@@ -33,7 +33,6 @@ private:
 
   std::string basicInformationStr() const;
 
-
   std::string _name;
   std::vector<RowInfo> _rowInfos;
 

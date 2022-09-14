@@ -12,11 +12,11 @@ template <typename T,
           typename ComparisonTraitsT = ApproximateComparisonTraits<T>>
 class RevisedPrimalSimplexPFIBounds {
 public:
-  RevisedPrimalSimplexPFIBounds(SimplexTableau<T> &simplexTableau,
-                                         const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
-                                const int32_t objValueLoggingFrequency,
-                                const int32_t reinversionFrequency
-                                );
+  RevisedPrimalSimplexPFIBounds(
+      SimplexTableau<T> &simplexTableau,
+      const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
+      const int32_t objValueLoggingFrequency,
+      const int32_t reinversionFrequency);
 
   void run();
   bool runPhaseOne();
@@ -32,27 +32,28 @@ private:
   std::optional<PivotRowData<T>>
   chooseRowIdx(const int enteringColumnIdx,
                const std::vector<T> &enteringColumn);
-  void changeTableau(const PivotRowData<T> &pivotRowData, const int enteringColumnIdx,
-             const std::vector<T> &enteringColumn);
+  void changeTableau(const PivotRowData<T> &pivotRowData,
+                     const int enteringColumnIdx,
+                     const std::vector<T> &enteringColumn);
   void moveVarInsideBasis(const int pivotRowIdx, const int enteringColumnIdx,
-                          const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow,
+                          const std::vector<T> &enteringColumn,
+                          const std::vector<T> &pivotRow,
                           const bool leavingVarBecomesLowerBound);
-  void moveVarFromOneBoundToAnother(const PivotRowData<T> &pivotRowData, const int enteringColumnIdx,
+  void moveVarFromOneBoundToAnother(const PivotRowData<T> &pivotRowData,
+                                    const int enteringColumnIdx,
                                     const std::vector<T> &enteringColumn);
-  void calculateDual();
-  bool reinversion();
-  //  void calculateRHS();
-  //
+
   bool removeArtificialVariablesFromBasis();
   void removeArtificialVariablesFromProgram();
-  void removeRows(const std::vector<bool>& shouldRowBeRemoved);
+  void removeRows(const std::vector<bool> &shouldRowBeRemoved);
 
   void setInitialObjective();
+  void calculateDual();
   void calculateCurrentObjectiveValue();
   void calculateSolution();
-  void initRHS();
   void calculateRHS();
-  //  void initSolution();
+
+  bool reinversion();
 
   SimplexTableau<T> &_simplexTableau;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;

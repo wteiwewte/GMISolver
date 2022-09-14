@@ -3,7 +3,6 @@
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/SpdlogHeader.h"
 
-
 template <typename T, typename ComparisonTraitsT>
 RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::RevisedPrimalSimplexPFI(
     SimplexTableau<T> &simplexTableau)

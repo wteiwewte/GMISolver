@@ -57,12 +57,10 @@ bool RevisedPrimalSimplexPFI<T, ComparisonTraitsT>::runOneIteration() {
   std::optional<int> enteringColumnIdx;
   for (int columnIdx = 0; columnIdx < _simplexTableau.getVariableInfos().size();
        ++columnIdx) {
-    if (_simplexTableau._variableInfos[columnIdx]._isArtificial)
+    if (!_simplexTableau.isColumnAllowedToEnterBasis(columnIdx))
       continue;
 
-    if (!_simplexTableau._simplexBasisData
-             ._isBasicColumnIndexBitset[columnIdx] &&
-        ComparisonTraitsT::less(_simplexTableau._reducedCosts[columnIdx],
+    if (ComparisonTraitsT::less(_simplexTableau._reducedCosts[columnIdx],
                                 0.0)) {
       enteringColumnIdx = columnIdx;
       SPDLOG_DEBUG("ENTERING COLUMN IDX {} REDUCED COST {}", columnIdx,

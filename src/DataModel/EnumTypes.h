@@ -27,7 +27,7 @@ enum class VariableType : int8_t { CONTINUOUS = 0, INTEGER };
 enum class BoundType : int8_t {
   LOWER_BOUND = 0,
   UPPER_BOUND,
-  FREE_VARIABLE,
+  FIXED_VARIABLE,
   BINARY_VARIABLE
 };
 

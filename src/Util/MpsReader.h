@@ -9,10 +9,13 @@
 #include <string>
 #include <vector>
 
+template <typename T>
 struct MpsReader {
 public:
-  template <typename T>
   static std::optional<LinearProgram<T>> read(const std::string &filePath);
+
+private:
+  static bool finalizeBounds(LinearProgram<T>& linearProgram);
 };
 
 #endif // GMISOLVER_MPSREADER_H

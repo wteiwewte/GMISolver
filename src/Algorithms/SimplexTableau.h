@@ -57,7 +57,7 @@ private:
   void pivot(const int rowIdx, const int enteringColumnIdx,
              const std::vector<T> &enteringColumn,
              const std::vector<T> &pivotRow);
-  void pivotImplicitBounds(const int rowIdx, const int enteringColumnIdx,
+  void pivotImplicitBounds(const int pivotRowIdx, const int enteringColumnIdx,
                            const std::vector<T> &enteringColumn,
                            const std::vector<T> &pivotRow,
                            const bool leavingVarBecomesLowerBound);
@@ -71,6 +71,7 @@ private:
   void initBoundsForDualSimplex();
 
   void calculateReducedCostsBasedOnDual();
+  void calculateRHS();
   void updateBasisData(const PivotData<T> &pivotData);
 
   const LinearProgram<T> &_initialProgram;

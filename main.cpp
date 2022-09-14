@@ -58,7 +58,7 @@ template <typename T>
 void readLPModelAndProcess(const std::string& modelFileMps)
 {
   SPDLOG_INFO("Processing lp model from file {}", modelFileMps);
-  auto linearProgram = MpsReader::read<T>(modelFileMps);
+  auto linearProgram = MpsReader<T>::read(modelFileMps);
   if (!linearProgram.has_value())
   {
       spdlog::warn("Could not read properly lp from {} file", modelFileMps);

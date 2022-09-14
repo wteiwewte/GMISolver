@@ -1,7 +1,7 @@
 #ifndef GMISOLVER_LINEARPROGRAM_H
 #define GMISOLVER_LINEARPROGRAM_H
 
-#include "CommonConstants.h"
+#include "src/DataModel/CommonConstants.h"
 #include "src/DataModel/CommonTypes.h"
 #include "src/DataModel/EnumTypes.h"
 
@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+template <typename T> struct MpsReader;
 template <typename T> class SimplexTableau;
 
 template <typename T> class LinearProgram {
@@ -28,7 +29,7 @@ public:
   const std::vector<T> &getObjective() const { return _objective; }
 
 private:
-  friend struct MpsReader;
+  friend struct MpsReader<T>;
   friend class SimplexTableau<T>;
 
   std::string basicInformationStr() const;

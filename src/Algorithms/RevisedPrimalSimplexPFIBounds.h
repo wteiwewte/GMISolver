@@ -35,10 +35,6 @@ private:
   void changeTableau(const PivotRowData<T> &pivotRowData,
                      const int enteringColumnIdx,
                      const std::vector<T> &enteringColumn);
-  void moveVarInsideBasis(const int pivotRowIdx, const int enteringColumnIdx,
-                          const std::vector<T> &enteringColumn,
-                          const std::vector<T> &pivotRow,
-                          const bool leavingVarBecomesLowerBound);
   void moveVarFromOneBoundToAnother(const PivotRowData<T> &pivotRowData,
                                     const int enteringColumnIdx,
                                     const std::vector<T> &enteringColumn);
@@ -49,9 +45,6 @@ private:
 
   void setInitialObjective();
   void calculateDual();
-  void calculateCurrentObjectiveValue();
-  void calculateSolution();
-  void calculateRHS();
 
   bool reinversion();
 

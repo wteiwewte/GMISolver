@@ -3,6 +3,7 @@
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/lseu
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/pipex
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air05
+#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/fixnet6
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib_couple_instances/bm23_repeated_rows
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib3/10teams
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/miplib2017-testscript-v1.0.3/instances/miplib2017_ungzipped/neos-911970.mps

@@ -36,6 +36,7 @@ struct VariableInfo {
   VariableType _type;
   bool _isSlack{false};
   bool _isArtificial{false};
+  bool _isFixed{false};
 };
 
 template <typename T> struct PivotData {

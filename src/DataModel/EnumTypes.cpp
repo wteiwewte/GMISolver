@@ -35,7 +35,7 @@ std::optional<BoundType> stringToBoundType(const std::string &string) {
   else if (string == "UP")
     return BoundType::UPPER_BOUND;
   else if (string == "FX")
-    return BoundType::FREE_VARIABLE;
+    return BoundType::FIXED_VARIABLE;
   else if (string == "BV")
     return BoundType::BINARY_VARIABLE;
 

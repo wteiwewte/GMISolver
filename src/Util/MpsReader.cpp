@@ -40,10 +40,18 @@ bool checkIfAllBoundAreSpeficied(
          std::all_of(variableUpperBounds.begin(), variableUpperBounds.end(),
                      [](const std::optional<T> &up) { return up.has_value(); });
 }
+
+template <typename T>
+int countBoundsSpecified(
+    const std::vector<std::optional<T>> &bounds) {
+  return std::count_if(
+      bounds.begin(), bounds.end(),
+             [](const std::optional<T> &bound) { return bound.has_value(); });
+}
 } // namespace
 
 template <typename T>
-std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
+std::optional<LinearProgram<T>> MpsReader<T>::read(const std::string &filePath) {
   std::ifstream fileStream(filePath);
   if (!fileStream.is_open()) {
     SPDLOG_DEBUG("Could not open {} file", filePath);
@@ -188,7 +196,7 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
     }
     case SectionType::RHS: {
       if (linearProgram._rightHandSides.empty())
-        SPDLOG_INFO("VARIABLE COUNT {}, ROW COUNT {} BEFORE RHS",
+        SPDLOG_DEBUG("VARIABLE COUNT {}, ROW COUNT {} BEFORE RHS",
                     linearProgram._variableInfos.size(),
                     linearProgram._rowInfos.size());
       if (lineParts.size() != 3 && lineParts.size() != 5) {
@@ -269,8 +277,9 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
         linearProgram._variableInfos[variableIdx]._type = VariableType::INTEGER;
         break;
       }
-      case BoundType::FREE_VARIABLE: {
+      case BoundType::FIXED_VARIABLE: {
         // TODO - maybe opt it
+        linearProgram._variableInfos[variableIdx]._isFixed = true;
         linearProgram._variableLowerBounds[variableIdx] =
             linearProgram._variableUpperBounds[variableIdx] =
                 convert(coefficientValueStr);
@@ -314,20 +323,35 @@ std::optional<LinearProgram<T>> MpsReader::read(const std::string &filePath) {
     return std::nullopt;
   }
 
-  if (!checkIfAllBoundAreSpeficied(linearProgram._variableInfos,
-                                   linearProgram._variableLowerBounds,
-                                   linearProgram._variableUpperBounds)) {
-    SPDLOG_WARN("Every variable must have defined bounds");
+  if (!finalizeBounds(linearProgram))
     return std::nullopt;
-  }
-
-  SPDLOG_INFO("VARIABLE COUNT {}, ROW COUNT {} AT THE END",
-              linearProgram._variableInfos.size(),
-              linearProgram._rowInfos.size());
 
   // TODO - add more integrity checks
   return linearProgram;
 }
 
-template std::optional<LinearProgram<double>>
-MpsReader::read(const std::string &);
+template <typename T>
+bool MpsReader<T>::finalizeBounds(LinearProgram<T>& linearProgram) {
+  for (int varIdx = 0; varIdx < linearProgram._variableInfos.size(); ++varIdx)
+    if (!linearProgram._variableLowerBounds[varIdx].has_value() &&
+        !linearProgram._variableUpperBounds[varIdx].has_value())
+      linearProgram._variableLowerBounds[varIdx] = 0.0;
+
+  SPDLOG_INFO("PROGRAM NAME {}, VARIABLE COUNT {}, ROW COUNT {}, LOWER BOUNDS {}, UPPER BOUNDS {}",
+              linearProgram._name,
+              linearProgram._variableInfos.size(),
+              linearProgram._rowInfos.size(),
+              countBoundsSpecified(linearProgram._variableLowerBounds),
+              countBoundsSpecified(linearProgram._variableUpperBounds));
+
+//  if (!checkIfAllBoundAreSpeficied(linearProgram._variableInfos,
+//                                   linearProgram._variableLowerBounds,
+//                                   linearProgram._variableUpperBounds)) {
+//    SPDLOG_WARN("Every variable must have defined bounds");
+//    return false;
+//  }
+
+  return true;
+}
+
+template struct MpsReader<double>;

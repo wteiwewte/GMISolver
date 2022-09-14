@@ -55,7 +55,7 @@ template <typename T> void SimplexTableau<T>::addArtificialVariables() {
     _variableLowerBounds.push_back(0.0);
     _variableUpperBounds.push_back(std::nullopt);
     _variableInfos.push_back(VariableInfo{
-        newArtificialLabelStr, VariableType::CONTINUOUS, false, true});
+        newArtificialLabelStr, VariableType::CONTINUOUS, false, true, false});
   }
 }
 
@@ -173,13 +173,21 @@ template <typename T> void SimplexTableau<T>::calculateCurrentObjectiveValue() {
   for (int i = 0; i < _rowInfos.size(); ++i)
     _objectiveValue +=
         _rightHandSides[i] *
-        _objectiveRow[_simplexBasisData._rowToBasisColumnIdxMap[i]];
+        _objectiveRow[basicColumnIdx(i)];
+
+  for (int j = 0; j < _variableInfos.size(); ++j)
+    if (!_simplexBasisData._isBasicColumnIndexBitset[j])
+      _objectiveValue += *curSatisfiedBound(j) *
+                                         _objectiveRow[j];
 }
 template <typename T> void SimplexTableau<T>::calculateSolution() {
   _x.resize(_variableInfos.size());
-  std::fill(_x.begin(), _x.end(), T{});
+  for (int colIdx = 0; colIdx < _variableInfos.size(); ++colIdx)
+    if (!_simplexBasisData._isBasicColumnIndexBitset[colIdx])
+      _x[colIdx] = *curSatisfiedBound(colIdx);
+
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx)
-    _x[_simplexBasisData._rowToBasisColumnIdxMap[rowIdx]] =
+    _x[basicColumnIdx(rowIdx)] =
         _rightHandSides[rowIdx];
 }
 template <typename T> void SimplexTableau<T>::initBasisMatrixInverse() {
@@ -207,6 +215,24 @@ void SimplexTableau<T>::calculateReducedCostsBasedOnDual() {
 
     _reducedCosts[columnIdx] = yAn;
   }
+}
+
+template <typename T>
+void SimplexTableau<T>::calculateRHS() {
+  std::vector<T> tempRHS = _initialRightHandSides;
+  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
+    for (int j = 0; j < _variableInfos.size(); ++j)
+      if (!_simplexBasisData._isBasicColumnIndexBitset[j])
+        tempRHS[rowIdx] -= *curSatisfiedBound(j) *
+                           _constraintMatrix[rowIdx][j];
+  }
+
+  std::fill(_rightHandSides.begin(),
+            _rightHandSides.end(), T{0.0});
+  for (int i = 0; i < _rowInfos.size(); ++i)
+    for (int j = 0; j < _rowInfos.size(); ++j)
+      _rightHandSides[i] +=
+          _basisMatrixInverse[i][j] * tempRHS[j];
 }
 
 template <typename T>
@@ -273,7 +299,7 @@ template <typename T> void SimplexTableau<T>::convertToStandardForm() {
     }
     const auto newSlackLabelStr = newSlackLabel();
     _variableInfos.push_back(
-        VariableInfo{newSlackLabelStr, VariableType::CONTINUOUS, true});
+        VariableInfo{newSlackLabelStr, VariableType::CONTINUOUS, true, false, false});
     _variableLabelSet.insert(newSlackLabelStr);
     _variableLowerBounds.push_back(0.0);
     _variableUpperBounds.push_back(std::nullopt);
@@ -323,8 +349,9 @@ template <typename T> void SimplexTableau<T>::addBoundsToMatrix() {
 
 template <typename T>
 bool SimplexTableau<T>::isColumnAllowedToEnterBasis(const int colIdx) {
-  return !_variableInfos[colIdx]._isArtificial &&
-         !_simplexBasisData._isBasicColumnIndexBitset[colIdx];
+  return  !_variableInfos[colIdx]._isArtificial &&
+          !_variableInfos[colIdx]._isFixed &&
+          !_simplexBasisData._isBasicColumnIndexBitset[colIdx];
 }
 template <typename T>
 std::vector<T>
@@ -377,11 +404,28 @@ void SimplexTableau<T>::pivot(const int rowIdx, const int enteringColumnIdx,
 
 template <typename T>
 void SimplexTableau<T>::pivotImplicitBounds(
-    const int rowIdx, const int enteringColumnIdx,
+    const int pivotRowIdx, const int enteringColumnIdx,
     const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow,
     const bool leavingVarBecomesLowerBound) {
-  const auto leavingBasicColumnIdx = basicColumnIdx(rowIdx);
-  pivot(rowIdx, enteringColumnIdx, enteringColumn, pivotRow);
+  const auto leavingBasicColumnIdx = basicColumnIdx(pivotRowIdx);
+  SPDLOG_DEBUG(
+      "PIVOT - ENTERING COLUMN IDX {}, ROW IDX {} LEAVING COLUMN IDX {}",
+      enteringColumnIdx, pivotRowIdx, leavingBasicColumnIdx);
+
+  const auto leavingColumn = computeTableauColumn(leavingBasicColumnIdx);
+  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
+    _rightHandSides[rowIdx] +=
+        *curSatisfiedBound(enteringColumnIdx) *
+        enteringColumn[rowIdx];
+
+    _rightHandSides[rowIdx] -=
+        (leavingVarBecomesLowerBound
+             ? *_variableLowerBounds[leavingBasicColumnIdx]
+             : *_variableUpperBounds[leavingBasicColumnIdx]) *
+        leavingColumn[rowIdx];
+  }
+
+  pivot(pivotRowIdx, enteringColumnIdx, enteringColumn, pivotRow);
 
   auto &isColumnAtLowerBoundBitset =
       _simplexBasisData._isColumnAtLowerBoundBitset;

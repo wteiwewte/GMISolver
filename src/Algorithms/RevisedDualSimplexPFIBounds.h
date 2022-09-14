@@ -25,17 +25,9 @@ private:
   std::optional<int> chooseRow();
   std::optional<int> chooseRowFirstEligible();
   std::optional<int> chooseRowBiggestViolation();
-  std::vector<T> computePivotRow(const int rowIdx);
   std::optional<int>
   chooseEnteringColumnIdx(const int pivotRowIdx, const std::vector<T> &pivotRow,
                           const bool isPivotRowUnderLowerBound);
-  void pivot(const std::vector<T> &pivotRow, const int pivotRowIdx,
-             const std::vector<T> &enteringColumn, const int enteringColumnIdx,
-             const bool isPivotRowUnderLowerBound);
-
-  void calculateCurrentObjectiveValue();
-  void calculateSolution();
-  void initRHS();
 
   SimplexTableau<T> &_simplexTableau;
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;

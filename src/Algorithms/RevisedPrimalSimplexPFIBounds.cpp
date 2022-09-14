@@ -26,9 +26,9 @@ RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>::
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _reinversionFrequency(reinversionFrequency) {
-  calculateRHS();
-  calculateCurrentObjectiveValue();
-  calculateSolution();
+  _simplexTableau.calculateRHS();
+  _simplexTableau.calculateCurrentObjectiveValue();
+  _simplexTableau.calculateSolution();
 }
 
 template <typename T, typename ComparisonTraitsT>
@@ -76,8 +76,8 @@ void RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>::runImpl() {
     if (iterResult)
       break;
 
-    calculateCurrentObjectiveValue();
-    calculateSolution();
+    _simplexTableau.calculateCurrentObjectiveValue();
+    _simplexTableau.calculateSolution();
 
     ++iterCount;
     if (_objValueLoggingFrequency &&
@@ -210,41 +210,10 @@ void RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>::changeTableau(
     moveVarFromOneBoundToAnother(pivotRowData, enteringColumnIdx,
                                  enteringColumn);
   else
-    moveVarInsideBasis(
+    _simplexTableau.pivotImplicitBounds(
         *pivotRowData._pivotRowIdx, enteringColumnIdx, enteringColumn,
         _simplexTableau.computeTableauRow(*pivotRowData._pivotRowIdx),
         pivotRowData._departingIdxBecomesLowerBound);
-}
-
-template <typename T, typename ComparisonTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>::moveVarInsideBasis(
-    const int pivotRowIdx, const int enteringColumnIdx,
-    const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow,
-    const bool leavingVarBecomesLowerBound) {
-  const auto leavingBasicColumnIdx =
-      _simplexTableau.basicColumnIdx(pivotRowIdx);
-  SPDLOG_DEBUG(
-      "PIVOT - ENTERING COLUMN IDX {}, ROW IDX {} LEAVING COLUMN IDX {}",
-      enteringColumnIdx, pivotRowIdx, leavingBasicColumnIdx);
-
-  const auto leavingColumn =
-      _simplexTableau.computeTableauColumn(leavingBasicColumnIdx);
-  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
-    _simplexTableau._rightHandSides[rowIdx] +=
-        *_simplexTableau.curSatisfiedBound(enteringColumnIdx) *
-        enteringColumn[rowIdx];
-
-    _simplexTableau._rightHandSides[rowIdx] -=
-        (leavingVarBecomesLowerBound
-             ? *_simplexTableau._variableLowerBounds[leavingBasicColumnIdx]
-             : *_simplexTableau._variableUpperBounds[leavingBasicColumnIdx]) *
-        leavingColumn[rowIdx];
-  }
-
-  _simplexTableau.pivotImplicitBounds(
-      pivotRowIdx, enteringColumnIdx, enteringColumn,
-      _simplexTableau.computeTableauRow(pivotRowIdx),
-      leavingVarBecomesLowerBound);
 }
 
 template <typename T, typename ComparisonTraitsT>
@@ -437,10 +406,11 @@ bool RevisedPrimalSimplexPFIBounds<
     if (!nonZeroEntryColumnIndex.has_value()) {
       shouldRowBeRemoved[rowIdx] = true;
     } else {
-      moveVarInsideBasis(
+      _simplexTableau.pivotImplicitBounds(
           rowIdx, *nonZeroEntryColumnIndex,
           _simplexTableau.computeTableauColumn(*nonZeroEntryColumnIndex),
-          pivotRow, true);
+          pivotRow,
+          true);
     }
   }
 
@@ -494,7 +464,7 @@ void RevisedPrimalSimplexPFIBounds<T,
   _simplexTableau._objectiveRow.resize(_simplexTableau._variableInfos.size());
   calculateDual();
   _simplexTableau.calculateReducedCostsBasedOnDual();
-  calculateCurrentObjectiveValue();
+  _simplexTableau.calculateCurrentObjectiveValue();
 }
 
 template <typename T, typename ComparisonTraitsT>
@@ -514,52 +484,6 @@ void RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>::calculateDual() {
 
     _simplexTableau._y[colIdx] = sum;
   }
-}
-
-template <typename T, typename ComparisonTraitsT>
-void RevisedPrimalSimplexPFIBounds<
-    T, ComparisonTraitsT>::calculateCurrentObjectiveValue() {
-  _simplexTableau._objectiveValue = T{};
-  for (int i = 0; i < _simplexTableau._rowInfos.size(); ++i)
-    _simplexTableau._objectiveValue +=
-        _simplexTableau._rightHandSides[i] *
-        _simplexTableau._objectiveRow[_simplexTableau._simplexBasisData
-                                          ._rowToBasisColumnIdxMap[i]];
-
-  for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j)
-    if (!_simplexTableau._simplexBasisData._isBasicColumnIndexBitset[j])
-      _simplexTableau._objectiveValue += *_simplexTableau.curSatisfiedBound(j) *
-                                         _simplexTableau._objectiveRow[j];
-}
-
-template <typename T, typename ComparisonTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>::calculateSolution() {
-  _simplexTableau._x.resize(_simplexTableau._variableInfos.size());
-  for (int colIdx = 0; colIdx < _simplexTableau._variableInfos.size(); ++colIdx)
-    if (!_simplexTableau._simplexBasisData._isBasicColumnIndexBitset[colIdx])
-      _simplexTableau._x[colIdx] = *_simplexTableau.curSatisfiedBound(colIdx);
-
-  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx)
-    _simplexTableau._x[_simplexTableau.basicColumnIdx(rowIdx)] =
-        _simplexTableau._rightHandSides[rowIdx];
-}
-
-template <typename T, typename ComparisonTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>::calculateRHS() {
-  std::vector<T> tempRHS = _simplexTableau._initialRightHandSides;
-  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
-    for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j)
-      if (!_simplexTableau._simplexBasisData._isBasicColumnIndexBitset[j])
-        tempRHS[rowIdx] -= *_simplexTableau.curSatisfiedBound(j) *
-                           _simplexTableau._constraintMatrix[rowIdx][j];
-  }
-
-  std::fill(_simplexTableau._rightHandSides.begin(),
-            _simplexTableau._rightHandSides.end(), T{0.0});
-  for (int i = 0; i < _simplexTableau._rowInfos.size(); ++i)
-    for (int j = 0; j < _simplexTableau._rowInfos.size(); ++j)
-      _simplexTableau._rightHandSides[i] +=
-          _simplexTableau._basisMatrixInverse[i][j] * tempRHS[j];
 }
 
 template <typename T, typename ComparisonTraitsT>
@@ -625,7 +549,7 @@ bool RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>::reinversion() {
     const T pivotingTermInverse{1.0 / basisColumns[*pivotColumnIdx][rowIdx]};
     for (int j = 0; j < basisSize; ++j) {
       if (j == rowIdx)
-        continue; // !!
+        continue;
 
       //      if (ComparisonTraitsT::equal(basisColumns[*pivotColumnIdx][j],
       //      0.0))
@@ -671,7 +595,7 @@ bool RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>::reinversion() {
   }
 
   _simplexTableau._basisMatrixInverse.swap(newBasisMatrixInverse);
-  calculateRHS();
+  _simplexTableau.calculateRHS();
   SPDLOG_INFO("REINVERSION SUCCESS");
   return true;
 }

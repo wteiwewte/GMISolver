@@ -46,8 +46,6 @@ private:
   void setInitialObjective();
   void calculateDual();
 
-  bool reinversion();
-
   SimplexTableau<T> &_simplexTableau;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
   const int32_t _objValueLoggingFrequency;

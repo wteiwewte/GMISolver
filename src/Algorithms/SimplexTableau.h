@@ -73,6 +73,7 @@ private:
   void calculateReducedCostsBasedOnDual();
   void calculateRHS();
   void updateBasisData(const PivotData<T> &pivotData);
+  bool reinversion();
 
   const LinearProgram<T> &_initialProgram;
   std::vector<VariableInfo> _variableInfos;

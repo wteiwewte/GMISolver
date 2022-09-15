@@ -489,4 +489,119 @@ std::optional<T> SimplexTableau<T>::curSatisfiedBound(const int varIdx) {
   return std::nullopt;
 }
 
+template <typename T>
+bool SimplexTableau<T>::reinversion() {
+  using ComparisonTraitsT = ApproximateComparisonTraits<T>;
+  // TODO - opt it by storing columns in vectors
+  const auto basisSize = _rowInfos.size();
+  std::vector<int> columnIndexesMapping(basisSize);
+  std::vector<std::vector<T>> basisColumns(basisSize);
+  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
+    const auto basicColumnIdx =
+        _simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
+    columnIndexesMapping[rowIdx] = basicColumnIdx;
+    basisColumns[rowIdx].resize(basisSize);
+    for (int j = 0; j < basisSize; ++j)
+      basisColumns[rowIdx][j] =
+          _constraintMatrix[j][basicColumnIdx];
+  }
+
+  std::vector<std::vector<T>> newBasisMatrixInverse(basisSize);
+  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
+    newBasisMatrixInverse[rowIdx].resize(basisSize);
+    newBasisMatrixInverse[rowIdx][rowIdx] = 1.0;
+  }
+
+  std::vector<bool> isUnusedColumn(basisSize, true);
+
+  [[maybe_unused]] const auto findPivotColumnFirstEligible =
+      [&](const int rowIdx) -> std::optional<int> {
+    for (int colIdx = 0; colIdx < basisSize; ++colIdx)
+      if (isUnusedColumn[colIdx] &&
+          !ComparisonTraitsT::equal(basisColumns[colIdx][rowIdx], 0.0))
+        return colIdx;
+
+    return std::nullopt;
+  };
+
+  [[maybe_unused]] const auto findPivotColumnMaxAbsValue =
+      [&](const int rowIdx) -> std::optional<int> {
+    std::optional<T> maxAbsPivotValue;
+    std::optional<int> maxAbsPivotColIdx;
+    for (int colIdx = 0; colIdx < basisSize; ++colIdx)
+      if (isUnusedColumn[colIdx] &&
+          ComparisonTraitsT::isEligibleForPivot(basisColumns[colIdx][rowIdx])) {
+        const auto currentAbsPivotValue =
+            std::fabs(basisColumns[colIdx][rowIdx]);
+        if (!maxAbsPivotColIdx.has_value() ||
+            (*maxAbsPivotColIdx < currentAbsPivotValue)) {
+          maxAbsPivotValue = currentAbsPivotValue;
+          maxAbsPivotColIdx = colIdx;
+        }
+      }
+
+    return maxAbsPivotColIdx;
+  };
+
+  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
+    const auto pivotColumnIdx = findPivotColumnMaxAbsValue(rowIdx);
+    if (!pivotColumnIdx.has_value()) {
+      SPDLOG_WARN("Basis matrix reinversion failed for row {}!", rowIdx);
+      return false;
+    }
+
+    const T pivotingTermInverse{1.0 / basisColumns[*pivotColumnIdx][rowIdx]};
+    for (int j = 0; j < basisSize; ++j) {
+      if (j == rowIdx)
+        continue;
+
+      //      if (ComparisonTraitsT::equal(basisColumns[*pivotColumnIdx][j],
+      //      0.0))
+      //        continue;
+
+      const auto commonCoeff =
+          pivotingTermInverse * basisColumns[*pivotColumnIdx][j];
+
+      //      if (ComparisonTraitsT::equal(commonCoeff, 0.0))
+      //        continue;
+      for (int k = 0; k < basisSize; ++k)
+        newBasisMatrixInverse[j][k] -=
+            commonCoeff * newBasisMatrixInverse[rowIdx][k];
+    }
+
+    for (int k = 0; k < basisSize; ++k)
+      newBasisMatrixInverse[rowIdx][k] *= pivotingTermInverse;
+
+    isUnusedColumn[*pivotColumnIdx] = false;
+    _simplexBasisData._rowToBasisColumnIdxMap[rowIdx] =
+        columnIndexesMapping[*pivotColumnIdx];
+
+    for (int colIdx = 0; colIdx < basisSize; ++colIdx)
+      if (isUnusedColumn[colIdx]) {
+        //        if (ComparisonTraitsT::equal(basisColumns[colIdx][rowIdx],
+        //        0.0))
+        //          continue;
+
+        const auto commonCoeff =
+            pivotingTermInverse * basisColumns[colIdx][rowIdx];
+
+        //        if (!ComparisonTraitsT::equal(commonCoeff, 0.0))
+        for (int k = 0; k < basisSize; ++k) {
+          if (k == rowIdx)
+            continue;
+
+          basisColumns[colIdx][k] -=
+              commonCoeff * basisColumns[*pivotColumnIdx][k];
+        }
+
+        basisColumns[colIdx][rowIdx] *= pivotingTermInverse;
+      }
+  }
+
+  _basisMatrixInverse.swap(newBasisMatrixInverse);
+  calculateRHS();
+  SPDLOG_INFO("REINVERSION SUCCESS");
+  return true;
+}
+
 template class SimplexTableau<double>;

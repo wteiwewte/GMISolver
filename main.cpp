@@ -1,6 +1,4 @@
-#include "src/Algorithms/PrimalSimplex.h"
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
-#include "src/Algorithms/RevisedPrimalSimplexPFI.h"
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/MpsReader.h"

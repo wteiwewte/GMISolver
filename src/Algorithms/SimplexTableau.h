@@ -4,10 +4,20 @@
 #include "src/DataModel/CommonTypes.h"
 #include "src/DataModel/LinearProgram.h"
 #include "src/DataModel/SimplexBasisData.h"
+#include "src/Util/ComparisonTraits.h"
 
 #include <iostream>
 
-template <typename T> class SimplexTableau {
+template <typename T,
+          typename ComparisonTraitsT>
+class RevisedPrimalSimplexPFIBounds;
+template <typename T,
+          typename ComparisonTraitsT>
+class RevisedDualSimplexPFIBounds;
+
+template <typename T,
+          typename ComparisonTraitsT = ApproximateComparisonTraits<T>>
+class SimplexTableau {
 public:
   SimplexTableau(const LinearProgram<T> &linearProgram,
                  const bool isPrimalSimplex);
@@ -34,14 +44,8 @@ public:
   const std::vector<RowInfo> &getRowInfos() const { return _rowInfos; }
 
 private:
-  template <typename U, typename ComparisonTraitsT> friend class PrimalSimplex;
-
-  template <typename U, typename ComparisonTraitsT>
-  friend class RevisedPrimalSimplexPFI;
-  template <typename U, typename ComparisonTraitsT>
-  friend class RevisedPrimalSimplexPFIBounds;
-  template <typename U, typename ComparisonTraitsT>
-  friend class RevisedDualSimplexPFIBounds;
+  friend class RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>;
+  friend class RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>;
 
   std::optional<SimplexBasisData> createBasisFromArtificialVars() const;
 

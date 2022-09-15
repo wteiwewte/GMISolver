@@ -18,7 +18,7 @@ void removeElements(std::vector<T> &vec,
 template <typename T, typename ComparisonTraitsT>
 RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>::
     RevisedPrimalSimplexPFIBounds(
-        SimplexTableau<T> &simplexTableau,
+        SimplexTableau<T, ComparisonTraitsT> &simplexTableau,
         const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
         const int32_t objValueLoggingFrequency,
         const int32_t reinversionFrequency)

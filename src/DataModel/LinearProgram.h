@@ -13,7 +13,6 @@
 #include <vector>
 
 template <typename T> struct MpsReader;
-template <typename T> class SimplexTableau;
 
 template <typename T> class LinearProgram {
 public:
@@ -30,7 +29,8 @@ public:
 
 private:
   friend struct MpsReader<T>;
-  friend class SimplexTableau<T>;
+  template <typename U, typename ComparisonTraitsU>
+  friend class SimplexTableau;
 
   std::string basicInformationStr() const;
 

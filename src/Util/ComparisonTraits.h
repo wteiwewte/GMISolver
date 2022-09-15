@@ -5,8 +5,6 @@
 #include <cmath>
 #include <numeric>
 
-// odpalic algos dla roznych epsilonow
-
 template <typename T> struct ApproximateComparisonTraits {
   static_assert(!std::numeric_limits<T>::is_integer);
 

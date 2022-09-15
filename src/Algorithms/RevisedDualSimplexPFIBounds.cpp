@@ -5,7 +5,7 @@
 
 template <typename T, typename ComparisonTraitsT>
 RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>::RevisedDualSimplexPFIBounds(
-    SimplexTableau<T> &simplexTableau,
+    SimplexTableau<T, ComparisonTraitsT> &simplexTableau,
     const DualSimplexRowPivotRule dualSimplexRowPivotRule,
     const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency)
     : _simplexTableau(simplexTableau),

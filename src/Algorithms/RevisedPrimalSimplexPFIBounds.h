@@ -6,14 +6,14 @@
 
 #include <optional>
 
-template <typename T> class SimplexTableau;
+template <typename T, typename ComparisonTraitsT> class SimplexTableau;
 
 template <typename T,
           typename ComparisonTraitsT = ApproximateComparisonTraits<T>>
 class RevisedPrimalSimplexPFIBounds {
 public:
   RevisedPrimalSimplexPFIBounds(
-      SimplexTableau<T> &simplexTableau,
+      SimplexTableau<T, ComparisonTraitsT> &simplexTableau,
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
       const int32_t objValueLoggingFrequency,
       const int32_t reinversionFrequency);
@@ -46,7 +46,7 @@ private:
   void setInitialObjective();
   void calculateDual();
 
-  SimplexTableau<T> &_simplexTableau;
+  SimplexTableau<T, ComparisonTraitsT> &_simplexTableau;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
   const int32_t _objValueLoggingFrequency;
   const int32_t _reinversionFrequency;

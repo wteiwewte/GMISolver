@@ -2,18 +2,18 @@
 #define GMISOLVER_REVISEDPRIMALSIMPLEXPFIBOUNDS_H
 
 #include "src/DataModel/CommonTypes.h"
-#include "src/Util/ComparisonTraits.h"
+#include "src/Util/SimplexTraits.h"
 
 #include <optional>
 
-template <typename T, typename ComparisonTraitsT> class SimplexTableau;
+template <typename T, typename SimplexTraitsT> class SimplexTableau;
 
 template <typename T,
-          typename ComparisonTraitsT = ApproximateComparisonTraits<T>>
+          typename SimplexTraitsT = SimplexTraits<T>>
 class RevisedPrimalSimplexPFIBounds {
 public:
   RevisedPrimalSimplexPFIBounds(
-      SimplexTableau<T, ComparisonTraitsT> &simplexTableau,
+      SimplexTableau<T, SimplexTraitsT> &simplexTableau,
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
       const int32_t objValueLoggingFrequency,
       const int32_t reinversionFrequency);
@@ -46,7 +46,7 @@ private:
   void setInitialObjective();
   void calculateDual();
 
-  SimplexTableau<T, ComparisonTraitsT> &_simplexTableau;
+  SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
   const int32_t _objValueLoggingFrequency;
   const int32_t _reinversionFrequency;

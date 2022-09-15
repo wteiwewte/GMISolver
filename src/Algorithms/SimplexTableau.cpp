@@ -1,11 +1,11 @@
 #include "SimplexTableau.h"
 
 #include "src/DataModel/LinearProgram.h"
-#include "src/Util/ComparisonTraits.h"
 #include "src/Util/LPPrinter.h"
+#include "src/Util/SimplexTraits.h"
 
-template <typename T, typename ComparisonTraitsT>
-SimplexTableau<T, ComparisonTraitsT>::SimplexTableau(const LinearProgram<T> &linearProgram,
+template <typename T, typename SimplexTraitsT>
+SimplexTableau<T, SimplexTraitsT>::SimplexTableau(const LinearProgram<T> &linearProgram,
                                   const bool isPrimalSimplex)
     : _initialProgram(linearProgram),
       _variableInfos(linearProgram._variableInfos),
@@ -36,9 +36,10 @@ SimplexTableau<T, ComparisonTraitsT>::SimplexTableau(const LinearProgram<T> &lin
   SPDLOG_TRACE("Simplex tableau with artificial variables");
   SPDLOG_TRACE(toString());
   SPDLOG_TRACE(toStringLpSolveFormat());
+  initMatrixRepresentations();
 }
 
-template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, ComparisonTraitsT>::addArtificialVariables() {
+template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables() {
   const int variableCountAtTheStart = _variableInfos.size();
   const int newVariableCount = variableCountAtTheStart + _rowInfos.size();
 
@@ -59,8 +60,8 @@ template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, Compari
   }
 }
 
-template <typename T, typename ComparisonTraitsT>
-std::vector<T> SimplexTableau<T, ComparisonTraitsT>::initialPrimalSimplexObjective() const {
+template <typename T, typename SimplexTraitsT>
+std::vector<T> SimplexTableau<T, SimplexTraitsT>::initialPrimalSimplexObjective() const {
   std::vector<T> result(_constraintMatrix.front().size());
 
   for (int variableIdx = 0; variableIdx < _variableInfos.size(); ++variableIdx)
@@ -70,16 +71,16 @@ std::vector<T> SimplexTableau<T, ComparisonTraitsT>::initialPrimalSimplexObjecti
   return result;
 }
 
-template <typename T, typename ComparisonTraitsT>
-std::vector<T> SimplexTableau<T, ComparisonTraitsT>::initialDualSimplexObjective() const {
+template <typename T, typename SimplexTraitsT>
+std::vector<T> SimplexTableau<T, SimplexTraitsT>::initialDualSimplexObjective() const {
   std::vector<T> result = _initialProgram.getObjective();
   result.resize(_variableInfos.size());
   return result;
 }
 
-template <typename T, typename ComparisonTraitsT>
+template <typename T, typename SimplexTraitsT>
 std::optional<SimplexBasisData>
-SimplexTableau<T, ComparisonTraitsT>::createBasisFromArtificialVars() const {
+SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
   std::optional<int> firstArtificialIdx;
   for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx)
     if (_variableInfos[varIdx]._isArtificial) {
@@ -108,7 +109,7 @@ SimplexTableau<T, ComparisonTraitsT>::createBasisFromArtificialVars() const {
   return result;
 }
 
-template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, ComparisonTraitsT>::init(const bool isPrimalSimplex) {
+template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::init(const bool isPrimalSimplex) {
   if (auto simplexBasisData = createBasisFromArtificialVars();
       simplexBasisData.has_value())
     _simplexBasisData = std::move(*simplexBasisData);
@@ -122,7 +123,7 @@ template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, Compari
   calculateSolution();
 }
 
-template <typename T, typename ComparisonTraitsT> std::string SimplexTableau<T, ComparisonTraitsT>::toString() const {
+template <typename T, typename SimplexTraitsT> std::string SimplexTableau<T, SimplexTraitsT>::toString() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printLineBreak();
 
@@ -148,19 +149,19 @@ template <typename T, typename ComparisonTraitsT> std::string SimplexTableau<T, 
 
   return lpPrinter.toString();
 }
-template <typename T, typename ComparisonTraitsT>
-std::string SimplexTableau<T, ComparisonTraitsT>::toStringObjectiveValue() const {
+template <typename T, typename SimplexTraitsT>
+std::string SimplexTableau<T, SimplexTraitsT>::toStringObjectiveValue() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printCurrentObjectiveValue(_result, _objectiveValue);
   return lpPrinter.toString();
 }
-template <typename T, typename ComparisonTraitsT> std::string SimplexTableau<T, ComparisonTraitsT>::toStringSolution() const {
+template <typename T, typename SimplexTraitsT> std::string SimplexTableau<T, SimplexTraitsT>::toStringSolution() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printSolution(_x);
   return lpPrinter.toString();
 }
-template <typename T, typename ComparisonTraitsT>
-std::string SimplexTableau<T, ComparisonTraitsT>::toStringLpSolveFormat() const {
+template <typename T, typename SimplexTraitsT>
+std::string SimplexTableau<T, SimplexTraitsT>::toStringLpSolveFormat() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printInLpSolveFormat(_constraintMatrix, _objectiveRow,
                                  _rightHandSides, _variableLowerBounds,
@@ -168,7 +169,7 @@ std::string SimplexTableau<T, ComparisonTraitsT>::toStringLpSolveFormat() const 
   return lpPrinter.toString();
 }
 
-template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, ComparisonTraitsT>::calculateCurrentObjectiveValue() {
+template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::calculateCurrentObjectiveValue() {
   _objectiveValue = T{};
   for (int i = 0; i < _rowInfos.size(); ++i)
     _objectiveValue +=
@@ -180,7 +181,7 @@ template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, Compari
       _objectiveValue += *curSatisfiedBound(j) *
                                          _objectiveRow[j];
 }
-template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, ComparisonTraitsT>::calculateSolution() {
+template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::calculateSolution() {
   _x.resize(_variableInfos.size());
   for (int colIdx = 0; colIdx < _variableInfos.size(); ++colIdx)
     if (!_simplexBasisData._isBasicColumnIndexBitset[colIdx])
@@ -190,14 +191,14 @@ template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, Compari
     _x[basicColumnIdx(rowIdx)] =
         _rightHandSides[rowIdx];
 }
-template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, ComparisonTraitsT>::initBasisMatrixInverse() {
+template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::initBasisMatrixInverse() {
   _basisMatrixInverse.resize(_rowInfos.size());
   for (int rowIdx = 0; rowIdx < _basisMatrixInverse.size(); ++rowIdx) {
     _basisMatrixInverse[rowIdx].resize(_basisMatrixInverse.size());
     _basisMatrixInverse[rowIdx][rowIdx] = 1;
   }
 }
-template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, ComparisonTraitsT>::initDual() {
+template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::initDual() {
   _y.resize(_rowInfos.size());
   for (int rowIdx = 0; rowIdx < _y.size(); ++rowIdx) {
     const auto basicColumnIdx =
@@ -205,8 +206,8 @@ template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, Compari
     _y[rowIdx] = _objectiveRow[basicColumnIdx];
   }
 }
-template <typename T, typename ComparisonTraitsT>
-void SimplexTableau<T, ComparisonTraitsT>::calculateReducedCostsBasedOnDual() {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::calculateReducedCostsBasedOnDual() {
   _reducedCosts.resize(_variableInfos.size());
   for (int columnIdx = 0; columnIdx < _variableInfos.size(); ++columnIdx) {
     T yAn = _objectiveRow[columnIdx];
@@ -217,8 +218,8 @@ void SimplexTableau<T, ComparisonTraitsT>::calculateReducedCostsBasedOnDual() {
   }
 }
 
-template <typename T, typename ComparisonTraitsT>
-void SimplexTableau<T, ComparisonTraitsT>::calculateRHS() {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::calculateRHS() {
   std::vector<T> tempRHS = _initialRightHandSides;
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     for (int j = 0; j < _variableInfos.size(); ++j)
@@ -235,8 +236,8 @@ void SimplexTableau<T, ComparisonTraitsT>::calculateRHS() {
           _basisMatrixInverse[i][j] * tempRHS[j];
 }
 
-template <typename T, typename ComparisonTraitsT>
-void SimplexTableau<T, ComparisonTraitsT>::updateBasisData(const PivotData<T> &pivotData) {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::updateBasisData(const PivotData<T> &pivotData) {
   const auto &[leavingRowIdx, enteringColumnIdx, _] = pivotData;
   auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset, _1, _2] =
       _simplexBasisData;
@@ -247,7 +248,7 @@ void SimplexTableau<T, ComparisonTraitsT>::updateBasisData(const PivotData<T> &p
   isBasicColumnIndexBitset[rowToBasisColumnIdxMap[leavingRowIdx]] = false;
   rowToBasisColumnIdxMap[leavingRowIdx] = enteringColumnIdx;
 }
-template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, ComparisonTraitsT>::initBoundsForDualSimplex() {
+template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::initBoundsForDualSimplex() {
   for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
     if (_reducedCosts[varIdx] < 0.0) {
       _simplexBasisData._isColumnAtLowerBoundBitset[varIdx] = false;
@@ -260,7 +261,7 @@ template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, Compari
   }
 }
 
-template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, ComparisonTraitsT>::convertToStandardForm() {
+template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::convertToStandardForm() {
   int nonEqualityRows = 0;
   for (const auto &rowInfo : _rowInfos)
     if (!rowInfo.isEqualityRow())
@@ -308,7 +309,7 @@ template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, Compari
   }
 }
 
-template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, ComparisonTraitsT>::makeRightHandSidesNonNegative() {
+template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::makeRightHandSidesNonNegative() {
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     T sum{0.0};
     for (int variableIdx = 0; variableIdx < _variableInfos.size();
@@ -329,7 +330,7 @@ template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, Compari
   }
 }
 
-template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, ComparisonTraitsT>::addBoundsToMatrix() {
+template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::addBoundsToMatrix() {
   for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
     if (const auto lowerBound = _variableLowerBounds[varIdx];
         lowerBound.has_value()) {
@@ -347,33 +348,29 @@ template <typename T, typename ComparisonTraitsT> void SimplexTableau<T, Compari
   }
 }
 
-template <typename T, typename ComparisonTraitsT>
-bool SimplexTableau<T, ComparisonTraitsT>::isColumnAllowedToEnterBasis(const int colIdx) {
+template <typename T, typename SimplexTraitsT>
+bool SimplexTableau<T, SimplexTraitsT>::isColumnAllowedToEnterBasis(const int colIdx) {
   return  !_variableInfos[colIdx]._isArtificial &&
           !_variableInfos[colIdx]._isFixed &&
           !_simplexBasisData._isBasicColumnIndexBitset[colIdx];
 }
-template <typename T, typename ComparisonTraitsT>
+template <typename T, typename SimplexTraitsT>
 std::vector<T>
-SimplexTableau<T, ComparisonTraitsT>::computeTableauColumn(const int enteringColumnIdx) {
+SimplexTableau<T, SimplexTraitsT>::computeTableauColumn(const int colIdx) {
   std::vector<T> result(_rowInfos.size());
 
-  // TODO - maybe add kahan summation algo, maybe opt order
-  for (int i = 0; i < _rowInfos.size(); ++i) {
-    for (int k = 0; k < _rowInfos.size(); ++k)
-      result[i] +=
-          _basisMatrixInverse[i][k] * _constraintMatrix[k][enteringColumnIdx];
-  }
+  for (int i = 0; i < _rowInfos.size(); ++i)
+    result[i] = SimplexTraitsT::dotProduct(_basisMatrixInverse[i], _constraintMatrixSparseForm._columns[colIdx]);
 
   return result;
 }
 
-template <typename T, typename ComparisonTraitsT>
-std::vector<T> SimplexTableau<T, ComparisonTraitsT>::computeTableauRow(const int rowIdx) {
+template <typename T, typename SimplexTraitsT>
+std::vector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRow(const int rowIdx) {
   std::vector<T> result(_variableInfos.size());
 
   // TODO - maybe add kahan summation algo, maybe opt order
-  const int columnBasicIdx = _simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
+  const int columnBasicIdx = basicColumnIdx(rowIdx);
   for (int j = 0; j < _variableInfos.size(); ++j) {
     if (j == columnBasicIdx)
       result[j] = 1.0;
@@ -381,15 +378,14 @@ std::vector<T> SimplexTableau<T, ComparisonTraitsT>::computeTableauRow(const int
              _simplexBasisData._isBasicColumnIndexBitset[j])
       result[j] = 0.0;
     else
-      for (int k = 0; k < _rowInfos.size(); ++k)
-        result[j] += _basisMatrixInverse[rowIdx][k] * _constraintMatrix[k][j];
+      result[j] = SimplexTraitsT::dotProduct(_basisMatrixInverse[rowIdx], _constraintMatrixSparseForm._columns[j]);
   }
 
   return result;
 }
 
-template <typename T, typename ComparisonTraitsT>
-void SimplexTableau<T, ComparisonTraitsT>::pivot(const int rowIdx, const int enteringColumnIdx,
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::pivot(const int rowIdx, const int enteringColumnIdx,
                               const std::vector<T> &enteringColumn,
                               const std::vector<T> &pivotRow) {
   const PivotData<T> pivotData{rowIdx, enteringColumnIdx,
@@ -402,8 +398,8 @@ void SimplexTableau<T, ComparisonTraitsT>::pivot(const int rowIdx, const int ent
   updateBasisData(pivotData);
 }
 
-template <typename T, typename ComparisonTraitsT>
-void SimplexTableau<T, ComparisonTraitsT>::pivotImplicitBounds(
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::pivotImplicitBounds(
     const int pivotRowIdx, const int enteringColumnIdx,
     const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow,
     const bool leavingVarBecomesLowerBound) {
@@ -412,18 +408,16 @@ void SimplexTableau<T, ComparisonTraitsT>::pivotImplicitBounds(
       "PIVOT - ENTERING COLUMN IDX {}, ROW IDX {} LEAVING COLUMN IDX {}",
       enteringColumnIdx, pivotRowIdx, leavingBasicColumnIdx);
 
-  const auto leavingColumn = computeTableauColumn(leavingBasicColumnIdx);
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     _rightHandSides[rowIdx] +=
         *curSatisfiedBound(enteringColumnIdx) *
         enteringColumn[rowIdx];
 
-    _rightHandSides[rowIdx] -=
-        (leavingVarBecomesLowerBound
-             ? *_variableLowerBounds[leavingBasicColumnIdx]
-             : *_variableUpperBounds[leavingBasicColumnIdx]) *
-        leavingColumn[rowIdx];
   }
+  _rightHandSides[pivotRowIdx] -=
+      (leavingVarBecomesLowerBound
+           ? *_variableLowerBounds[leavingBasicColumnIdx]
+           : *_variableUpperBounds[leavingBasicColumnIdx]);
 
   pivot(pivotRowIdx, enteringColumnIdx, enteringColumn, pivotRow);
 
@@ -443,8 +437,8 @@ void SimplexTableau<T, ComparisonTraitsT>::pivotImplicitBounds(
     isColumnAtUpperBoundBitset[enteringColumnIdx] = false;
 }
 
-template <typename T, typename ComparisonTraitsT>
-void SimplexTableau<T, ComparisonTraitsT>::updateReducedCosts(const PivotData<T> &pivotData,
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::updateReducedCosts(const PivotData<T> &pivotData,
                                            const std::vector<T> &pivotRow) {
   const auto &[leavingRowIdx, enteringColumnIdx, pivotingTermInverse] =
       pivotData;
@@ -454,32 +448,19 @@ void SimplexTableau<T, ComparisonTraitsT>::updateReducedCosts(const PivotData<T>
     _reducedCosts[j] -= commonCoeffReducedCost * pivotRow[j];
 }
 
-template <typename T, typename ComparisonTraitsT>
-void SimplexTableau<T, ComparisonTraitsT>::updateInverseMatrixWithRHS(
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::updateInverseMatrixWithRHS(
     const PivotData<T> &pivotData, const std::vector<T> &enteringColumn) {
   const auto &[leavingRowIdx, enteringColumnIdx, pivotingTermInverse] =
       pivotData;
 
-  for (int i = 0; i < _rowInfos.size(); ++i) {
-    if (i == leavingRowIdx)
-      continue;
-    // TODO - opt if coeff is zero
-    const auto commonCoeff = enteringColumn[i] * pivotingTermInverse;
+  const ElementaryMatrix<T> etm{enteringColumn,pivotingTermInverse, leavingRowIdx};
 
-    for (int j = 0; j < _basisMatrixInverse.size(); ++j)
-      _basisMatrixInverse[i][j] -=
-          commonCoeff * _basisMatrixInverse[leavingRowIdx][j];
-
-    _rightHandSides[i] -= commonCoeff * _rightHandSides[leavingRowIdx];
-  }
-
-  for (int j = 0; j < _basisMatrixInverse.size(); ++j)
-    _basisMatrixInverse[leavingRowIdx][j] *= pivotingTermInverse;
-
-  _rightHandSides[leavingRowIdx] *= pivotingTermInverse;
+  SimplexTraitsT::multiplyByETM(etm, _basisMatrixInverse);
+  SimplexTraitsT::multiplyByETM(etm, _rightHandSides);
 }
-template <typename T, typename ComparisonTraitsT>
-std::optional<T> SimplexTableau<T, ComparisonTraitsT>::curSatisfiedBound(const int varIdx) {
+template <typename T, typename SimplexTraitsT>
+std::optional<T> SimplexTableau<T, SimplexTraitsT>::curSatisfiedBound(const int varIdx) {
   if (_simplexBasisData._isColumnAtLowerBoundBitset[varIdx])
     return *_variableLowerBounds[varIdx];
 
@@ -489,8 +470,8 @@ std::optional<T> SimplexTableau<T, ComparisonTraitsT>::curSatisfiedBound(const i
   return std::nullopt;
 }
 
-template <typename T, typename ComparisonTraitsT>
-bool SimplexTableau<T, ComparisonTraitsT>::reinversion() {
+template <typename T, typename SimplexTraitsT>
+bool SimplexTableau<T, SimplexTraitsT>::reinversion() {
   // TODO - opt it by storing columns in vectors
   const auto basisSize = _rowInfos.size();
   std::vector<int> columnIndexesMapping(basisSize);
@@ -517,7 +498,7 @@ bool SimplexTableau<T, ComparisonTraitsT>::reinversion() {
       [&](const int rowIdx) -> std::optional<int> {
     for (int colIdx = 0; colIdx < basisSize; ++colIdx)
       if (isUnusedColumn[colIdx] &&
-          !ComparisonTraitsT::equal(basisColumns[colIdx][rowIdx], 0.0))
+          !SimplexTraitsT::equal(basisColumns[colIdx][rowIdx], 0.0))
         return colIdx;
 
     return std::nullopt;
@@ -529,7 +510,7 @@ bool SimplexTableau<T, ComparisonTraitsT>::reinversion() {
     std::optional<int> maxAbsPivotColIdx;
     for (int colIdx = 0; colIdx < basisSize; ++colIdx)
       if (isUnusedColumn[colIdx] &&
-          ComparisonTraitsT::isEligibleForPivot(basisColumns[colIdx][rowIdx])) {
+          SimplexTraitsT::isEligibleForPivot(basisColumns[colIdx][rowIdx])) {
         const auto currentAbsPivotValue =
             std::fabs(basisColumns[colIdx][rowIdx]);
         if (!maxAbsPivotColIdx.has_value() ||
@@ -554,14 +535,14 @@ bool SimplexTableau<T, ComparisonTraitsT>::reinversion() {
       if (j == rowIdx)
         continue;
 
-      //      if (ComparisonTraitsT::equal(basisColumns[*pivotColumnIdx][j],
+      //      if (SimplexTraitsT::equal(basisColumns[*pivotColumnIdx][j],
       //      0.0))
       //        continue;
 
       const auto commonCoeff =
           pivotingTermInverse * basisColumns[*pivotColumnIdx][j];
 
-      //      if (ComparisonTraitsT::equal(commonCoeff, 0.0))
+      //      if (SimplexTraitsT::equal(commonCoeff, 0.0))
       //        continue;
       for (int k = 0; k < basisSize; ++k)
         newBasisMatrixInverse[j][k] -=
@@ -577,14 +558,14 @@ bool SimplexTableau<T, ComparisonTraitsT>::reinversion() {
 
     for (int colIdx = 0; colIdx < basisSize; ++colIdx)
       if (isUnusedColumn[colIdx]) {
-        //        if (ComparisonTraitsT::equal(basisColumns[colIdx][rowIdx],
+        //        if (SimplexTraitsT::equal(basisColumns[colIdx][rowIdx],
         //        0.0))
         //          continue;
 
         const auto commonCoeff =
             pivotingTermInverse * basisColumns[colIdx][rowIdx];
 
-        //        if (!ComparisonTraitsT::equal(commonCoeff, 0.0))
+        //        if (!SimplexTraitsT::equal(commonCoeff, 0.0))
         for (int k = 0; k < basisSize; ++k) {
           if (k == rowIdx)
             continue;
@@ -601,6 +582,47 @@ bool SimplexTableau<T, ComparisonTraitsT>::reinversion() {
   calculateRHS();
   SPDLOG_INFO("REINVERSION SUCCESS");
   return true;
+}
+
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::initMatrixRepresentations() {
+  _constraintMatrixNormalForm.clear();
+  _constraintMatrixSparseForm.clear();
+
+  _constraintMatrixNormalForm._rows.resize(_rowInfos.size());
+  for (int i = 0; i < _rowInfos.size(); ++i)
+    _constraintMatrixNormalForm._rows[i].resize(_variableInfos.size());
+
+  _constraintMatrixNormalForm._columns.resize(_variableInfos.size());
+  for (int j = 0; j < _variableInfos.size(); ++j)
+    _constraintMatrixNormalForm._columns[j].resize(_rowInfos.size());
+
+  _constraintMatrixSparseForm._rows.resize(_rowInfos.size());
+  _constraintMatrixSparseForm._columns.resize(_variableInfos.size());
+
+  for (int i = 0; i < _rowInfos.size(); ++i)
+    for (int j = 0; j < _variableInfos.size(); ++j)
+    {
+      const auto currentValue = _constraintMatrix[i][j];
+      _constraintMatrixNormalForm._rows[i][j] = currentValue;
+      _constraintMatrixNormalForm._columns[j][i] = currentValue;
+
+      if (currentValue != T{})
+      {
+        _constraintMatrixSparseForm._rows[i]._elements.push_back({currentValue, j});
+        _constraintMatrixSparseForm._columns[j]._elements.push_back({currentValue, i});
+      }
+    }
+
+//  int rowNonzeros = 0;
+//  for (int i = 0; i < _rowInfos.size(); ++i)
+//    SPDLOG_INFO("{} ROW NONZEROS COUNT {}", i,
+//                (rowNonzeros += _constraintMatrixSparseForm._rows[i]._elements.size(), _constraintMatrixSparseForm._rows[i]._elements.size()));
+//
+//  SPDLOG_INFO("TOTAL NONZEROS COUNT {}", rowNonzeros);
+//
+//  for (int j = 0; j < _variableInfos.size(); ++j)
+//    SPDLOG_INFO("{} COLUMN NONZEROS COUNT {}", j, _constraintMatrixSparseForm._columns[j]._elements.size());
 }
 
 template class SimplexTableau<double>;

@@ -27,10 +27,10 @@ bool contains(const std::vector<std::string>& vec, const std::string& str)
   return std::find(vec.begin(), vec.end(), str) != vec.end();
 }
 
-template <typename T, typename ComparisonTraitsT>
+template <typename T, typename SimplexTraitsT>
 void runPrimalSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
 {
-  SimplexTableau<T, ComparisonTraitsT> simplexTableau(linearProgram, true);
+  SimplexTableau<T, SimplexTraitsT> simplexTableau(linearProgram, true);
   RevisedPrimalSimplexPFIBounds<T>(simplexTableau,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
                                    absl::GetFlag(FLAGS_obj_value_logging_frequency),
@@ -40,10 +40,10 @@ void runPrimalSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
   SPDLOG_DEBUG(simplexTableau.toStringSolution());
 }
 
-template <typename T, typename ComparisonTraitsT>
+template <typename T, typename SimplexTraitsT>
 void runDualSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
 {
-  SimplexTableau<T, ComparisonTraitsT> simplexTableau(linearProgram, false);
+  SimplexTableau<T, SimplexTraitsT> simplexTableau(linearProgram, false);
   RevisedDualSimplexPFIBounds<T>(simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
                                  absl::GetFlag(FLAGS_obj_value_logging_frequency),
                                  absl::GetFlag(FLAGS_reinversion_frequency)
@@ -52,7 +52,7 @@ void runDualSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
   SPDLOG_DEBUG(simplexTableau.toStringSolution());
 }
 
-template <typename T, typename ComparisonTraitsT = ApproximateComparisonTraits<T>>
+template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 void readLPModelAndProcess(const std::string& modelFileMps)
 {
   SPDLOG_INFO("Processing lp model from file {}", modelFileMps);
@@ -65,10 +65,10 @@ void readLPModelAndProcess(const std::string& modelFileMps)
 
   const auto simplexTypesToBenchmark = absl::GetFlag(FLAGS_benchmark_simplex_types);
   if (contains(simplexTypesToBenchmark, "primal"))
-    runPrimalSimplexWithImplicitBounds<T, ComparisonTraitsT>(*linearProgram);
+    runPrimalSimplexWithImplicitBounds<T, SimplexTraitsT>(*linearProgram);
 
   if (contains(simplexTypesToBenchmark, "dual"))
-    runDualSimplexWithImplicitBounds<T, ComparisonTraitsT>(*linearProgram);
+    runDualSimplexWithImplicitBounds<T, SimplexTraitsT>(*linearProgram);
 }
 
 void initFileLogger()

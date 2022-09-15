@@ -2,6 +2,7 @@
 #define GMISOLVER_LPPRINTER_H
 
 #include "src/DataModel/CommonTypes.h"
+#include "src/DataModel/MatrixTypes.h"
 #include "src/DataModel/SimplexBasisData.h"
 #include "src/Util/SpdlogHeader.h"
 

@@ -52,6 +52,4 @@ template <typename T> struct PivotRowData {
   bool _noBasisChangeNeeded{false};
 };
 
-template <typename T> using Matrix = std::vector<std::vector<T>>;
-
 #endif // GMISOLVER_COMMONTYPES_H

@@ -4,6 +4,7 @@
 #include "src/DataModel/CommonConstants.h"
 #include "src/DataModel/CommonTypes.h"
 #include "src/DataModel/EnumTypes.h"
+#include "src/DataModel/MatrixTypes.h"
 
 #include <map>
 #include <optional>

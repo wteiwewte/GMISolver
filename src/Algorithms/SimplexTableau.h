@@ -2,21 +2,23 @@
 #define GMISOLVER_SIMPLEXTABLEAU_H
 
 #include "src/DataModel/CommonTypes.h"
-#include "src/DataModel/LinearProgram.h"
+#include "src/DataModel/MatrixTypes.h"
 #include "src/DataModel/SimplexBasisData.h"
-#include "src/Util/ComparisonTraits.h"
+#include "src/Util/SimplexTraits.h"
 
-#include <iostream>
+#include <set>
 
+template <typename T>
+class LinearProgram;
 template <typename T,
-          typename ComparisonTraitsT>
+          typename SimplexTraitsT>
 class RevisedPrimalSimplexPFIBounds;
 template <typename T,
-          typename ComparisonTraitsT>
+          typename SimplexTraitsT>
 class RevisedDualSimplexPFIBounds;
 
 template <typename T,
-          typename ComparisonTraitsT = ApproximateComparisonTraits<T>>
+          typename SimplexTraitsT = SimplexTraits<T>>
 class SimplexTableau {
 public:
   SimplexTableau(const LinearProgram<T> &linearProgram,
@@ -44,8 +46,8 @@ public:
   const std::vector<RowInfo> &getRowInfos() const { return _rowInfos; }
 
 private:
-  friend class RevisedPrimalSimplexPFIBounds<T, ComparisonTraitsT>;
-  friend class RevisedDualSimplexPFIBounds<T, ComparisonTraitsT>;
+  friend class RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>;
+  friend class RevisedDualSimplexPFIBounds<T, SimplexTraitsT>;
 
   std::optional<SimplexBasisData> createBasisFromArtificialVars() const;
 
@@ -55,7 +57,7 @@ private:
   bool isColumnAllowedToEnterBasis(const int colIdx);
   std::optional<T> curSatisfiedBound(const int varIdx);
 
-  std::vector<T> computeTableauColumn(const int enteringColumnIdx);
+  std::vector<T> computeTableauColumn(const int colIdx);
   std::vector<T> computeTableauRow(const int rowIdx);
 
   void pivot(const int rowIdx, const int enteringColumnIdx,
@@ -73,6 +75,7 @@ private:
   void initBasisMatrixInverse();
   void initDual();
   void initBoundsForDualSimplex();
+  void initMatrixRepresentations();
 
   void calculateReducedCostsBasedOnDual();
   void calculateRHS();
@@ -87,6 +90,9 @@ private:
   std::vector<RowInfo> _rowInfos;
 
   Matrix<T> _constraintMatrix;
+  MatrixRepresentation<T> _constraintMatrixNormalForm;
+  SparseMatrixRepresentation<T> _constraintMatrixSparseForm;
+
   std::vector<T> _rightHandSides;
   std::vector<T> _initialRightHandSides;
   std::vector<T> _initialObjectiveRow;

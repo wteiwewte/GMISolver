@@ -73,7 +73,7 @@ private:
                                   const std::vector<T> &enteringColumn);
 
   void initBasisMatrixInverse();
-  void initDual();
+  void calculateDual();
   void initBoundsForDualSimplex();
   void initMatrixRepresentations();
 
@@ -81,6 +81,7 @@ private:
   void calculateRHS();
   void updateBasisData(const PivotData<T> &pivotData);
   bool reinversion();
+  void setObjective(const std::vector<T>& newObjective);
 
   const LinearProgram<T> &_initialProgram;
   std::vector<VariableInfo> _variableInfos;

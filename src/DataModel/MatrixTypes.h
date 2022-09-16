@@ -47,7 +47,7 @@ struct ElementaryMatrix
 {
   const std::vector<T>& _vec;
   T _pivotingTermInverse{0.0};
-  int _pivotIdx{0};
+  int _pivotRowIdx{0};
 };
 
 #endif // GMISOLVER_MATRIXTYPES_H

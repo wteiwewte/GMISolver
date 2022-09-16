@@ -48,59 +48,118 @@ template <typename T> struct SimplexTraits {
     return x + y;
   }
 
+  static T add(const T& x, const T& y)
+  {
+    return addNormal(x, y);
+  }
+
+  struct PositiveNegativeAdder
+  {
+    void addValue(const T& val)
+    {
+      if (val > 0.0)
+        _sumPositives = add(_sumPositives, val);
+      else
+        _sumNegatives = add(_sumNegatives, val);
+    }
+
+    T currentSum() const
+    {
+      return add(_sumPositives, _sumNegatives);
+    }
+
+    T _sumPositives = 0.0;
+    T _sumNegatives = 0.0;
+  };
+
+  struct KahanAdder {
+    void addValue(const T& val)
+    {
+      T t = add(_sum, val);
+      if (std::fabs(_sum) >= std::fabs(val))
+        _c = add(_c, (_sum - t) + val);
+      else
+        _c = add(_c, (val - t) + _sum);
+
+      _sum = t;
+    }
+
+    T currentSum() const
+    {
+      return add(_sum, _c);
+    }
+
+    T _sum = 0.0;
+    T _c = 0.0;
+  };
+
+  struct SimpleAdder {
+    void addValue(const T& val)
+    {
+      _sum += val;
+    }
+
+    T currentSum() const
+    {
+      return _sum;
+    }
+
+    T _sum = 0.0;
+  };
+
+  using Adder = SimpleAdder;
+
   static T dotProduct(const std::vector<T>& vecNormal, const SparseVector<T>& vecSparse)
   {
-    T result{};
-
+    Adder adder;
     for (const auto& elem : vecSparse._elements)
     {
       if (elem._index >= vecNormal.size())
         break;
-      result += vecNormal[elem._index] * elem._data;
+
+      adder.addValue(vecNormal[elem._index] * elem._data);
     }
 
-    return result;
+    return adder.currentSum();
+  }
+
+  static T dotProduct(const std::vector<T>& vec1, const std::vector<T>& vec2)
+  {
+    Adder adder;
+
+    for (int i = 0; i < vec1.size(); ++i)
+      adder.addValue(vec1[i] * vec2[i]);
+
+    return adder.currentSum();
   }
 
   static void multiplyByETM(const ElementaryMatrix<T>& etm, std::vector<T>& modifiedVec)
   {
-    const T pivotModifiedVecTerm = modifiedVec[etm._pivotIdx];
+    const T pivotModifiedVecTerm = modifiedVec[etm._pivotRowIdx];
     for (int i = 0; i < modifiedVec.size(); ++i) {
-      if (i == etm._pivotIdx)
+      if (i == etm._pivotRowIdx)
         modifiedVec[i] *= etm._pivotingTermInverse;
       else
-        modifiedVec[i] -= etm._pivotingTermInverse * etm._vec[i] * pivotModifiedVecTerm;
+        modifiedVec[i] = add(modifiedVec[i], -(etm._pivotingTermInverse * etm._vec[i] * pivotModifiedVecTerm));
     }
   }
 
 
-  static void multiplyByETM(const ElementaryMatrix<T>& etm, Matrix<T>&modifiedMatrix)
+  static void multiplyByETM(const ElementaryMatrix<T>& etm, Matrix<T>& modifiedMatrix)
   {
     for (int rowIdx = 0; rowIdx < modifiedMatrix.size(); ++rowIdx) {
-      if (rowIdx == etm._pivotIdx)
+      if (rowIdx == etm._pivotRowIdx)
         continue;
 
       const auto commonCoeff = etm._vec[rowIdx] * etm._pivotingTermInverse;
 
       for (int colIdx = 0; colIdx < modifiedMatrix[rowIdx].size(); ++colIdx)
-        modifiedMatrix[rowIdx][colIdx] -= commonCoeff * modifiedMatrix[etm._pivotIdx][colIdx];
+        modifiedMatrix[rowIdx][colIdx] =
+            add(modifiedMatrix[rowIdx][colIdx], -(commonCoeff * modifiedMatrix[etm._pivotRowIdx][colIdx]));
     }
 
-    for (int j = 0; j < modifiedMatrix[etm._pivotIdx].size(); ++j)
-      modifiedMatrix[etm._pivotIdx][j] *= etm._pivotingTermInverse;
-
-//    for (int i = 0; i < _rowInfos.size(); ++i) {
-//      if (i == leavingRowIdx)
-//        continue;
-//      const auto commonCoeff = enteringColumn[i] * pivotingTermInverse;
-//
-//      for (int j = 0; j < _basisMatrixInverse.size(); ++j)
-//        _basisMatrixInverse[i][j] -=
-//            commonCoeff * _basisMatrixInverse[leavingRowIdx][j];
-//    }
-//
-//    for (int j = 0; j < _basisMatrixInverse.size(); ++j)
-//      _basisMatrixInverse[leavingRowIdx][j] *= pivotingTermInverse;
+    for (int j = 0; j < modifiedMatrix[etm._pivotRowIdx].size(); ++j)
+      modifiedMatrix[etm._pivotRowIdx][j] *= etm._pivotingTermInverse;
   }
 };
 
@@ -113,3 +172,6 @@ template <typename T> struct SimpleComparisonTraits {
 };
 
 #endif // GMISOLVER_SIMPLEXTRAITS_H
+
+
+

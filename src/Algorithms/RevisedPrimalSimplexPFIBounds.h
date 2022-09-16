@@ -43,9 +43,6 @@ private:
   void removeArtificialVariablesFromProgram();
   void removeRows(const std::vector<bool> &shouldRowBeRemoved);
 
-  void setInitialObjective();
-  void calculateDual();
-
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
   const int32_t _objValueLoggingFrequency;

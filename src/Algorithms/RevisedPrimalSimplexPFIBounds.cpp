@@ -64,7 +64,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
 }
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseTwo() {
-  setInitialObjective();
+  _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
   runImpl();
 }
 
@@ -236,7 +236,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
     if (isVarIncreasing)
       addedValue = -addedValue;
 
-    _simplexTableau._rightHandSides[rowIdx] += addedValue;
+    _simplexTableau._rightHandSides[rowIdx] = SimplexTraitsT::add(_simplexTableau._rightHandSides[rowIdx], addedValue);
   }
 
   isColumnAtLowerBoundBitset[enteringColumnIdx] =
@@ -458,35 +458,6 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::removeRows(
     removeElements(_simplexTableau._basisMatrixInverse[i], shouldRowBeRemoved);
 
   removeElements(_simplexTableau._basisMatrixInverse, shouldRowBeRemoved);
-}
-template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T,
-                                   SimplexTraitsT>::setInitialObjective() {
-  _simplexTableau._objectiveRow =
-      _simplexTableau._initialProgram.getObjective();
-  _simplexTableau._objectiveRow.resize(_simplexTableau._variableInfos.size());
-  calculateDual();
-  _simplexTableau.calculateReducedCostsBasedOnDual();
-  _simplexTableau.calculateCurrentObjectiveValue();
-}
-
-template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::calculateDual() {
-  _simplexTableau._y.resize(_simplexTableau._basisMatrixInverse.size());
-  for (int colIdx = 0; colIdx < _simplexTableau._y.size(); ++colIdx) {
-    T sum{};
-
-    for (int k = 0; k < _simplexTableau._rowInfos.size(); ++k) {
-      SPDLOG_TRACE("{} {} {}", k,
-                   _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[k],
-                   _simplexTableau._objectiveRow.size());
-      sum += _simplexTableau._objectiveRow[_simplexTableau._simplexBasisData
-                                               ._rowToBasisColumnIdxMap[k]] *
-             _simplexTableau._basisMatrixInverse[k][colIdx];
-    }
-
-    _simplexTableau._y[colIdx] = sum;
-  }
 }
 
 template class RevisedPrimalSimplexPFIBounds<double>;

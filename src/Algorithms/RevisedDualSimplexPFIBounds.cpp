@@ -205,3 +205,4 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumnIdx(
 }
 
 template class RevisedDualSimplexPFIBounds<double>;
+template class RevisedDualSimplexPFIBounds<long double>;

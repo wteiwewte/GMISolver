@@ -24,6 +24,8 @@ public:
   void runImpl();
   bool runOneIteration();
 
+  void lexicographicReoptimization(const bool minimize);
+
 private:
   std::optional<int> chooseEnteringColumn();
   std::optional<int> chooseEnteringColumnFirstEligible();
@@ -42,6 +44,10 @@ private:
   bool removeArtificialVariablesFromBasis();
   void removeArtificialVariablesFromProgram();
   void removeRows(const std::vector<bool> &shouldRowBeRemoved);
+
+  std::vector<T> singleVarObjective(const int varIdx, const bool minimize);
+  void fixNonBasicVariables(int& varsFixedCount);
+  void unfixAllVariables();
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;

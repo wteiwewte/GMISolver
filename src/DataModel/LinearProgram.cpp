@@ -35,3 +35,4 @@ std::string LinearProgram<T>::basicInformationStr() const {
 }
 
 template class LinearProgram<double>;
+template class LinearProgram<long double>;

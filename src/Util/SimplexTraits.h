@@ -96,7 +96,7 @@ template <typename T> struct SimplexTraits {
   struct SimpleAdder {
     void addValue(const T& val)
     {
-      _sum += val;
+      _sum = add(_sum, val);
     }
 
     T currentSum() const

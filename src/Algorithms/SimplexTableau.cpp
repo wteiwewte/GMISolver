@@ -508,7 +508,7 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversion() {
       [&](const int rowIdx) -> std::optional<int> {
     for (int colIdx = 0; colIdx < basisSize; ++colIdx)
       if (isUnusedColumn[colIdx] &&
-          !SimplexTraitsT::equal(basisColumns[colIdx][rowIdx], 0.0))
+          SimplexTraitsT::isEligibleForPivot(basisColumns[colIdx][rowIdx]))
         return colIdx;
 
     return std::nullopt;
@@ -536,7 +536,7 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversion() {
   for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
     const auto pivotColumnIdx = findPivotColumnMaxAbsValue(rowIdx);
     if (!pivotColumnIdx.has_value()) {
-      SPDLOG_WARN("Basis matrix reinversion failed for row {}!", rowIdx);
+      SPDLOG_WARN("BASIS MATRIX REINVERSION FAILED FOR ROW {}!", rowIdx);
       return false;
     }
 
@@ -555,7 +555,6 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversion() {
 
   _basisMatrixInverse.swap(newBasisMatrixInverse);
   calculateRHS();
-  SPDLOG_INFO("REINVERSION SUCCESS");
   return true;
 }
 
@@ -608,3 +607,4 @@ void SimplexTableau<T, SimplexTraitsT>::setObjective(const std::vector<T>& newOb
 }
 
 template class SimplexTableau<double>;
+template class SimplexTableau<long double>;

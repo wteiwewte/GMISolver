@@ -31,13 +31,17 @@ template <typename T, typename SimplexTraitsT>
 void runPrimalSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
 {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(linearProgram, true);
-  RevisedPrimalSimplexPFIBounds<T>(simplexTableau,
+  RevisedPrimalSimplexPFIBounds<T> revisedPrimalSimplexPfiBounds(simplexTableau,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
                                    absl::GetFlag(FLAGS_obj_value_logging_frequency),
                                    absl::GetFlag(FLAGS_reinversion_frequency)
-                                   ).run();
+                                   );
+  revisedPrimalSimplexPfiBounds.run();
   SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
   SPDLOG_DEBUG(simplexTableau.toStringSolution());
+//  revisedPrimalSimplexPfiBounds.lexicographicReoptimization(false);
+//  SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
+//  SPDLOG_INFO(simplexTableau.toStringSolution());
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -93,9 +97,11 @@ int main(int argc, char** argv) {
   initFileLogger();
   std::this_thread::sleep_for (std::chrono::seconds(1));
 
+  using FloatingPointT = double;
+
   if (const auto lpModelFile = absl::GetFlag(FLAGS_lp_model_file); lpModelFile.has_value())
-    readLPModelAndProcess<double>(*lpModelFile);
+    readLPModelAndProcess<FloatingPointT>(*lpModelFile);
   else if(const auto lpModelsDirectory = absl::GetFlag(FLAGS_lp_models_directory); lpModelsDirectory.has_value())
     for (const auto& lpModelFileEntry : std::filesystem::directory_iterator(*lpModelsDirectory))
-      readLPModelAndProcess<double>(lpModelFileEntry.path());
+      readLPModelAndProcess<FloatingPointT>(lpModelFileEntry.path());
 }

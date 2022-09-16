@@ -400,7 +400,7 @@ bool RevisedPrimalSimplexPFIBounds<
           _simplexTableau._simplexBasisData._isBasicColumnIndexBitset[j])
         continue;
 
-      if (!SimplexTraitsT::equal(pivotRow[j], 0.0)) {
+      if (SimplexTraitsT::isEligibleForPivot(pivotRow[j])) {
         nonZeroEntryColumnIndex = j;
         break;
       }
@@ -419,7 +419,7 @@ bool RevisedPrimalSimplexPFIBounds<
 
   if (std::any_of(shouldRowBeRemoved.begin(), shouldRowBeRemoved.end(),
                   [](const bool val) { return val; })) {
-    SPDLOG_INFO("REDUNDANT CONSTRAINTS IN LP FORMULATION");
+    SPDLOG_DEBUG("REDUNDANT CONSTRAINTS IN LP FORMULATION");
     removeRows(shouldRowBeRemoved);
 //    return _simplexTableau.reinversion();
   }
@@ -459,5 +459,58 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::removeRows(
 
   removeElements(_simplexTableau._basisMatrixInverse, shouldRowBeRemoved);
 }
+template <typename T, typename SimplexTraitsT>
+void RevisedPrimalSimplexPFIBounds<
+    T, SimplexTraitsT>::lexicographicReoptimization(const bool minimize) {
+  int curVarIdxToBeOptimized = 0;
+  int varsFixedCount = 0;
+  while (curVarIdxToBeOptimized < _simplexTableau._variableInfos.size() &&
+         varsFixedCount < _simplexTableau._variableInfos.size())
+  {
+    fixNonBasicVariables(varsFixedCount);
+    if (!_simplexTableau._variableInfos[curVarIdxToBeOptimized]._isFixed)
+    {
+      SPDLOG_INFO("VAR IDX {} TO BE OPTIMIZED", curVarIdxToBeOptimized);
+      _simplexTableau.setObjective(singleVarObjective(curVarIdxToBeOptimized, minimize));
+      runImpl();
+    }
+    ++curVarIdxToBeOptimized;
+  }
+  _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
+  unfixAllVariables();
+}
+template <typename T, typename SimplexTraitsT>
+std::vector<T>
+RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::singleVarObjective(
+    const int varIdx, const bool minimize) {
+  std::vector<T> result(_simplexTableau._variableInfos.size());
+  result[varIdx] = minimize ? 1.0 : -1.0;
+  return result;
+}
+template <typename T, typename SimplexTraitsT>
+void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
+    fixNonBasicVariables(int &varsFixedCount) {
+  for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size(); ++varIdx)
+  {
+    if (!_simplexTableau._simplexBasisData._isBasicColumnIndexBitset[varIdx] &&
+        !SimplexTraitsT::equal(_simplexTableau._reducedCosts[varIdx], 0.0))
+    {
+      _simplexTableau._variableInfos[varIdx]._isFixed = true;
+      ++varsFixedCount;
+    }
+  }
+}
+template <typename T, typename SimplexTraitsT>
+void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::unfixAllVariables() {
+  for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size(); ++varIdx)
+  {
+    if (_simplexTableau._variableLowerBounds[varIdx].has_value()
+        && _simplexTableau._variableLowerBounds[varIdx] == _simplexTableau._variableUpperBounds[varIdx])
+      continue;
+
+    _simplexTableau._variableInfos[varIdx]._isFixed = false;
+  }
+}
 
 template class RevisedPrimalSimplexPFIBounds<double>;
+template class RevisedPrimalSimplexPFIBounds<long double>;

@@ -355,3 +355,4 @@ bool MpsReader<T>::finalizeBounds(LinearProgram<T>& linearProgram) {
 }
 
 template struct MpsReader<double>;
+template struct MpsReader<long double>;

@@ -419,9 +419,10 @@ bool RevisedPrimalSimplexPFIBounds<
 
   if (std::any_of(shouldRowBeRemoved.begin(), shouldRowBeRemoved.end(),
                   [](const bool val) { return val; })) {
-    SPDLOG_DEBUG("REDUNDANT CONSTRAINTS IN LP FORMULATION");
+    SPDLOG_INFO("REDUNDANT CONSTRAINTS IN LP FORMULATION");
     removeRows(shouldRowBeRemoved);
-//    return _simplexTableau.reinversion();
+//    if (_simplexTableau._useProductFormOfInverse)
+//      return _simplexTableau.reinversion();
   }
 
   return true;
@@ -454,6 +455,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::removeRows(
   removeElements(_simplexTableau._rowInfos, shouldRowBeRemoved);
   removeElements(_simplexTableau._rightHandSides, shouldRowBeRemoved);
   removeElements(_simplexTableau._initialRightHandSides, shouldRowBeRemoved);
+  // FIXME PFI CASE
   for (int i = 0; i < _simplexTableau._basisMatrixInverse.size(); ++i)
     removeElements(_simplexTableau._basisMatrixInverse[i], shouldRowBeRemoved);
 

@@ -39,6 +39,13 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
       SPDLOG_INFO("ITERATION {}", iterCount);
       SPDLOG_INFO("{}\n", _simplexTableau.toStringObjectiveValue());
     }
+    if (_reinversionFrequency && (iterCount % _reinversionFrequency == 0)) {
+      if (!_simplexTableau.reinversion()) {
+        SPDLOG_WARN("STOPPING PRIMAL SIMPLEX BECAUSE OF FAILED REINVERSION");
+        _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
+        break;
+      }
+    }
 
     SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   }

@@ -22,7 +22,8 @@ template <typename T,
 class SimplexTableau {
 public:
   SimplexTableau(const LinearProgram<T> &linearProgram,
-                 const bool isPrimalSimplex);
+                 const bool isPrimalSimplex,
+                 const bool useProductFormOfInverse);
 
   void convertToStandardForm();
   void makeRightHandSidesNonNegative();
@@ -58,7 +59,11 @@ private:
   std::optional<T> curSatisfiedBound(const int varIdx);
 
   std::vector<T> computeTableauColumn(const int colIdx);
+  std::vector<T> computeTableauColumnExplicit(const int colIdx);
+  std::vector<T> computeTableauColumnPFI(const int colIdx);
   std::vector<T> computeTableauRow(const int rowIdx);
+  std::vector<T> computeTableauRowExplicit(const int rowIdx);
+  std::vector<T> computeTableauRowPFI(const int rowIdx);
 
   void pivot(const int rowIdx, const int enteringColumnIdx,
              const std::vector<T> &enteringColumn,
@@ -74,14 +79,22 @@ private:
 
   void initBasisMatrixInverse();
   void calculateDual();
+  void calculateDualExplicit();
+  void calculateDualPFI();
   void initBoundsForDualSimplex();
   void initMatrixRepresentations();
 
   void calculateReducedCostsBasedOnDual();
   void calculateRHS();
+  void calculateRHSExplicit();
+  void calculateRHSPFI();
   void updateBasisData(const PivotData<T> &pivotData);
   bool reinversion();
+  bool reinversionExplicit();
+  bool reinversionPFI();
   void setObjective(const std::vector<T>& newObjective);
+  std::vector<T> multiplyByBasisMatrixLeftInverseUsingPFI(const std::vector<T>& vec);
+  std::vector<T> multiplyByBasisMatrixRightInverseUsingPFI(const std::vector<T>& vec);
 
   const LinearProgram<T> &_initialProgram;
   std::vector<VariableInfo> _variableInfos;
@@ -99,7 +112,9 @@ private:
   std::vector<T> _initialObjectiveRow;
   std::vector<T> _objectiveRow;
 
+  bool _useProductFormOfInverse;
   std::vector<std::vector<T>> _basisMatrixInverse;
+  std::vector<ElementaryMatrix<T>> _pfiEtms;
   std::vector<T> _reducedCosts;
   std::vector<T> _y;
   std::vector<T> _x;

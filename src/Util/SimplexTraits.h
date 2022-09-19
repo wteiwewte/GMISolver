@@ -133,7 +133,7 @@ template <typename T> struct SimplexTraits {
     return adder.currentSum();
   }
 
-  static void multiplyByETM(const ElementaryMatrix<T>& etm, std::vector<T>& modifiedVec)
+  static void multiplyByETM(const ElementaryMatrixView<T>& etm, std::vector<T>& modifiedVec)
   {
     const T pivotModifiedVecTerm = modifiedVec[etm._pivotRowIdx];
     for (int i = 0; i < modifiedVec.size(); ++i) {
@@ -144,8 +144,21 @@ template <typename T> struct SimplexTraits {
     }
   }
 
+  static void multiplyByETMFromRight(std::vector<T>& modifiedVec, const ElementaryMatrixView<T>& etm)
+  {
+    Adder adder;
+    for (int i = 0; i < modifiedVec.size(); ++i) {
+      if (i == etm._pivotRowIdx)
+        adder.addValue(modifiedVec[i] * etm._pivotingTermInverse);
+      else
+        adder.addValue(-modifiedVec[i] * etm._vec[i] * etm._pivotingTermInverse);
+    }
 
-  static void multiplyByETM(const ElementaryMatrix<T>& etm, Matrix<T>& modifiedMatrix)
+    modifiedVec[etm._pivotRowIdx] = adder.currentSum();
+  }
+
+
+  static void multiplyByETM(const ElementaryMatrixView<T>& etm, Matrix<T>& modifiedMatrix)
   {
     for (int rowIdx = 0; rowIdx < modifiedMatrix.size(); ++rowIdx) {
       if (rowIdx == etm._pivotRowIdx)

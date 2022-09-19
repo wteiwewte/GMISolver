@@ -43,9 +43,15 @@ struct MatrixRepresentation
 };
 
 template <typename T>
-struct ElementaryMatrix
-{
+struct ElementaryMatrixView {
   const std::vector<T>& _vec;
+  T _pivotingTermInverse{0.0};
+  int _pivotRowIdx{0};
+};
+
+template <typename T>
+struct ElementaryMatrix {
+  std::vector<T> _vec;
   T _pivotingTermInverse{0.0};
   int _pivotRowIdx{0};
 };

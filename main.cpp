@@ -1,5 +1,6 @@
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
+#include "src/Algorithms/RevisedPrimalSimplexPFIBoundsSparse.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/MpsReader.h"
 #include "src/Util/SpdlogHeader.h"
@@ -46,6 +47,20 @@ void runPrimalSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
 }
 
 template <typename T, typename SimplexTraitsT>
+void runPrimalSimplexWithImplicitBoundsSparse(const LinearProgram<T>& linearProgram)
+{
+  SimplexTableau<T, SimplexTraitsT> simplexTableau(linearProgram, true, absl::GetFlag(FLAGS_use_product_form_of_inverse));
+  RevisedPrimalSimplexPFIBoundsSparse<T> revisedPrimalSimplexPfiBounds(simplexTableau,
+      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+                                   absl::GetFlag(FLAGS_obj_value_logging_frequency),
+                                   absl::GetFlag(FLAGS_reinversion_frequency)
+                                   );
+  revisedPrimalSimplexPfiBounds.run();
+  SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
+  SPDLOG_DEBUG(simplexTableau.toStringSolution());
+}
+
+template <typename T, typename SimplexTraitsT>
 void runDualSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
 {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse));
@@ -71,6 +86,9 @@ void readLPModelAndProcess(const std::string& modelFileMps)
   const auto simplexTypesToBenchmark = absl::GetFlag(FLAGS_benchmark_simplex_types);
   if (contains(simplexTypesToBenchmark, "primal"))
     runPrimalSimplexWithImplicitBounds<T, SimplexTraitsT>(*linearProgram);
+
+  if (contains(simplexTypesToBenchmark, "primal_sparse"))
+    runPrimalSimplexWithImplicitBoundsSparse<T, SimplexTraitsT>(*linearProgram);
 
   if (contains(simplexTypesToBenchmark, "dual"))
     runDualSimplexWithImplicitBounds<T, SimplexTraitsT>(*linearProgram);

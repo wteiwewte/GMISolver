@@ -2,6 +2,7 @@
 #define GMISOLVER_SIMPLEXTRAITS_H
 
 #include "src/DataModel/MatrixTypes.h"
+#include "src/Util/SpdlogHeader.h"
 
 #include <algorithm>
 #include <cmath>
@@ -133,7 +134,7 @@ template <typename T> struct SimplexTraits {
     return adder.currentSum();
   }
 
-  static void multiplyByETM(const ElementaryMatrixView<T>& etm, std::vector<T>& modifiedVec)
+  static void multiplyByETM(const ElementaryMatrix<T>& etm, std::vector<T>& modifiedVec)
   {
     const T pivotModifiedVecTerm = modifiedVec[etm._pivotRowIdx];
     for (int i = 0; i < modifiedVec.size(); ++i) {
@@ -144,7 +145,146 @@ template <typename T> struct SimplexTraits {
     }
   }
 
-  static void multiplyByETMFromRight(std::vector<T>& modifiedVec, const ElementaryMatrixView<T>& etm)
+  static void multiplyByETMSparse(const SparseElementaryMatrix<T>&sparseEtm, std::vector<T>& modifiedVec)
+  {
+    const T pivotModifiedVecTerm = modifiedVec[sparseEtm._pivotRowIdx];
+    for (const auto&etmElem : sparseEtm._sparseVec._elements) {
+      if (etmElem._index == sparseEtm._pivotRowIdx)
+        modifiedVec[sparseEtm._pivotRowIdx] *= sparseEtm._pivotingTermInverse;
+      else
+        modifiedVec[etmElem._index] = add(modifiedVec[etmElem._index], -(sparseEtm._pivotingTermInverse *
+                                               etmElem._data * pivotModifiedVecTerm));
+    }
+  }
+
+  static void multiplyByETMSparse(const SparseElementaryMatrix<T>&sparseEtm, SparseVector<T>& modifiedVec)
+  {
+//    SPDLOG_INFO("{} {}", modifiedVec._normalVec.size(), sparseEtm._pivotRowIdx);
+
+    const T pivotModifiedVecTerm = modifiedVec._normalVec[sparseEtm._pivotRowIdx];
+    if (pivotModifiedVecTerm == T{0.0})
+      return;
+
+    auto currentModifiedVecIt = modifiedVec._elements.begin();
+    for (const auto&etmElem : sparseEtm._sparseVec._elements) {
+      while (currentModifiedVecIt != modifiedVec._elements.end() && currentModifiedVecIt->_index < etmElem._index)
+        ++currentModifiedVecIt;
+
+      if (currentModifiedVecIt != modifiedVec._elements.end() && currentModifiedVecIt->_index == etmElem._index)
+      {
+        if (etmElem._index == sparseEtm._pivotRowIdx)
+        {
+          currentModifiedVecIt->_data *= sparseEtm._pivotingTermInverse;
+          modifiedVec._normalVec[currentModifiedVecIt->_index] = currentModifiedVecIt->_data;
+        }
+        else
+        {
+          const auto updatedValue =
+              add(currentModifiedVecIt->_data, -sparseEtm._pivotingTermInverse * etmElem._data * pivotModifiedVecTerm);
+//          if (std::fabs(updatedValue) < 1e-10)
+//            SPDLOG_INFO("{}, {}", add(currentModifiedVecIt->_data, -sparseEtm._pivotingTermInverse * etmElem._data * pivotModifiedVecTerm),
+//                        addSafeNumerical(currentModifiedVecIt->_data, -sparseEtm._pivotingTermInverse * etmElem._data * pivotModifiedVecTerm));
+          // TODO addSafeNumerical ?
+          if (updatedValue == T{0.0})
+          {
+            modifiedVec._normalVec[etmElem._index] = T{0.0};
+            currentModifiedVecIt = modifiedVec._elements.erase(currentModifiedVecIt);
+          }
+          else
+          {
+            currentModifiedVecIt->_data = modifiedVec._normalVec[currentModifiedVecIt->_index]
+                = updatedValue;
+          }
+        }
+      }
+      else
+      {
+        currentModifiedVecIt = modifiedVec._elements.insert(currentModifiedVecIt,
+                                                            {add(0.0, -sparseEtm._pivotingTermInverse * etmElem._data * pivotModifiedVecTerm),
+                                                            etmElem._index});
+        modifiedVec._normalVec[etmElem._index] = currentModifiedVecIt->_data;
+      }
+    }
+  }
+
+
+  static T dotProductSparse(const SparseVector<T>& vec1, const SparseVector<T>& vec2)
+  {
+    Adder adder;
+    auto currentVec2It = vec2._elements.begin();
+
+    for (const auto& vec1Elem : vec1._elements)
+    {
+      while ((currentVec2It != vec2._elements.end()) && (currentVec2It->_index < vec1Elem._index))
+        ++currentVec2It;
+
+      if (currentVec2It == vec2._elements.end())
+        break;
+
+      if (currentVec2It->_index == vec1Elem._index)
+        adder.addValue(vec1Elem._data * currentVec2It->_data);
+    }
+
+    return adder.currentSum();
+  }
+
+
+  static void multiplyByETMFromRightSparse(SparseVector<T>& modifiedVec, const SparseElementaryMatrix<T>& etm)
+    {
+      Adder adder;
+      auto currentEtmIt = etm._sparseVec._elements.begin();
+      auto firstModifiecVecElemAfterPivotRowIt = modifiedVec._elements.end();
+
+      for (auto modifiecVecElemIt = modifiedVec._elements.begin();
+               modifiecVecElemIt != modifiedVec._elements.end(); ++modifiecVecElemIt)
+      {
+        if (modifiecVecElemIt->_index >= etm._pivotRowIdx &&
+                                         firstModifiecVecElemAfterPivotRowIt == modifiedVec._elements.end())
+          firstModifiecVecElemAfterPivotRowIt = modifiecVecElemIt;
+
+        auto& modifiedVecElem = *modifiecVecElemIt;
+        while ((currentEtmIt != etm._sparseVec._elements.end()) && (currentEtmIt->_index < modifiedVecElem._index))
+          ++currentEtmIt;
+
+        if (currentEtmIt == etm._sparseVec._elements.end())
+          break;
+
+        if (currentEtmIt->_index == modifiedVecElem._index)
+        {
+          if (currentEtmIt->_index == etm._pivotRowIdx)
+            adder.addValue(modifiedVecElem._data * etm._pivotingTermInverse);
+          else
+            adder.addValue(-modifiedVecElem._data * currentEtmIt->_data * etm._pivotingTermInverse);
+        }
+      }
+
+      const auto sum = adder.currentSum();
+      if (sum == T{0.0})
+      {
+        if ((firstModifiecVecElemAfterPivotRowIt != modifiedVec._elements.end()) &&
+        (firstModifiecVecElemAfterPivotRowIt->_index == etm._pivotRowIdx))
+        {
+          modifiedVec._elements.erase(firstModifiecVecElemAfterPivotRowIt);
+          modifiedVec._normalVec[etm._pivotRowIdx] = T{0.0};
+        }
+      }
+      else
+      {
+        if ((firstModifiecVecElemAfterPivotRowIt != modifiedVec._elements.end())  &&
+            (firstModifiecVecElemAfterPivotRowIt->_index == etm._pivotRowIdx))
+        {
+          firstModifiecVecElemAfterPivotRowIt->_data =
+              modifiedVec._normalVec[etm._pivotRowIdx] = sum;
+        }
+        else
+        {
+          modifiedVec._elements.insert(firstModifiecVecElemAfterPivotRowIt, {sum, etm._pivotRowIdx});
+          modifiedVec._normalVec[etm._pivotRowIdx] = sum;
+        }
+      }
+    }
+
+  static void multiplyByETMFromRight(std::vector<T>& modifiedVec, const ElementaryMatrix<T>& etm)
   {
     Adder adder;
     for (int i = 0; i < modifiedVec.size(); ++i) {
@@ -157,8 +297,21 @@ template <typename T> struct SimplexTraits {
     modifiedVec[etm._pivotRowIdx] = adder.currentSum();
   }
 
+  static void multiplyByETMFromRightSparse(std::vector<T>& modifiedVec, const SparseElementaryMatrix<T>&sparseEtm)
+  {
+    Adder adder;
+    for (const auto&etmElem : sparseEtm._sparseVec._elements) {
+      if (etmElem._index == sparseEtm._pivotRowIdx)
+        adder.addValue(modifiedVec[sparseEtm._pivotRowIdx] * sparseEtm._pivotingTermInverse);
+      else
+        adder.addValue(-modifiedVec[etmElem._index] * etmElem._data * sparseEtm._pivotingTermInverse);
+    }
 
-  static void multiplyByETM(const ElementaryMatrixView<T>& etm, Matrix<T>& modifiedMatrix)
+    modifiedVec[sparseEtm._pivotRowIdx] = adder.currentSum();
+  }
+
+
+  static void multiplyByETM(const ElementaryMatrix<T>& etm, Matrix<T>& modifiedMatrix)
   {
     for (int rowIdx = 0; rowIdx < modifiedMatrix.size(); ++rowIdx) {
       if (rowIdx == etm._pivotRowIdx)

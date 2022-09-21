@@ -15,6 +15,9 @@ template <typename T,
 class RevisedPrimalSimplexPFIBounds;
 template <typename T,
           typename SimplexTraitsT>
+class RevisedPrimalSimplexPFIBoundsSparse;
+template <typename T,
+          typename SimplexTraitsT>
 class RevisedDualSimplexPFIBounds;
 
 template <typename T,
@@ -48,6 +51,7 @@ public:
 
 private:
   friend class RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>;
+  friend class RevisedPrimalSimplexPFIBoundsSparse<T, SimplexTraitsT>;
   friend class RevisedDualSimplexPFIBounds<T, SimplexTraitsT>;
 
   std::optional<SimplexBasisData> createBasisFromArtificialVars() const;
@@ -61,9 +65,11 @@ private:
   std::vector<T> computeTableauColumn(const int colIdx);
   std::vector<T> computeTableauColumnExplicit(const int colIdx);
   std::vector<T> computeTableauColumnPFI(const int colIdx);
+  SparseVector<T> computeTableauColumnPFISparse(const int colIdx);
   std::vector<T> computeTableauRow(const int rowIdx);
   std::vector<T> computeTableauRowExplicit(const int rowIdx);
   std::vector<T> computeTableauRowPFI(const int rowIdx);
+  SparseVector<T> computeTableauRowPFISparse(const int rowIdx);
 
   void pivot(const int rowIdx, const int enteringColumnIdx,
              const std::vector<T> &enteringColumn,
@@ -77,10 +83,24 @@ private:
   void updateInverseMatrixWithRHS(const PivotData<T> &pivotData,
                                   const std::vector<T> &enteringColumn);
 
+
+  void pivotSparse(const int rowIdx, const int enteringColumnIdx,
+             const SparseVector<T> &enteringColumn,
+             const SparseVector<T> &pivotRow);
+  void pivotImplicitBoundsSparse(const int pivotRowIdx, const int enteringColumnIdx,
+                           const SparseVector<T> &enteringColumn,
+                           const SparseVector<T> &pivotRow,
+                           const bool leavingVarBecomesLowerBound);
+  void updateReducedCostsSparse(const PivotData<T> &pivotData,
+                          const SparseVector<T> &pivotRow);
+  void updateInverseMatrixWithRHSSparse(const PivotData<T> &pivotData,
+                                  const SparseVector<T> &enteringColumn);
+
   void initBasisMatrixInverse();
   void calculateDual();
   void calculateDualExplicit();
   void calculateDualPFI();
+  void calculateDualPFISparse();
   void initBoundsForDualSimplex();
   void initMatrixRepresentations();
 
@@ -88,13 +108,20 @@ private:
   void calculateRHS();
   void calculateRHSExplicit();
   void calculateRHSPFI();
+  void calculateRHSPFISparse();
   void updateBasisData(const PivotData<T> &pivotData);
   bool reinversion();
   bool reinversionExplicit();
   bool reinversionPFI();
+  bool reinversionPFISparse();
   void setObjective(const std::vector<T>& newObjective);
+  void setObjectiveSparse(const std::vector<T>& newObjective);
   std::vector<T> multiplyByBasisMatrixLeftInverseUsingPFI(const std::vector<T>& vec);
+  SparseVector<T> multiplyByBasisMatrixLeftInverseUsingPFISparse(const SparseVector<T>& vec);
+  std::vector<T> multiplyByBasisMatrixLeftInverseUsingPFISparseNormal(const std::vector<T>& vec);
   std::vector<T> multiplyByBasisMatrixRightInverseUsingPFI(const std::vector<T>& vec);
+  SparseVector<T> multiplyByBasisMatrixRightInverseUsingPFISparse(const SparseVector<T>& vec);
+  std::vector<T> multiplyByBasisMatrixRightInverseUsingPFISparseNormal(const std::vector<T>& vec);
 
   const LinearProgram<T> &_initialProgram;
   std::vector<VariableInfo> _variableInfos;
@@ -115,6 +142,7 @@ private:
   bool _useProductFormOfInverse;
   std::vector<std::vector<T>> _basisMatrixInverse;
   std::vector<ElementaryMatrix<T>> _pfiEtms;
+  std::vector<SparseElementaryMatrix<T>> _sparsePfiEtms;
   std::vector<T> _reducedCosts;
   std::vector<T> _y;
   std::vector<T> _x;

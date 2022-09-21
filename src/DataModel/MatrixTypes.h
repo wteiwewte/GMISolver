@@ -1,6 +1,7 @@
 #ifndef GMISOLVER_MATRIXTYPES_H
 #define GMISOLVER_MATRIXTYPES_H
 
+#include <deque>
 #include <vector>
 
 template <typename T>
@@ -11,7 +12,9 @@ struct SparseVector
     int _index;
   };
 
-  std::vector<Element> _elements;
+  std::deque<Element> _elements;
+  // TODO - use std::deque
+  std::vector<T> _normalVec;
 };
 
 template <typename T>
@@ -43,15 +46,15 @@ struct MatrixRepresentation
 };
 
 template <typename T>
-struct ElementaryMatrixView {
-  const std::vector<T>& _vec;
+struct ElementaryMatrix {
+  std::vector<T> _vec;
   T _pivotingTermInverse{0.0};
   int _pivotRowIdx{0};
 };
 
 template <typename T>
-struct ElementaryMatrix {
-  std::vector<T> _vec;
+struct SparseElementaryMatrix {
+  SparseVector<T> _sparseVec;
   T _pivotingTermInverse{0.0};
   int _pivotRowIdx{0};
 };

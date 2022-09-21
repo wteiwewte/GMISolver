@@ -1,4 +1,4 @@
-add_library(Algorithms Algorithms/RevisedPrimalSimplexPFIBounds.cpp Algorithms/RevisedPrimalSimplexPFIBounds.h Algorithms/RevisedDualSimplexPFIBounds.cpp Algorithms/RevisedDualSimplexPFIBounds.h)
+add_library(Algorithms Algorithms/RevisedPrimalSimplexPFIBounds.cpp Algorithms/RevisedPrimalSimplexPFIBounds.h Algorithms/RevisedDualSimplexPFIBounds.cpp Algorithms/RevisedDualSimplexPFIBounds.h Algorithms/RevisedPrimalSimplexPFIBoundsSparse.cpp Algorithms/RevisedPrimalSimplexPFIBoundsSparse.h)
 target_link_libraries(Algorithms DataModel Util)
 
 add_library(DataModel DataModel/LinearProgram.cpp DataModel/LinearProgram.h DataModel/EnumTypes.h DataModel/EnumTypes.cpp Algorithms/SimplexTableau.cpp Algorithms/SimplexTableau.h DataModel/CommonTypes.h DataModel/CommonConstants.h DataModel/SimplexBasisData.h)

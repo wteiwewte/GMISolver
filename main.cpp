@@ -106,11 +106,6 @@ void initFileLogger()
   spdlog::flush_every(std::chrono::seconds(5));
 }
 
-//std::shared_ptr<spdlog::logger> initSimplexResultsLogger()
-//{
-//
-//}
-
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
   initFileLogger();

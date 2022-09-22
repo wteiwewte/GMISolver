@@ -54,6 +54,15 @@ private:
   friend class RevisedPrimalSimplexPFIBoundsSparse<T, SimplexTraitsT>;
   friend class RevisedDualSimplexPFIBounds<T, SimplexTraitsT>;
 
+  using SimpleAdderSafe = typename SimplexTraitsT::template SimpleAdder<
+      typename SimplexTraitsT::SafeNumericalAddOp>;
+  using PositiveNegativeAdderSafe = typename SimplexTraitsT::template PositiveNegativeAdder<
+      typename SimplexTraitsT::SafeNumericalAddOp>;
+  using KahanAdderSafe = typename SimplexTraitsT::template KahanAdder<
+      typename SimplexTraitsT::SafeNumericalAddOp>;
+  using KahanAdderNormal = typename SimplexTraitsT::template KahanAdder<
+      typename SimplexTraitsT::NormalAddOp>;
+
   std::optional<SimplexBasisData> createBasisFromArtificialVars() const;
 
   int basicColumnIdx(const int rowIdx) const {

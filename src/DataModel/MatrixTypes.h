@@ -4,7 +4,7 @@
 #include <deque>
 #include <vector>
 
-template <typename T>
+template <typename T, template<typename, typename...> class UnderlyingContainerT = std::deque, typename... Args>
 struct SparseVector
 {
   struct Element {
@@ -12,8 +12,7 @@ struct SparseVector
     int _index;
   };
 
-  std::deque<Element> _elements;
-  // TODO - use std::deque
+  UnderlyingContainerT<Element, Args...> _elements;
   std::vector<T> _normalVec;
 };
 

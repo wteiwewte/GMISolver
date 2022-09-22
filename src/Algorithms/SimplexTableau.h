@@ -109,6 +109,7 @@ private:
   void calculateRHSExplicit();
   void calculateRHSPFI();
   void calculateRHSPFISparse();
+  void calculateRHSWithoutInverse();
   void updateBasisData(const PivotData<T> &pivotData);
   bool reinversion();
   bool reinversionExplicit();
@@ -116,12 +117,12 @@ private:
   bool reinversionPFISparse();
   void setObjective(const std::vector<T>& newObjective);
   void setObjectiveSparse(const std::vector<T>& newObjective);
-  std::vector<T> multiplyByBasisMatrixLeftInverseUsingPFI(const std::vector<T>& vec);
-  SparseVector<T> multiplyByBasisMatrixLeftInverseUsingPFISparse(const SparseVector<T>& vec);
-  std::vector<T> multiplyByBasisMatrixLeftInverseUsingPFISparseNormal(const std::vector<T>& vec);
-  std::vector<T> multiplyByBasisMatrixRightInverseUsingPFI(const std::vector<T>& vec);
-  SparseVector<T> multiplyByBasisMatrixRightInverseUsingPFISparse(const SparseVector<T>& vec);
-  std::vector<T> multiplyByBasisMatrixRightInverseUsingPFISparseNormal(const std::vector<T>& vec);
+  void multiplyByBasisMatrixLeftInverseUsingPFI(std::vector<T>& vec);
+  void multiplyByBasisMatrixLeftInverseUsingPFISparse(SparseVector<T>& vec);
+  void multiplyByBasisMatrixLeftInverseUsingPFISparseNormal(std::vector<T>& vec);
+  void multiplyByBasisMatrixRightInverseUsingPFI(std::vector<T>& vec);
+  void multiplyByBasisMatrixRightInverseUsingPFISparse(SparseVector<T>& vec);
+  void multiplyByBasisMatrixRightInverseUsingPFISparseNormal(std::vector<T>& vec);
 
   const LinearProgram<T> &_initialProgram;
   std::vector<VariableInfo> _variableInfos;

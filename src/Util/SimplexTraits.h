@@ -33,71 +33,85 @@ template <typename T> struct SimplexTraits {
     return std::fabs(x) > PIVOT_ABSOLUTE_EPSILON;
   }
 
-  constexpr static T RELATIVE_TOLERANCE = 1e-10;
   constexpr static T ABSOLUTE_TOLERANCE = 1e-14;
-
-  static T addSafeNumerical(const T& x, const T& y)
-  {
-    if (std::fabs(x + y) < RELATIVE_TOLERANCE * std::max(std::fabs(x), std::fabs(y)))
-      return T{0.0};
-
-    return x + y;
-  }
 
   static T addNormal(const T& x, const T& y)
   {
     return x + y;
   }
 
+  struct NormalAddOp {
+    T operator()(const T& x, const T& y) const
+    {
+      return addNormal(x, y);
+    }
+  };
+
+  struct SafeNumericalAddOp {
+    constexpr static T RELATIVE_TOLERANCE = 1e-10;
+
+    T operator()(const T& x, const T& y) const
+    {
+      if (std::fabs(x + y) < RELATIVE_TOLERANCE * std::max(std::fabs(x), std::fabs(y)))
+        return T{0.0};
+
+      return x + y;
+    }
+  };
+
   static T add(const T& x, const T& y)
   {
     return addNormal(x, y);
   }
 
+  template <typename AddOp>
   struct PositiveNegativeAdder
   {
     void addValue(const T& val)
     {
       if (val > 0.0)
-        _sumPositives = add(_sumPositives, val);
+        _sumPositives = AddOp(_sumPositives, val);
       else
-        _sumNegatives = add(_sumNegatives, val);
+        _sumNegatives = AddOp(_sumNegatives, val);
     }
 
     T currentSum() const
     {
-      return add(_sumPositives, _sumNegatives);
+      return AddOp(_sumPositives, _sumNegatives);
     }
 
     T _sumPositives = 0.0;
     T _sumNegatives = 0.0;
   };
 
+  template <typename AddOp>
   struct KahanAdder {
     void addValue(const T& val)
     {
-      T t = add(_sum, val);
+      T t = AddOp(_sum, val);
       if (std::fabs(_sum) >= std::fabs(val))
-        _c = add(_c, (_sum - t) + val);
+        _c = AddOp(_c, (_sum - t) + val);
       else
-        _c = add(_c, (val - t) + _sum);
+        _c = AddOp(_c, (val - t) + _sum);
 
       _sum = t;
     }
 
     T currentSum() const
     {
-      return add(_sum, _c);
+      return AddOp(_sum, _c);
     }
 
     T _sum = 0.0;
     T _c = 0.0;
   };
 
+
+  template <typename AddOp = NormalAddOp>
   struct SimpleAdder {
     void addValue(const T& val)
     {
-      _sum = add(_sum, val);
+      _sum = AddOp{}(_sum, val);
     }
 
     T currentSum() const
@@ -108,7 +122,7 @@ template <typename T> struct SimplexTraits {
     T _sum = 0.0;
   };
 
-  using Adder = SimpleAdder;
+  using Adder = SimpleAdder<NormalAddOp>;
 
   static T dotProduct(const std::vector<T>& vecNormal, const SparseVector<T>& vecSparse)
   {
@@ -225,6 +239,8 @@ template <typename T> struct SimplexTraits {
         adder.addValue(vec1Elem._data * currentVec2It->_data);
     }
 
+//    if (std::fabs(adder.currentSum()) < 1e-10 && std::fabs(adder.currentSum()) > 0.0)
+//      SPDLOG_INFO("DOT PRODUCT SPARSE {}", adder.currentSum());
     return adder.currentSum();
   }
 

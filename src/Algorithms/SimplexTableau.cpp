@@ -225,7 +225,7 @@ void SimplexTableau<T, SimplexTraitsT>::calculateDualPFI() {
   for (int k = 0; k < _rowInfos.size(); ++k)
     _y[k] = _objectiveRow[basicColumnIdx(k)];
 
-  _y = multiplyByBasisMatrixRightInverseUsingPFI(_y);
+  multiplyByBasisMatrixRightInverseUsingPFI(_y);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -234,7 +234,7 @@ void SimplexTableau<T, SimplexTraitsT>::calculateDualPFISparse() {
   for (int k = 0; k < _rowInfos.size(); ++k)
     _y[k] = _objectiveRow[basicColumnIdx(k)];
 
-  _y = multiplyByBasisMatrixRightInverseUsingPFISparseNormal(_y);
+  multiplyByBasisMatrixRightInverseUsingPFISparseNormal(_y);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -261,14 +261,8 @@ void SimplexTableau<T, SimplexTraitsT>::calculateRHS() {
 
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateRHSExplicit() {
-  std::vector<T> tempRHS = _initialRightHandSides;
-  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
-    for (int j = 0; j < _variableInfos.size(); ++j)
-      if (!_simplexBasisData._isBasicColumnIndexBitset[j])
-        tempRHS[rowIdx] = SimplexTraitsT::add(tempRHS[rowIdx], (- (*curSatisfiedBound(j) *
-                                                                  _constraintMatrix[rowIdx][j])));
-  }
-
+  calculateRHSWithoutInverse();
+  std::vector<T> tempRHS = std::move(_rightHandSides);
   for (int i = 0; i < _rowInfos.size(); ++i)
     _rightHandSides[i] = SimplexTraitsT::dotProduct(
         _basisMatrixInverse[i],
@@ -277,20 +271,18 @@ void SimplexTableau<T, SimplexTraitsT>::calculateRHSExplicit() {
 
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateRHSPFI() {
-  std::vector<T> tempRHS = _initialRightHandSides;
-  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
-    for (int j = 0; j < _variableInfos.size(); ++j)
-      if (!_simplexBasisData._isBasicColumnIndexBitset[j])
-        tempRHS[rowIdx] = SimplexTraitsT::add(tempRHS[rowIdx], (- (*curSatisfiedBound(j) *
-                                                                  _constraintMatrix[rowIdx][j])));
-  }
-
-  _rightHandSides = multiplyByBasisMatrixLeftInverseUsingPFI(tempRHS);
+  calculateRHSWithoutInverse();
+  multiplyByBasisMatrixLeftInverseUsingPFI(_rightHandSides);
 }
 
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateRHSPFISparse() {
-  std::vector<T> tempRHS = _initialRightHandSides;
+  calculateRHSWithoutInverse();
+  multiplyByBasisMatrixLeftInverseUsingPFISparseNormal(_rightHandSides);
+}
+
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::calculateRHSWithoutInverse() {
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     typename SimplexTraitsT::Adder adder;
     adder.addValue(_initialRightHandSides[rowIdx]);
@@ -298,10 +290,8 @@ void SimplexTableau<T, SimplexTraitsT>::calculateRHSPFISparse() {
       if (!_simplexBasisData._isBasicColumnIndexBitset[j])
         adder.addValue(-(*curSatisfiedBound(j) * _constraintMatrix[rowIdx][j]));
 
-    tempRHS[rowIdx] = adder.currentSum();
+    _rightHandSides[rowIdx] = adder.currentSum();
   }
-
-  _rightHandSides = multiplyByBasisMatrixLeftInverseUsingPFISparseNormal(tempRHS);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -441,12 +431,18 @@ SimplexTableau<T, SimplexTraitsT>::computeTableauColumnExplicit(const int colIdx
 template <typename T, typename SimplexTraitsT>
 std::vector<T>
 SimplexTableau<T, SimplexTraitsT>::computeTableauColumnPFI(const int colIdx) {
-  return multiplyByBasisMatrixLeftInverseUsingPFI(_constraintMatrixNormalForm._columns[colIdx]);
+  std::vector<T> tableauColumn = _constraintMatrixNormalForm._columns[colIdx];
+  multiplyByBasisMatrixLeftInverseUsingPFI(tableauColumn);
+  return tableauColumn;
 }
 template <typename T, typename SimplexTraitsT>
 SparseVector<T>
 SimplexTableau<T, SimplexTraitsT>::computeTableauColumnPFISparse(const int colIdx) {
-  return multiplyByBasisMatrixLeftInverseUsingPFISparse(_constraintMatrixSparseForm._columns[colIdx]);
+  SparseVector<T> tableauColumn = _constraintMatrixSparseForm._columns[colIdx];
+  multiplyByBasisMatrixLeftInverseUsingPFISparse(tableauColumn);
+//  SPDLOG_INFO("COLUMN NONZEROS BEFORE {} AFTER {}", _constraintMatrixSparseForm._columns[colIdx]._elements.size(),
+//              tableauColumn._elements.size());
+  return tableauColumn;
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -474,7 +470,7 @@ template <typename T, typename SimplexTraitsT>
 std::vector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFI(const int rowIdx) {
   std::vector<T> eRowIdx(_rowInfos.size());
   eRowIdx[rowIdx] = 1.0;
-  auto z = multiplyByBasisMatrixRightInverseUsingPFI(eRowIdx);
+  multiplyByBasisMatrixRightInverseUsingPFI(eRowIdx);
 
   const int columnBasicIdx = basicColumnIdx(rowIdx);
   std::vector<T> result(_variableInfos.size());
@@ -485,7 +481,7 @@ std::vector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFI(const int
              _simplexBasisData._isBasicColumnIndexBitset[j])
       result[j] = 0.0;
     else
-      result[j] = SimplexTraitsT::dotProduct(z, _constraintMatrixNormalForm._columns[j]);
+      result[j] = SimplexTraitsT::dotProduct(eRowIdx, _constraintMatrixNormalForm._columns[j]);
   }
 
   return result;
@@ -493,10 +489,10 @@ std::vector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFI(const int
 template <typename T, typename SimplexTraitsT>
 SparseVector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFISparse(const int rowIdx) {
   SparseVector<T> eRowIdx;
-  eRowIdx._elements.push_back({1.0, rowIdx});
+  eRowIdx._elements.push_back({T{1.0}, rowIdx});
   eRowIdx._normalVec.resize(_rowInfos.size());
   eRowIdx._normalVec[rowIdx] = 1.0;
-  auto z = multiplyByBasisMatrixRightInverseUsingPFISparse(eRowIdx);
+  multiplyByBasisMatrixRightInverseUsingPFISparse(eRowIdx);
 
   const int columnBasicIdx = basicColumnIdx(rowIdx);
   SparseVector<T> result;
@@ -509,10 +505,14 @@ SparseVector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFISparse(co
     }
     else if (!_simplexBasisData._isBasicColumnIndexBitset[j])
     {
-      result._normalVec[j] = SimplexTraitsT::dotProductSparse(z, _constraintMatrixSparseForm._columns[j]);
-      result._elements.push_back({result._normalVec[j], j});
+      result._normalVec[j] = SimplexTraitsT::dotProductSparse(eRowIdx, _constraintMatrixSparseForm._columns[j]);
+      if (result._normalVec[j] != T{0.0})
+        result._elements.push_back({result._normalVec[j], j});
     }
   }
+
+//  SPDLOG_INFO("ROW NONZEROS BEFORE {} AFTER {}", _constraintMatrixSparseForm._rows[rowIdx]._elements.size(),
+//              result._elements.size());
 
   return result;
 }
@@ -955,77 +955,46 @@ void SimplexTableau<T, SimplexTraitsT>::setObjectiveSparse(const std::vector<T>&
   calculateCurrentObjectiveValue();
 }
 template <typename T, typename SimplexTraitsT>
-std::vector<T>
+void
 SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixLeftInverseUsingPFI(
-    const std::vector<T> &vec) {
-  std::vector<T> result = vec;
-
+    std::vector<T> &vec) {
   for (const auto& pfiEtm : _pfiEtms)
     SimplexTraitsT::multiplyByETM(pfiEtm,
-                                  result);
-
-  return result;
+                                  vec);
 }
 template <typename T, typename SimplexTraitsT>
-SparseVector<T>
-SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixLeftInverseUsingPFISparse(
-    const SparseVector<T> &vec) {
-  SparseVector<T> result = vec;
-
+void
+SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixLeftInverseUsingPFISparse(SparseVector<T> &vec) {
   for (const auto& pfiEtm : _sparsePfiEtms)
-    SimplexTraitsT::multiplyByETMSparse(pfiEtm, result);
-
-  return result;
+    SimplexTraitsT::multiplyByETMSparse(pfiEtm, vec);
 }
 template <typename T, typename SimplexTraitsT>
-std::vector<T>
+void
 SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixLeftInverseUsingPFISparseNormal(
-    const std::vector<T> &vec) {
-  std::vector<T> result = vec;
-
+    std::vector<T> &vec) {
   for (const auto& pfiEtm : _sparsePfiEtms)
-    SimplexTraitsT::multiplyByETMSparse(pfiEtm, result);
-
-  return result;
+    SimplexTraitsT::multiplyByETMSparse(pfiEtm, vec);
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T>
-SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixRightInverseUsingPFI(
-    const std::vector<T> &vec) {
-  std::vector<T> result = vec;
-
+void
+SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixRightInverseUsingPFI(std::vector<T> &vec) {
   for (int i = 0; i < _pfiEtms.size(); ++i)
-    SimplexTraitsT::multiplyByETMFromRight(result,
-                                           _pfiEtms[_pfiEtms.size() - 1 - i]);
-
-  return result;
+    SimplexTraitsT::multiplyByETMFromRight(vec, _pfiEtms[_pfiEtms.size() - 1 - i]);
 }
 template <typename T, typename SimplexTraitsT>
-SparseVector<T>
-SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixRightInverseUsingPFISparse(
-    const SparseVector<T> &vec) {
-  SparseVector<T> result = vec;
-
+void
+SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixRightInverseUsingPFISparse(SparseVector<T> &vec) {
   for (int i = 0; i < _sparsePfiEtms.size(); ++i)
-    SimplexTraitsT::multiplyByETMFromRightSparse(result,
+    SimplexTraitsT::multiplyByETMFromRightSparse(vec,
                                                  _sparsePfiEtms[_sparsePfiEtms.size() - 1 - i]);
 
-  return result;
 }
 template <typename T, typename SimplexTraitsT>
-std::vector<T>
-SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixRightInverseUsingPFISparseNormal(
-    const std::vector<T> &vec) {
-  std::vector<T> result = vec;
-
+void SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixRightInverseUsingPFISparseNormal(
+    std::vector<T> &vec) {
   for (int i = 0; i < _sparsePfiEtms.size(); ++i)
-  {
-    const auto& sparsePfiEtm = _sparsePfiEtms[_sparsePfiEtms.size() - 1 - i];
-    SimplexTraitsT::multiplyByETMFromRightSparse(result, sparsePfiEtm);
-  }
-
-  return result;
+    SimplexTraitsT::multiplyByETMFromRightSparse(vec, _sparsePfiEtms[_sparsePfiEtms.size() - 1 - i]);
 }
 
 template class SimplexTableau<double>;

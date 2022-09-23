@@ -4,23 +4,22 @@
 #include <deque>
 #include <vector>
 
-template <typename T, template<typename, typename...> class UnderlyingContainerT = std::deque, typename... Args>
-struct SparseVector
-{
-  struct Element {
-    T _data;
-    int _index;
-  };
+template <typename T> struct IndexedValue {
+  T _data;
+  int _index;
+};
 
-  UnderlyingContainerT<Element, Args...> _elements;
+template <typename T,
+          template <typename, typename...> class UnderlyingContainerT =
+              std::deque,
+          typename... Args>
+struct SparseVector {
+  UnderlyingContainerT<IndexedValue<T>, Args...> _indexedValues;
   std::vector<T> _normalVec;
 };
 
-template <typename T>
-struct SparseMatrixRepresentation
-{
-  void clear()
-  {
+template <typename T> struct SparseMatrixRepresentation {
+  void clear() {
     _rows.clear();
     _columns.clear();
   }
@@ -31,11 +30,8 @@ struct SparseMatrixRepresentation
 
 template <typename T> using Matrix = std::vector<std::vector<T>>;
 
-template <typename T>
-struct MatrixRepresentation
-{
-  void clear()
-  {
+template <typename T> struct MatrixRepresentation {
+  void clear() {
     _rows.clear();
     _columns.clear();
   }
@@ -44,15 +40,13 @@ struct MatrixRepresentation
   std::vector<std::vector<T>> _columns;
 };
 
-template <typename T>
-struct ElementaryMatrix {
+template <typename T> struct ElementaryMatrix {
   std::vector<T> _vec;
   T _pivotingTermInverse{0.0};
   int _pivotRowIdx{0};
 };
 
-template <typename T>
-struct SparseElementaryMatrix {
+template <typename T> struct SparseElementaryMatrix {
   SparseVector<T> _sparseVec;
   T _pivotingTermInverse{0.0};
   int _pivotRowIdx{0};

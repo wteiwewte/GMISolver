@@ -7,8 +7,8 @@
 
 #include <filesystem>
 #include <optional>
-#include <vector>
 #include <thread>
+#include <vector>
 
 #include <absl/flags/flag.h>
 #include <absl/flags/parse.h>
@@ -18,72 +18,81 @@ ABSL_FLAG(std::string, log_file, "GMISolver_out.txt", "log file");
 ABSL_FLAG(std::vector<std::string>, benchmark_simplex_types,
           std::vector<std::string>({"primal", "dual"}),
           "List of simplex algorithms to benchmark");
-ABSL_FLAG(std::optional<std::string>, lp_model_file, std::nullopt, "Path to single lp model");
-ABSL_FLAG(std::optional<std::string>, lp_models_directory, std::nullopt, "Path to directory with lp models");
-ABSL_FLAG(int32_t, obj_value_logging_frequency, 100, "Current objective value should be logged every nth iteration of simplex");
-ABSL_FLAG(int32_t, reinversion_frequency, 300, "Basis matrix should be reinverted every nth iteration of simplex");
-ABSL_FLAG(bool, use_product_form_of_inverse, true, "Basis matrix inverse is represented via product form of inverse");
+ABSL_FLAG(std::optional<std::string>, lp_model_file, std::nullopt,
+          "Path to single lp model");
+ABSL_FLAG(std::optional<std::string>, lp_models_directory, std::nullopt,
+          "Path to directory with lp models");
+ABSL_FLAG(
+    int32_t, obj_value_logging_frequency, 100,
+    "Current objective value should be logged every nth iteration of simplex");
+ABSL_FLAG(int32_t, reinversion_frequency, 300,
+          "Basis matrix should be reinverted every nth iteration of simplex");
+ABSL_FLAG(bool, use_product_form_of_inverse, true,
+          "Basis matrix inverse is represented via product form of inverse");
 
-bool contains(const std::vector<std::string>& vec, const std::string& str)
-{
+bool contains(const std::vector<std::string> &vec, const std::string &str) {
   return std::find(vec.begin(), vec.end(), str) != vec.end();
 }
 
 template <typename T, typename SimplexTraitsT>
-void runPrimalSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
-{
-  SimplexTableau<T, SimplexTraitsT> simplexTableau(linearProgram, true, absl::GetFlag(FLAGS_use_product_form_of_inverse));
-  RevisedPrimalSimplexPFIBounds<T> revisedPrimalSimplexPfiBounds(simplexTableau,
+void runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
+  SimplexTableau<T, SimplexTraitsT> simplexTableau(
+      linearProgram, true, absl::GetFlag(FLAGS_use_product_form_of_inverse),
+      false);
+  RevisedPrimalSimplexPFIBounds<T> revisedPrimalSimplexPfiBounds(
+      simplexTableau,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
-                                   absl::GetFlag(FLAGS_obj_value_logging_frequency),
-                                   absl::GetFlag(FLAGS_reinversion_frequency)
-                                   );
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_reinversion_frequency));
   revisedPrimalSimplexPfiBounds.run();
   SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
   SPDLOG_DEBUG(simplexTableau.toStringSolution());
-//  revisedPrimalSimplexPfiBounds.lexicographicReoptimization(false);
-//  SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
-//  SPDLOG_INFO(simplexTableau.toStringSolution());
+  //  revisedPrimalSimplexPfiBounds.lexicographicReoptimization(false);
+  //  SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
+  //  SPDLOG_INFO(simplexTableau.toStringSolution());
 }
 
 template <typename T, typename SimplexTraitsT>
-void runPrimalSimplexWithImplicitBoundsSparse(const LinearProgram<T>& linearProgram)
-{
-  SimplexTableau<T, SimplexTraitsT> simplexTableau(linearProgram, true, absl::GetFlag(FLAGS_use_product_form_of_inverse));
-  RevisedPrimalSimplexPFIBoundsSparse<T> revisedPrimalSimplexPfiBounds(simplexTableau,
+void runPrimalSimplexWithImplicitBoundsSparse(
+    const LinearProgram<T> &linearProgram) {
+  SimplexTableau<T, SimplexTraitsT> simplexTableau(
+      linearProgram, true, absl::GetFlag(FLAGS_use_product_form_of_inverse),
+      true);
+  RevisedPrimalSimplexPFIBoundsSparse<T> revisedPrimalSimplexPfiBounds(
+      simplexTableau,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
-                                   absl::GetFlag(FLAGS_obj_value_logging_frequency),
-                                   absl::GetFlag(FLAGS_reinversion_frequency)
-                                   );
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_reinversion_frequency));
   revisedPrimalSimplexPfiBounds.run();
   SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
   SPDLOG_DEBUG(simplexTableau.toStringSolution());
 }
 
 template <typename T, typename SimplexTraitsT>
-void runDualSimplexWithImplicitBounds(const LinearProgram<T>& linearProgram)
-{
-  SimplexTableau<T, SimplexTraitsT> simplexTableau(linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse));
-  RevisedDualSimplexPFIBounds<T>(simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
-                                 absl::GetFlag(FLAGS_obj_value_logging_frequency),
-                                 absl::GetFlag(FLAGS_reinversion_frequency)
-                                     ).run();
+void runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
+  SimplexTableau<T, SimplexTraitsT> simplexTableau(
+      linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse),
+      false);
+  RevisedDualSimplexPFIBounds<T>(
+      simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_reinversion_frequency))
+      .run();
   SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
   SPDLOG_DEBUG(simplexTableau.toStringSolution());
 }
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
-void readLPModelAndProcess(const std::string& modelFileMps)
-{
+void readLPModelAndProcess(const std::string &modelFileMps) {
   SPDLOG_INFO("Processing lp model from file {}", modelFileMps);
   auto linearProgram = MpsReader<T>::read(modelFileMps);
-  if (!linearProgram.has_value())
-  {
-      spdlog::warn("Could not read properly lp from {} file", modelFileMps);
-      return;
+  if (!linearProgram.has_value()) {
+    spdlog::warn("Could not read properly lp from {} file", modelFileMps);
+    return;
   }
 
-  const auto simplexTypesToBenchmark = absl::GetFlag(FLAGS_benchmark_simplex_types);
+  const auto simplexTypesToBenchmark =
+      absl::GetFlag(FLAGS_benchmark_simplex_types);
   if (contains(simplexTypesToBenchmark, "primal"))
     runPrimalSimplexWithImplicitBounds<T, SimplexTraitsT>(*linearProgram);
 
@@ -94,9 +103,9 @@ void readLPModelAndProcess(const std::string& modelFileMps)
     runDualSimplexWithImplicitBounds<T, SimplexTraitsT>(*linearProgram);
 }
 
-void initFileLogger()
-{
-  auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_st>(absl::GetFlag(FLAGS_log_file), true);
+void initFileLogger() {
+  auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_st>(
+      absl::GetFlag(FLAGS_log_file), true);
   auto fileLogger = std::make_shared<spdlog::logger>("fileLogger", fileSink);
   spdlog::set_default_logger(fileLogger);
 
@@ -106,16 +115,20 @@ void initFileLogger()
   spdlog::flush_every(std::chrono::seconds(5));
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   absl::ParseCommandLine(argc, argv);
   initFileLogger();
-  std::this_thread::sleep_for (std::chrono::seconds(1));
+  std::this_thread::sleep_for(std::chrono::seconds(1));
 
   using FloatingPointT = double;
 
-  if (const auto lpModelFile = absl::GetFlag(FLAGS_lp_model_file); lpModelFile.has_value())
+  if (const auto lpModelFile = absl::GetFlag(FLAGS_lp_model_file);
+      lpModelFile.has_value())
     readLPModelAndProcess<FloatingPointT>(*lpModelFile);
-  else if(const auto lpModelsDirectory = absl::GetFlag(FLAGS_lp_models_directory); lpModelsDirectory.has_value())
-    for (const auto& lpModelFileEntry : std::filesystem::directory_iterator(*lpModelsDirectory))
+  else if (const auto lpModelsDirectory =
+               absl::GetFlag(FLAGS_lp_models_directory);
+           lpModelsDirectory.has_value())
+    for (const auto &lpModelFileEntry :
+         std::filesystem::directory_iterator(*lpModelsDirectory))
       readLPModelAndProcess<FloatingPointT>(lpModelFileEntry.path());
 }

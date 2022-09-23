@@ -35,60 +35,43 @@ template <typename T> struct SimplexTraits {
 
   constexpr static T ABSOLUTE_TOLERANCE = 1e-14;
 
-  static T addNormal(const T& x, const T& y)
-  {
-    return x + y;
-  }
+  static T addNormal(const T &x, const T &y) { return x + y; }
 
   struct NormalAddOp {
-    T operator()(const T& x, const T& y) const
-    {
-      return addNormal(x, y);
-    }
+    T operator()(const T &x, const T &y) const { return addNormal(x, y); }
   };
 
   struct SafeNumericalAddOp {
     constexpr static T RELATIVE_TOLERANCE = 1e-10;
 
-    T operator()(const T& x, const T& y) const
-    {
-      if (std::fabs(x + y) < RELATIVE_TOLERANCE * std::max(std::fabs(x), std::fabs(y)))
+    T operator()(const T &x, const T &y) const {
+      if (std::fabs(x + y) <
+          RELATIVE_TOLERANCE * std::max(std::fabs(x), std::fabs(y)))
         return T{0.0};
 
       return x + y;
     }
   };
 
-  static T add(const T& x, const T& y)
-  {
-    return addNormal(x, y);
-  }
+  static T add(const T &x, const T &y) { return addNormal(x, y); }
 
-  template <typename AddOp>
-  struct PositiveNegativeAdder
-  {
-    void addValue(const T& val)
-    {
+  template <typename AddOp> struct PositiveNegativeAdder {
+    void addValue(const T &val) {
       if (val > 0.0)
         _sumPositives = _addOp(_sumPositives, val);
       else
         _sumNegatives = _addOp(_sumNegatives, val);
     }
 
-    T currentSum() const
-    {
-      return _addOp(_sumPositives, _sumNegatives);
-    }
+    T currentSum() const { return _addOp(_sumPositives, _sumNegatives); }
 
     const AddOp _addOp{};
     T _sumPositives = 0.0;
     T _sumNegatives = 0.0;
   };
 
-  template <typename AddOp>
-  struct KahanAdder {
-    void addValue(const T& val)
-    {
+  template <typename AddOp> struct KahanAdder {
+    void addValue(const T &val) {
       T t = _addOp(_sum, val);
       if (std::fabs(_sum) >= std::fabs(val))
         _c = _addOp(_c, _addOp(_addOp(_sum, -t), val));
@@ -98,46 +81,31 @@ template <typename T> struct SimplexTraits {
       _sum = t;
     }
 
-    T currentSum() const
-    {
-      return _addOp(_sum, _c);
-    }
+    T currentSum() const { return _addOp(_sum, _c); }
 
     const AddOp _addOp{};
     T _sum = 0.0;
     T _c = 0.0;
   };
 
+  template <typename AddOp = NormalAddOp> struct SimpleAdder {
+    void addValue(const T &val) { _sum = _addOp(_sum, val); }
 
-  template <typename AddOp = NormalAddOp>
-  struct SimpleAdder {
-    void addValue(const T& val)
-    {
-      _sum = _addOp(_sum, val);
-    }
-
-    T currentSum() const
-    {
-      return _sum;
-    }
+    T currentSum() const { return _sum; }
 
     const AddOp _addOp{};
     T _sum = 0.0;
   };
 
-  static bool isZero(const T& x)
-  {
-    return std::fabs(x) < ABSOLUTE_TOLERANCE;
-  }
+  static bool isZero(const T &x) { return std::fabs(x) < ABSOLUTE_TOLERANCE; }
 
   using CurrentAdder = SimpleAdder<NormalAddOp>;
 
   template <typename AdderT = CurrentAdder>
-  static T dotProduct(const std::vector<T>& vecNormal, const SparseVector<T>& vecSparse)
-  {
+  static T dotProduct(const std::vector<T> &vecNormal,
+                      const SparseVector<T> &vecSparse) {
     AdderT adder;
-    for (const auto& elem : vecSparse._elements)
-    {
+    for (const auto &elem : vecSparse._indexedValues) {
       if (elem._index >= vecNormal.size())
         break;
 
@@ -148,8 +116,7 @@ template <typename T> struct SimplexTraits {
   }
 
   template <typename AdderT = CurrentAdder>
-  static T dotProduct(const std::vector<T>& vec1, const std::vector<T>& vec2)
-  {
+  static T dotProduct(const std::vector<T> &vec1, const std::vector<T> &vec2) {
     AdderT adder;
 
     for (int i = 0; i < vec1.size(); ++i)
@@ -159,193 +126,200 @@ template <typename T> struct SimplexTraits {
   }
 
   template <typename AddOp = NormalAddOp>
-  static void multiplyByETM(const ElementaryMatrix<T>& etm, std::vector<T>& modifiedVec)
-  {
+  static void multiplyByETM(const ElementaryMatrix<T> &etm,
+                            std::vector<T> &modifiedVec) {
     const T pivotModifiedVecTerm = modifiedVec[etm._pivotRowIdx];
     for (int i = 0; i < modifiedVec.size(); ++i) {
       if (i == etm._pivotRowIdx)
         modifiedVec[i] *= etm._pivotingTermInverse;
       else
-        modifiedVec[i] = AddOp{}(modifiedVec[i], -(etm._pivotingTermInverse * etm._vec[i] * pivotModifiedVecTerm));
+        modifiedVec[i] =
+            AddOp{}(modifiedVec[i], -(etm._pivotingTermInverse * etm._vec[i] *
+                                      pivotModifiedVecTerm));
     }
   }
 
   template <typename AddOp = NormalAddOp>
-  static void multiplyByETMSparse(const SparseElementaryMatrix<T>&sparseEtm, std::vector<T>& modifiedVec)
-  {
+  static void multiplyByETMSparse(const SparseElementaryMatrix<T> &sparseEtm,
+                                  std::vector<T> &modifiedVec) {
     const T pivotModifiedVecTerm = modifiedVec[sparseEtm._pivotRowIdx];
-    for (const auto&etmElem : sparseEtm._sparseVec._elements) {
+    for (const auto &etmElem : sparseEtm._sparseVec._indexedValues) {
       if (etmElem._index == sparseEtm._pivotRowIdx)
         modifiedVec[sparseEtm._pivotRowIdx] *= sparseEtm._pivotingTermInverse;
       else
-        modifiedVec[etmElem._index] = AddOp{}(modifiedVec[etmElem._index], -(sparseEtm._pivotingTermInverse *
-                                               etmElem._data * pivotModifiedVecTerm));
+        modifiedVec[etmElem._index] =
+            AddOp{}(modifiedVec[etmElem._index],
+                    -(sparseEtm._pivotingTermInverse * etmElem._data *
+                      pivotModifiedVecTerm));
     }
   }
 
   template <typename AddOp = NormalAddOp>
-  static void multiplyByETMSparse(const SparseElementaryMatrix<T>&sparseEtm, SparseVector<T>& modifiedVec)
-  {
-    const T pivotModifiedVecTerm = modifiedVec._normalVec[sparseEtm._pivotRowIdx];
+  static void multiplyByETMSparse(const SparseElementaryMatrix<T> &sparseEtm,
+                                  SparseVector<T> &modifiedVec) {
+    const T pivotModifiedVecTerm =
+        modifiedVec._normalVec[sparseEtm._pivotRowIdx];
     if (isZero(pivotModifiedVecTerm))
       return;
 
-    auto currentModifiedVecIt = modifiedVec._elements.begin();
-    for (const auto&etmElem : sparseEtm._sparseVec._elements) {
-      while (currentModifiedVecIt != modifiedVec._elements.end() && currentModifiedVecIt->_index < etmElem._index)
+    auto currentModifiedVecIt = modifiedVec._indexedValues.begin();
+    for (const auto &etmElem : sparseEtm._sparseVec._indexedValues) {
+      while (currentModifiedVecIt != modifiedVec._indexedValues.end() &&
+             currentModifiedVecIt->_index < etmElem._index)
         ++currentModifiedVecIt;
 
-      if (currentModifiedVecIt != modifiedVec._elements.end() && currentModifiedVecIt->_index == etmElem._index)
-      {
-        if (etmElem._index == sparseEtm._pivotRowIdx)
-        {
+      if (currentModifiedVecIt != modifiedVec._indexedValues.end() &&
+          currentModifiedVecIt->_index == etmElem._index) {
+        if (etmElem._index == sparseEtm._pivotRowIdx) {
           currentModifiedVecIt->_data *= sparseEtm._pivotingTermInverse;
-          modifiedVec._normalVec[currentModifiedVecIt->_index] = currentModifiedVecIt->_data;
-        }
-        else
-        {
+          modifiedVec._normalVec[currentModifiedVecIt->_index] =
+              currentModifiedVecIt->_data;
+        } else {
           const auto updatedValue =
-              AddOp{}(currentModifiedVecIt->_data, -sparseEtm._pivotingTermInverse * etmElem._data * pivotModifiedVecTerm);
-          if (isZero(updatedValue))
-          {
+              AddOp{}(currentModifiedVecIt->_data,
+                      -sparseEtm._pivotingTermInverse * etmElem._data *
+                          pivotModifiedVecTerm);
+          if (isZero(updatedValue)) {
             modifiedVec._normalVec[etmElem._index] = T{0.0};
-            currentModifiedVecIt = modifiedVec._elements.erase(currentModifiedVecIt);
-          }
-          else
-          {
-            currentModifiedVecIt->_data = modifiedVec._normalVec[currentModifiedVecIt->_index]
-                = updatedValue;
+            currentModifiedVecIt =
+                modifiedVec._indexedValues.erase(currentModifiedVecIt);
+          } else {
+            currentModifiedVecIt->_data =
+                modifiedVec._normalVec[currentModifiedVecIt->_index] =
+                    updatedValue;
           }
         }
-      }
-      else
-      {
-        currentModifiedVecIt = modifiedVec._elements.insert(currentModifiedVecIt,
-                                                            {AddOp{}(0.0, -sparseEtm._pivotingTermInverse * etmElem._data * pivotModifiedVecTerm),
-                                                            etmElem._index});
+      } else {
+        currentModifiedVecIt = modifiedVec._indexedValues.insert(
+            currentModifiedVecIt,
+            {AddOp{}(0.0, -sparseEtm._pivotingTermInverse * etmElem._data *
+                              pivotModifiedVecTerm),
+             etmElem._index});
         modifiedVec._normalVec[etmElem._index] = currentModifiedVecIt->_data;
       }
     }
   }
 
   template <typename AdderT = CurrentAdder>
-  static T dotProductSparse(const SparseVector<T>& vec1, const SparseVector<T>& vec2)
-  {
+  static T dotProductSparse(const SparseVector<T> &vec1,
+                            const SparseVector<T> &vec2) {
     AdderT adder;
-//    std::vector<T> addedValues;
-    auto currentVec2It = vec2._elements.begin();
+    //    std::vector<T> addedValues;
+    auto currentVec2It = vec2._indexedValues.begin();
 
-    for (const auto& vec1Elem : vec1._elements)
-    {
-      while ((currentVec2It != vec2._elements.end()) && (currentVec2It->_index < vec1Elem._index))
+    for (const auto &vec1Elem : vec1._indexedValues) {
+      while ((currentVec2It != vec2._indexedValues.end()) &&
+             (currentVec2It->_index < vec1Elem._index))
         ++currentVec2It;
 
-      if (currentVec2It == vec2._elements.end())
+      if (currentVec2It == vec2._indexedValues.end())
         break;
 
-      if (currentVec2It->_index == vec1Elem._index)
-      {
+      if (currentVec2It->_index == vec1Elem._index) {
         adder.addValue(vec1Elem._data * currentVec2It->_data);
-//        addedValues.push_back(vec1Elem._data * currentVec2It->_data);
+        //        addedValues.push_back(vec1Elem._data * currentVec2It->_data);
       }
     }
 
-//    if (std::fabs(adder.currentSum()) < 1e-10 && std::fabs(adder.currentSum()) > 0.0)
-//    {
-//      SPDLOG_INFO("DOT NONZEROS {}", fmt::join(addedValues, ", "));
-//    }
-//      SPDLOG_INFO("DOT PRODUCT SPARSE {}", adder.currentSum());
+    //    if (std::fabs(adder.currentSum()) < 1e-10 &&
+    //    std::fabs(adder.currentSum()) > 0.0)
+    //    {
+    //      SPDLOG_INFO("DOT NONZEROS {}", fmt::join(addedValues, ", "));
+    //    }
+    //      SPDLOG_INFO("DOT PRODUCT SPARSE {}", adder.currentSum());
     return adder.currentSum();
   }
 
-
   template <typename AdderT = CurrentAdder>
-  static void multiplyByETMFromRightSparse(SparseVector<T>& modifiedVec, const SparseElementaryMatrix<T>& etm)
-    {
-      AdderT adder;
-      auto currentEtmIt = etm._sparseVec._elements.begin();
-      auto firstModifiecVecElemAfterPivotRowIt = modifiedVec._elements.end();
+  static void
+  multiplyByETMFromRightSparse(SparseVector<T> &modifiedVec,
+                               const SparseElementaryMatrix<T> &etm) {
+    AdderT adder;
+    auto currentEtmIt = etm._sparseVec._indexedValues.begin();
+    auto firstModifiecVecElemAfterPivotRowIt = modifiedVec._indexedValues.end();
 
-      for (auto modifiecVecElemIt = modifiedVec._elements.begin();
-               modifiecVecElemIt != modifiedVec._elements.end(); ++modifiecVecElemIt)
-      {
-        if (modifiecVecElemIt->_index >= etm._pivotRowIdx &&
-                                         firstModifiecVecElemAfterPivotRowIt == modifiedVec._elements.end())
-          firstModifiecVecElemAfterPivotRowIt = modifiecVecElemIt;
+    for (auto modifiecVecElemIt = modifiedVec._indexedValues.begin();
+         modifiecVecElemIt != modifiedVec._indexedValues.end();
+         ++modifiecVecElemIt) {
+      if (modifiecVecElemIt->_index >= etm._pivotRowIdx &&
+          firstModifiecVecElemAfterPivotRowIt ==
+              modifiedVec._indexedValues.end())
+        firstModifiecVecElemAfterPivotRowIt = modifiecVecElemIt;
 
-        auto& modifiedVecElem = *modifiecVecElemIt;
-        while ((currentEtmIt != etm._sparseVec._elements.end()) && (currentEtmIt->_index < modifiedVecElem._index))
-          ++currentEtmIt;
+      auto &modifiedVecElem = *modifiecVecElemIt;
+      while ((currentEtmIt != etm._sparseVec._indexedValues.end()) &&
+             (currentEtmIt->_index < modifiedVecElem._index))
+        ++currentEtmIt;
 
-        if (currentEtmIt == etm._sparseVec._elements.end())
-          break;
+      if (currentEtmIt == etm._sparseVec._indexedValues.end())
+        break;
 
-        if (currentEtmIt->_index == modifiedVecElem._index)
-        {
-          if (currentEtmIt->_index == etm._pivotRowIdx)
-            adder.addValue(modifiedVecElem._data * etm._pivotingTermInverse);
-          else
-            adder.addValue(-modifiedVecElem._data * currentEtmIt->_data * etm._pivotingTermInverse);
-        }
-      }
-
-      const auto sum = adder.currentSum();
-      if (isZero(sum))
-      {
-        if ((firstModifiecVecElemAfterPivotRowIt != modifiedVec._elements.end()) &&
-        (firstModifiecVecElemAfterPivotRowIt->_index == etm._pivotRowIdx))
-        {
-          modifiedVec._elements.erase(firstModifiecVecElemAfterPivotRowIt);
-          modifiedVec._normalVec[etm._pivotRowIdx] = T{0.0};
-        }
-      }
-      else
-      {
-        if ((firstModifiecVecElemAfterPivotRowIt != modifiedVec._elements.end())  &&
-            (firstModifiecVecElemAfterPivotRowIt->_index == etm._pivotRowIdx))
-        {
-          firstModifiecVecElemAfterPivotRowIt->_data =
-              modifiedVec._normalVec[etm._pivotRowIdx] = sum;
-        }
+      if (currentEtmIt->_index == modifiedVecElem._index) {
+        if (currentEtmIt->_index == etm._pivotRowIdx)
+          adder.addValue(modifiedVecElem._data * etm._pivotingTermInverse);
         else
-        {
-          modifiedVec._elements.insert(firstModifiecVecElemAfterPivotRowIt, {sum, etm._pivotRowIdx});
-          modifiedVec._normalVec[etm._pivotRowIdx] = sum;
-        }
+          adder.addValue(-modifiedVecElem._data * currentEtmIt->_data *
+                         etm._pivotingTermInverse);
       }
     }
 
+    const auto sum = adder.currentSum();
+    if (isZero(sum)) {
+      if ((firstModifiecVecElemAfterPivotRowIt !=
+           modifiedVec._indexedValues.end()) &&
+          (firstModifiecVecElemAfterPivotRowIt->_index == etm._pivotRowIdx)) {
+        modifiedVec._indexedValues.erase(firstModifiecVecElemAfterPivotRowIt);
+        modifiedVec._normalVec[etm._pivotRowIdx] = T{0.0};
+      }
+    } else {
+      if ((firstModifiecVecElemAfterPivotRowIt !=
+           modifiedVec._indexedValues.end()) &&
+          (firstModifiecVecElemAfterPivotRowIt->_index == etm._pivotRowIdx)) {
+        firstModifiecVecElemAfterPivotRowIt->_data =
+            modifiedVec._normalVec[etm._pivotRowIdx] = sum;
+      } else {
+        modifiedVec._indexedValues.insert(firstModifiecVecElemAfterPivotRowIt,
+                                          {sum, etm._pivotRowIdx});
+        modifiedVec._normalVec[etm._pivotRowIdx] = sum;
+      }
+    }
+  }
+
   template <typename AdderT = CurrentAdder>
-  static void multiplyByETMFromRight(std::vector<T>& modifiedVec, const ElementaryMatrix<T>& etm)
-  {
+  static void multiplyByETMFromRight(std::vector<T> &modifiedVec,
+                                     const ElementaryMatrix<T> &etm) {
     AdderT adder;
     for (int i = 0; i < modifiedVec.size(); ++i) {
       if (i == etm._pivotRowIdx)
         adder.addValue(modifiedVec[i] * etm._pivotingTermInverse);
       else
-        adder.addValue(-modifiedVec[i] * etm._vec[i] * etm._pivotingTermInverse);
+        adder.addValue(-modifiedVec[i] * etm._vec[i] *
+                       etm._pivotingTermInverse);
     }
 
     modifiedVec[etm._pivotRowIdx] = adder.currentSum();
   }
 
   template <typename AdderT = CurrentAdder>
-  static void multiplyByETMFromRightSparse(std::vector<T>& modifiedVec, const SparseElementaryMatrix<T>&sparseEtm)
-  {
+  static void
+  multiplyByETMFromRightSparse(std::vector<T> &modifiedVec,
+                               const SparseElementaryMatrix<T> &sparseEtm) {
     AdderT adder;
-    for (const auto&etmElem : sparseEtm._sparseVec._elements) {
+    for (const auto &etmElem : sparseEtm._sparseVec._indexedValues) {
       if (etmElem._index == sparseEtm._pivotRowIdx)
-        adder.addValue(modifiedVec[sparseEtm._pivotRowIdx] * sparseEtm._pivotingTermInverse);
+        adder.addValue(modifiedVec[sparseEtm._pivotRowIdx] *
+                       sparseEtm._pivotingTermInverse);
       else
-        adder.addValue(-modifiedVec[etmElem._index] * etmElem._data * sparseEtm._pivotingTermInverse);
+        adder.addValue(-modifiedVec[etmElem._index] * etmElem._data *
+                       sparseEtm._pivotingTermInverse);
     }
 
     modifiedVec[sparseEtm._pivotRowIdx] = adder.currentSum();
   }
 
   template <typename AddOp = NormalAddOp>
-  static void multiplyByETM(const ElementaryMatrix<T>& etm, Matrix<T>& modifiedMatrix)
-  {
+  static void multiplyByETM(const ElementaryMatrix<T> &etm,
+                            Matrix<T> &modifiedMatrix) {
     for (int rowIdx = 0; rowIdx < modifiedMatrix.size(); ++rowIdx) {
       if (rowIdx == etm._pivotRowIdx)
         continue;
@@ -354,7 +328,8 @@ template <typename T> struct SimplexTraits {
 
       for (int colIdx = 0; colIdx < modifiedMatrix[rowIdx].size(); ++colIdx)
         modifiedMatrix[rowIdx][colIdx] =
-            AddOp{}(modifiedMatrix[rowIdx][colIdx], -(commonCoeff * modifiedMatrix[etm._pivotRowIdx][colIdx]));
+            AddOp{}(modifiedMatrix[rowIdx][colIdx],
+                    -(commonCoeff * modifiedMatrix[etm._pivotRowIdx][colIdx]));
     }
 
     for (int j = 0; j < modifiedMatrix[etm._pivotRowIdx].size(); ++j)
@@ -371,6 +346,3 @@ template <typename T> struct SimpleComparisonTraits {
 };
 
 #endif // GMISOLVER_SIMPLEXTRAITS_H
-
-
-

@@ -8,8 +8,7 @@
 
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
 
-template <typename T,
-          typename SimplexTraitsT = SimplexTraits<T>>
+template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class RevisedPrimalSimplexPFIBounds {
 public:
   RevisedPrimalSimplexPFIBounds(
@@ -46,7 +45,7 @@ private:
   void removeRows(const std::vector<bool> &shouldRowBeRemoved);
 
   std::vector<T> singleVarObjective(const int varIdx, const bool minimize);
-  void fixNonBasicVariables(int& varsFixedCount);
+  void fixNonBasicVariables(int &varsFixedCount);
   void unfixAllVariables();
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;

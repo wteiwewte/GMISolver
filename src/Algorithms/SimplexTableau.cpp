@@ -5,9 +5,9 @@
 #include "src/Util/SimplexTraits.h"
 
 template <typename T, typename SimplexTraitsT>
-SimplexTableau<T, SimplexTraitsT>::SimplexTableau(const LinearProgram<T> &linearProgram,
-                                  const bool isPrimalSimplex,
-                                                  const bool useProductFormOfInverse)
+SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
+    const LinearProgram<T> &linearProgram, const bool isPrimalSimplex,
+    const bool useProductFormOfInverse, const bool useSparseRepresentation)
     : _initialProgram(linearProgram),
       _variableInfos(linearProgram._variableInfos),
       _variableLowerBounds(linearProgram._variableLowerBounds),
@@ -32,16 +32,15 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(const LinearProgram<T> &linear
 
   SPDLOG_INFO("Adding artificial variables");
   addArtificialVariables();
-  _objectiveRow = isPrimalSimplex ? initialPrimalSimplexObjective()
-                                  : initialDualSimplexObjective();
   initMatrixRepresentations();
-  init(isPrimalSimplex);
+  init(isPrimalSimplex, useSparseRepresentation);
   SPDLOG_TRACE("Simplex tableau with artificial variables");
   SPDLOG_TRACE(toString());
   SPDLOG_TRACE(toStringLpSolveFormat());
 }
 
-template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables() {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables() {
   const int variableCountAtTheStart = _variableInfos.size();
   const int newVariableCount = variableCountAtTheStart + _rowInfos.size();
 
@@ -63,7 +62,7 @@ template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTra
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T> SimplexTableau<T, SimplexTraitsT>::initialPrimalSimplexObjective() const {
+std::vector<T> SimplexTableau<T, SimplexTraitsT>::artificialObjective() const {
   std::vector<T> result(_constraintMatrix.front().size());
 
   for (int variableIdx = 0; variableIdx < _variableInfos.size(); ++variableIdx)
@@ -74,7 +73,7 @@ std::vector<T> SimplexTableau<T, SimplexTraitsT>::initialPrimalSimplexObjective(
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T> SimplexTableau<T, SimplexTraitsT>::initialDualSimplexObjective() const {
+std::vector<T> SimplexTableau<T, SimplexTraitsT>::originalObjective() const {
   std::vector<T> result = _initialProgram.getObjective();
   result.resize(_variableInfos.size());
   return result;
@@ -111,21 +110,27 @@ SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
   return result;
 }
 
-template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::init(const bool isPrimalSimplex) {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::init(
+    const bool isPrimalSimplex, const bool useSparseRepresentation) {
   if (auto simplexBasisData = createBasisFromArtificialVars();
       simplexBasisData.has_value())
     _simplexBasisData = std::move(*simplexBasisData);
 
   initBasisMatrixInverse();
-  calculateDual();
-  calculateReducedCostsBasedOnDual();
-  if (!isPrimalSimplex)
+  setObjectiveImpl(isPrimalSimplex ? artificialObjective()
+                                   : originalObjective(),
+                   useSparseRepresentation);
+
+  if (!isPrimalSimplex) {
     initBoundsForDualSimplex();
-  calculateCurrentObjectiveValue();
-  calculateSolution();
+    calculateCurrentObjectiveValue();
+    calculateSolution();
+  }
 }
 
-template <typename T, typename SimplexTraitsT> std::string SimplexTableau<T, SimplexTraitsT>::toString() const {
+template <typename T, typename SimplexTraitsT>
+std::string SimplexTableau<T, SimplexTraitsT>::toString() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printLineBreak();
 
@@ -157,7 +162,8 @@ std::string SimplexTableau<T, SimplexTraitsT>::toStringObjectiveValue() const {
   lpPrinter.printCurrentObjectiveValue(_result, _objectiveValue);
   return lpPrinter.toString();
 }
-template <typename T, typename SimplexTraitsT> std::string SimplexTableau<T, SimplexTraitsT>::toStringSolution() const {
+template <typename T, typename SimplexTraitsT>
+std::string SimplexTableau<T, SimplexTraitsT>::toStringSolution() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printSolution(_x);
   return lpPrinter.toString();
@@ -171,30 +177,30 @@ std::string SimplexTableau<T, SimplexTraitsT>::toStringLpSolveFormat() const {
   return lpPrinter.toString();
 }
 
-template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::calculateCurrentObjectiveValue() {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::calculateCurrentObjectiveValue() {
   typename SimplexTraitsT::CurrentAdder adder;
   for (int i = 0; i < _rowInfos.size(); ++i)
-    adder.addValue(_rightHandSides[i] *
-              _objectiveRow[basicColumnIdx(i)]);
+    adder.addValue(_rightHandSides[i] * _objectiveRow[basicColumnIdx(i)]);
 
   for (int j = 0; j < _variableInfos.size(); ++j)
     if (!_simplexBasisData._isBasicColumnIndexBitset[j])
-      adder.addValue(*curSatisfiedBound(j) *
-                _objectiveRow[j]);
+      adder.addValue(*curSatisfiedBound(j) * _objectiveRow[j]);
 
   _objectiveValue = adder.currentSum();
 }
-template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::calculateSolution() {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::calculateSolution() {
   _x.resize(_variableInfos.size());
   for (int colIdx = 0; colIdx < _variableInfos.size(); ++colIdx)
     if (!_simplexBasisData._isBasicColumnIndexBitset[colIdx])
       _x[colIdx] = *curSatisfiedBound(colIdx);
 
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx)
-    _x[basicColumnIdx(rowIdx)] =
-        _rightHandSides[rowIdx];
+    _x[basicColumnIdx(rowIdx)] = _rightHandSides[rowIdx];
 }
-template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::initBasisMatrixInverse() {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::initBasisMatrixInverse() {
   _basisMatrixInverse.resize(_rowInfos.size());
   for (int rowIdx = 0; rowIdx < _basisMatrixInverse.size(); ++rowIdx) {
     _basisMatrixInverse[rowIdx].resize(_basisMatrixInverse.size());
@@ -203,7 +209,8 @@ template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTra
 }
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateDual() {
-  return _useProductFormOfInverse ? calculateDualPFI() : calculateDualExplicit();
+  return _useProductFormOfInverse ? calculateDualPFI()
+                                  : calculateDualExplicit();
 }
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateDualExplicit() {
@@ -248,10 +255,11 @@ void SimplexTableau<T, SimplexTraitsT>::calculateReducedCostsBasedOnDual() {
     _reducedCosts[columnIdx] = yAn;
   }
 
-//  _reducedCosts.resize(_variableInfos.size()); // FIXME why this doesnt work
-//  for (int columnIdx = 0; columnIdx < _variableInfos.size(); ++columnIdx)
-//    _reducedCosts[columnIdx] = _objectiveRow[columnIdx]
-//                                                   -SimplexTraitsT::dotProduct(_y, _constraintMatrixSparseForm._columns[columnIdx]);
+  //  _reducedCosts.resize(_variableInfos.size()); // FIXME why this doesnt work
+  //  for (int columnIdx = 0; columnIdx < _variableInfos.size(); ++columnIdx)
+  //    _reducedCosts[columnIdx] = _objectiveRow[columnIdx]
+  //                                                   -SimplexTraitsT::dotProduct(_y,
+  //                                                   _constraintMatrixSparseForm._columns[columnIdx]);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -262,11 +270,10 @@ void SimplexTableau<T, SimplexTraitsT>::calculateRHS() {
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateRHSExplicit() {
   calculateRHSWithoutInverse();
-  std::vector<T> tempRHS = std::move(_rightHandSides);
+  std::vector<T> tempRHS = _rightHandSides;
   for (int i = 0; i < _rowInfos.size(); ++i)
-    _rightHandSides[i] = SimplexTraitsT::dotProduct(
-        _basisMatrixInverse[i],
-        tempRHS);
+    _rightHandSides[i] =
+        SimplexTraitsT::dotProduct(_basisMatrixInverse[i], tempRHS);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -295,7 +302,8 @@ void SimplexTableau<T, SimplexTraitsT>::calculateRHSWithoutInverse() {
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::updateBasisData(const PivotData<T> &pivotData) {
+void SimplexTableau<T, SimplexTraitsT>::updateBasisData(
+    const PivotData<T> &pivotData) {
   const auto &[leavingRowIdx, enteringColumnIdx, _] = pivotData;
   auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset, _1, _2] =
       _simplexBasisData;
@@ -306,7 +314,8 @@ void SimplexTableau<T, SimplexTraitsT>::updateBasisData(const PivotData<T> &pivo
   isBasicColumnIndexBitset[rowToBasisColumnIdxMap[leavingRowIdx]] = false;
   rowToBasisColumnIdxMap[leavingRowIdx] = enteringColumnIdx;
 }
-template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::initBoundsForDualSimplex() {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::initBoundsForDualSimplex() {
   for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
     if (_reducedCosts[varIdx] < 0.0) {
       _simplexBasisData._isColumnAtLowerBoundBitset[varIdx] = false;
@@ -315,11 +324,13 @@ template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTra
 
     if (_variableInfos[varIdx]._isArtificial) {
       _variableUpperBounds[varIdx] = 0.0;
+      _variableInfos[varIdx]._isFixed = true;
     }
   }
 }
 
-template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::convertToStandardForm() {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::convertToStandardForm() {
   int nonEqualityRows = 0;
   for (const auto &rowInfo : _rowInfos)
     if (!rowInfo.isEqualityRow())
@@ -357,8 +368,8 @@ template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTra
       break;
     }
     const auto newSlackLabelStr = newSlackLabel();
-    _variableInfos.push_back(
-        VariableInfo{newSlackLabelStr, VariableType::CONTINUOUS, true, false, false});
+    _variableInfos.push_back(VariableInfo{
+        newSlackLabelStr, VariableType::CONTINUOUS, true, false, false});
     _variableLabelSet.insert(newSlackLabelStr);
     _variableLowerBounds.push_back(0.0);
     _variableUpperBounds.push_back(std::nullopt);
@@ -367,15 +378,17 @@ template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTra
   }
 }
 
-template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::makeRightHandSidesNonNegative() {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::makeRightHandSidesNonNegative() {
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     typename SimplexTraitsT::CurrentAdder adder;
     for (int variableIdx = 0; variableIdx < _variableInfos.size();
          ++variableIdx)
       adder.addValue(_variableLowerBounds[variableIdx].value() *
-                _constraintMatrix[rowIdx][variableIdx]);
+                     _constraintMatrix[rowIdx][variableIdx]);
 
-    const T diff = SimplexTraitsT::add(_rightHandSides[rowIdx], -adder.currentSum());
+    const T diff =
+        SimplexTraitsT::add(_rightHandSides[rowIdx], -adder.currentSum());
 
     if (diff < 0.0) {
       for (int variableIdx = 0; variableIdx < _variableInfos.size();
@@ -388,7 +401,8 @@ template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTra
   }
 }
 
-template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTraitsT>::addBoundsToMatrix() {
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::addBoundsToMatrix() {
   for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
     if (const auto lowerBound = _variableLowerBounds[varIdx];
         lowerBound.has_value()) {
@@ -407,24 +421,27 @@ template <typename T, typename SimplexTraitsT> void SimplexTableau<T, SimplexTra
 }
 
 template <typename T, typename SimplexTraitsT>
-bool SimplexTableau<T, SimplexTraitsT>::isColumnAllowedToEnterBasis(const int colIdx) {
-  return  !_variableInfos[colIdx]._isArtificial &&
-          !_variableInfos[colIdx]._isFixed &&
-          !_simplexBasisData._isBasicColumnIndexBitset[colIdx];
+bool SimplexTableau<T, SimplexTraitsT>::isColumnAllowedToEnterBasis(
+    const int colIdx) {
+  return !_variableInfos[colIdx]._isArtificial &&
+         !_variableInfos[colIdx]._isFixed &&
+         !_simplexBasisData._isBasicColumnIndexBitset[colIdx];
 }
 template <typename T, typename SimplexTraitsT>
 std::vector<T>
 SimplexTableau<T, SimplexTraitsT>::computeTableauColumn(const int colIdx) {
-  return _useProductFormOfInverse ? computeTableauColumnPFI(colIdx) : computeTableauColumnExplicit(colIdx);
+  return _useProductFormOfInverse ? computeTableauColumnPFI(colIdx)
+                                  : computeTableauColumnExplicit(colIdx);
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T>
-SimplexTableau<T, SimplexTraitsT>::computeTableauColumnExplicit(const int colIdx) {
+std::vector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauColumnExplicit(
+    const int colIdx) {
   std::vector<T> result(_rowInfos.size());
 
   for (int i = 0; i < _rowInfos.size(); ++i)
-    result[i] = SimplexTraitsT::dotProduct(_basisMatrixInverse[i], _constraintMatrixSparseForm._columns[colIdx]);
+    result[i] = SimplexTraitsT::dotProduct(
+        _basisMatrixInverse[i], _constraintMatrixSparseForm._columns[colIdx]);
 
   return result;
 }
@@ -437,21 +454,26 @@ SimplexTableau<T, SimplexTraitsT>::computeTableauColumnPFI(const int colIdx) {
 }
 template <typename T, typename SimplexTraitsT>
 SparseVector<T>
-SimplexTableau<T, SimplexTraitsT>::computeTableauColumnPFISparse(const int colIdx) {
+SimplexTableau<T, SimplexTraitsT>::computeTableauColumnPFISparse(
+    const int colIdx) {
   SparseVector<T> tableauColumn = _constraintMatrixSparseForm._columns[colIdx];
   multiplyByBasisMatrixLeftInverseUsingPFISparse(tableauColumn);
-//  SPDLOG_INFO("COLUMN NONZEROS BEFORE {} AFTER {}", _constraintMatrixSparseForm._columns[colIdx]._elements.size(),
-//              tableauColumn._elements.size());
+  //  SPDLOG_INFO("COLUMN NONZEROS BEFORE {} AFTER {}",
+  //  _constraintMatrixSparseForm._columns[colIdx]._indexedValues.size(),
+  //              tableauColumn._indexedValues.size());
   return tableauColumn;
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRow(const int rowIdx) {
-  return _useProductFormOfInverse ? computeTableauRowPFI(rowIdx) : computeTableauRowExplicit(rowIdx);
+std::vector<T>
+SimplexTableau<T, SimplexTraitsT>::computeTableauRow(const int rowIdx) {
+  return _useProductFormOfInverse ? computeTableauRowPFI(rowIdx)
+                                  : computeTableauRowExplicit(rowIdx);
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowExplicit(const int rowIdx) {
+std::vector<T>
+SimplexTableau<T, SimplexTraitsT>::computeTableauRowExplicit(const int rowIdx) {
   std::vector<T> result(_variableInfos.size());
   const int columnBasicIdx = basicColumnIdx(rowIdx);
   for (int j = 0; j < _variableInfos.size(); ++j) {
@@ -461,13 +483,15 @@ std::vector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowExplicit(cons
              _simplexBasisData._isBasicColumnIndexBitset[j])
       result[j] = 0.0;
     else
-      result[j] = SimplexTraitsT::dotProduct(_basisMatrixInverse[rowIdx], _constraintMatrixSparseForm._columns[j]);
+      result[j] = SimplexTraitsT::dotProduct(
+          _basisMatrixInverse[rowIdx], _constraintMatrixSparseForm._columns[j]);
   }
 
   return result;
 }
 template <typename T, typename SimplexTraitsT>
-std::vector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFI(const int rowIdx) {
+std::vector<T>
+SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFI(const int rowIdx) {
   std::vector<T> eRowIdx(_rowInfos.size());
   eRowIdx[rowIdx] = 1.0;
   multiplyByBasisMatrixRightInverseUsingPFI(eRowIdx);
@@ -481,15 +505,17 @@ std::vector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFI(const int
              _simplexBasisData._isBasicColumnIndexBitset[j])
       result[j] = 0.0;
     else
-      result[j] = SimplexTraitsT::dotProduct(eRowIdx, _constraintMatrixNormalForm._columns[j]);
+      result[j] = SimplexTraitsT::dotProduct(
+          eRowIdx, _constraintMatrixNormalForm._columns[j]);
   }
 
   return result;
 }
 template <typename T, typename SimplexTraitsT>
-SparseVector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFISparse(const int rowIdx) {
+SparseVector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFISparse(
+    const int rowIdx) {
   SparseVector<T> eRowIdx;
-  eRowIdx._elements.push_back({T{1.0}, rowIdx});
+  eRowIdx._indexedValues.push_back({T{1.0}, rowIdx});
   eRowIdx._normalVec.resize(_rowInfos.size());
   eRowIdx._normalVec[rowIdx] = 1.0;
   multiplyByBasisMatrixRightInverseUsingPFISparse(eRowIdx);
@@ -498,43 +524,51 @@ SparseVector<T> SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFISparse(co
   SparseVector<T> result;
   result._normalVec.resize(_variableInfos.size());
   for (int j = 0; j < _variableInfos.size(); ++j) {
-    if (j == columnBasicIdx)
-    {
+    if (j == columnBasicIdx) {
       result._normalVec[j] = 1.0;
-      result._elements.push_back({1.0, j});
-    }
-    else if (!_simplexBasisData._isBasicColumnIndexBitset[j])
-    {
-//      const auto product = SimplexTraitsT::dotProductSparse(eRowIdx, _constraintMatrixSparseForm._columns[j]);
-//      if (std::fabs(product) < 1e-10 && std::fabs(product) > 0.0)
-//      {
-//        SPDLOG_INFO("DOT PRODUCT SPARSE {} {} {} {} {}", product,
-//                    SimplexTraitsT::template dotProductSparse<SimpleAdderSafe>(eRowIdx, _constraintMatrixSparseForm._columns[j]),
-//                    SimplexTraitsT::template dotProductSparse<PositiveNegativeAdderSafe>(eRowIdx, _constraintMatrixSparseForm._columns[j]),
-//                    SimplexTraitsT::template dotProductSparse<KahanAdderSafe>(eRowIdx, _constraintMatrixSparseForm._columns[j]),
-//                    SimplexTraitsT::template dotProductSparse<KahanAdderNormal>(eRowIdx, _constraintMatrixSparseForm._columns[j])
-//                    );
-//
-//      }
-      const auto product = SimplexTraitsT::template dotProductSparse<PositiveNegativeAdderSafe>(eRowIdx, _constraintMatrixSparseForm._columns[j]);
-      if (!SimplexTraitsT::isZero(product))
-      {
+      result._indexedValues.push_back({1.0, j});
+    } else if (!_simplexBasisData._isBasicColumnIndexBitset[j]) {
+      //      const auto product = SimplexTraitsT::dotProductSparse(eRowIdx,
+      //      _constraintMatrixSparseForm._columns[j]); if (std::fabs(product) <
+      //      1e-10 && std::fabs(product) > 0.0)
+      //      {
+      //        SPDLOG_INFO("DOT PRODUCT SPARSE {} {} {} {} {}", product,
+      //                    SimplexTraitsT::template
+      //                    dotProductSparse<SimpleAdderSafe>(eRowIdx,
+      //                    _constraintMatrixSparseForm._columns[j]),
+      //                    SimplexTraitsT::template
+      //                    dotProductSparse<PositiveNegativeAdderSafe>(eRowIdx,
+      //                    _constraintMatrixSparseForm._columns[j]),
+      //                    SimplexTraitsT::template
+      //                    dotProductSparse<KahanAdderSafe>(eRowIdx,
+      //                    _constraintMatrixSparseForm._columns[j]),
+      //                    SimplexTraitsT::template
+      //                    dotProductSparse<KahanAdderNormal>(eRowIdx,
+      //                    _constraintMatrixSparseForm._columns[j])
+      //                    );
+      //
+      //      }
+      const auto product =
+          SimplexTraitsT::template dotProductSparse<PositiveNegativeAdderSafe>(
+              eRowIdx, _constraintMatrixSparseForm._columns[j]);
+      if (!SimplexTraitsT::isZero(product)) {
         result._normalVec[j] = product;
-        result._elements.push_back({result._normalVec[j], j});
+        result._indexedValues.push_back({result._normalVec[j], j});
       }
     }
   }
 
-//  SPDLOG_INFO("ROW NONZEROS BEFORE {} AFTER {}", _constraintMatrixSparseForm._rows[rowIdx]._elements.size(),
-//              result._elements.size());
+  //  SPDLOG_INFO("ROW NONZEROS BEFORE {} AFTER {}",
+  //  _constraintMatrixSparseForm._rows[rowIdx]._indexedValues.size(),
+  //              result._indexedValues.size());
 
   return result;
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::pivot(const int rowIdx, const int enteringColumnIdx,
-                              const std::vector<T> &enteringColumn,
-                              const std::vector<T> &pivotRow) {
+void SimplexTableau<T, SimplexTraitsT>::pivot(
+    const int rowIdx, const int enteringColumnIdx,
+    const std::vector<T> &enteringColumn, const std::vector<T> &pivotRow) {
   const PivotData<T> pivotData{rowIdx, enteringColumnIdx,
                                1.0 / enteringColumn[rowIdx]};
   SPDLOG_DEBUG("PIVOT VALUE {},  INV {}", enteringColumn[rowIdx],
@@ -556,15 +590,15 @@ void SimplexTableau<T, SimplexTraitsT>::pivotImplicitBounds(
       enteringColumnIdx, pivotRowIdx, leavingBasicColumnIdx);
 
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
-    _rightHandSides[rowIdx] = SimplexTraitsT::add(_rightHandSides[rowIdx],
-                                                  *curSatisfiedBound(enteringColumnIdx) *
-                                                      enteringColumn[rowIdx]);
-
+    _rightHandSides[rowIdx] = SimplexTraitsT::add(
+        _rightHandSides[rowIdx],
+        *curSatisfiedBound(enteringColumnIdx) * enteringColumn[rowIdx]);
   }
-  _rightHandSides[pivotRowIdx] = SimplexTraitsT::add(_rightHandSides[pivotRowIdx], -
-                                                                                   (leavingVarBecomesLowerBound
-                                                                                        ? *_variableLowerBounds[leavingBasicColumnIdx]
-                                                                                        : *_variableUpperBounds[leavingBasicColumnIdx]));
+  _rightHandSides[pivotRowIdx] = SimplexTraitsT::add(
+      _rightHandSides[pivotRowIdx],
+      -(leavingVarBecomesLowerBound
+            ? *_variableLowerBounds[leavingBasicColumnIdx]
+            : *_variableUpperBounds[leavingBasicColumnIdx]));
 
   pivot(pivotRowIdx, enteringColumnIdx, enteringColumn, pivotRow);
 
@@ -585,14 +619,15 @@ void SimplexTableau<T, SimplexTraitsT>::pivotImplicitBounds(
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::updateReducedCosts(const PivotData<T> &pivotData,
-                                                           const std::vector<T> &pivotRow) {
+void SimplexTableau<T, SimplexTraitsT>::updateReducedCosts(
+    const PivotData<T> &pivotData, const std::vector<T> &pivotRow) {
   const auto &[leavingRowIdx, enteringColumnIdx, pivotingTermInverse] =
       pivotData;
   const auto commonCoeffReducedCost =
       _reducedCosts[enteringColumnIdx] * pivotingTermInverse;
   for (int j = 0; j < _variableInfos.size(); ++j)
-    _reducedCosts[j] = SimplexTraitsT::add(_reducedCosts[j], -(commonCoeffReducedCost * pivotRow[j]));
+    _reducedCosts[j] = SimplexTraitsT::add(
+        _reducedCosts[j], -(commonCoeffReducedCost * pivotRow[j]));
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -610,9 +645,9 @@ void SimplexTableau<T, SimplexTraitsT>::updateInverseMatrixWithRHS(
     _pfiEtms.push_back(std::move(etm));
 }
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::pivotSparse(const int rowIdx, const int enteringColumnIdx,
-                              const SparseVector<T>&enteringColumn,
-                              const SparseVector<T>&pivotRow) {
+void SimplexTableau<T, SimplexTraitsT>::pivotSparse(
+    const int rowIdx, const int enteringColumnIdx,
+    const SparseVector<T> &enteringColumn, const SparseVector<T> &pivotRow) {
   const PivotData<T> pivotData{rowIdx, enteringColumnIdx,
                                1.0 / enteringColumn._normalVec[rowIdx]};
   SPDLOG_DEBUG("PIVOT VALUE {},  INV {}", enteringColumn._normalVec[rowIdx],
@@ -626,7 +661,7 @@ void SimplexTableau<T, SimplexTraitsT>::pivotSparse(const int rowIdx, const int 
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::pivotImplicitBoundsSparse(
     const int pivotRowIdx, const int enteringColumnIdx,
-    const SparseVector<T>&enteringColumn, const SparseVector<T>&pivotRow,
+    const SparseVector<T> &enteringColumn, const SparseVector<T> &pivotRow,
     const bool leavingVarBecomesLowerBound) {
   const auto leavingBasicColumnIdx = basicColumnIdx(pivotRowIdx);
   SPDLOG_DEBUG(
@@ -634,15 +669,15 @@ void SimplexTableau<T, SimplexTraitsT>::pivotImplicitBoundsSparse(
       enteringColumnIdx, pivotRowIdx, leavingBasicColumnIdx);
 
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
-    _rightHandSides[rowIdx] = SimplexTraitsT::add(_rightHandSides[rowIdx],
-                                                  *curSatisfiedBound(enteringColumnIdx) *
-                                                      enteringColumn._normalVec[rowIdx]);
-
+    _rightHandSides[rowIdx] = SimplexTraitsT::add(
+        _rightHandSides[rowIdx], *curSatisfiedBound(enteringColumnIdx) *
+                                     enteringColumn._normalVec[rowIdx]);
   }
-  _rightHandSides[pivotRowIdx] = SimplexTraitsT::add(_rightHandSides[pivotRowIdx], -
-                                                                                   (leavingVarBecomesLowerBound
-                                                                                        ? *_variableLowerBounds[leavingBasicColumnIdx]
-                                                                                        : *_variableUpperBounds[leavingBasicColumnIdx]));
+  _rightHandSides[pivotRowIdx] = SimplexTraitsT::add(
+      _rightHandSides[pivotRowIdx],
+      -(leavingVarBecomesLowerBound
+            ? *_variableLowerBounds[leavingBasicColumnIdx]
+            : *_variableUpperBounds[leavingBasicColumnIdx]));
 
   pivotSparse(pivotRowIdx, enteringColumnIdx, enteringColumn, pivotRow);
 
@@ -663,28 +698,32 @@ void SimplexTableau<T, SimplexTraitsT>::pivotImplicitBoundsSparse(
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::updateReducedCostsSparse(const PivotData<T> &pivotData,
-                                                           const SparseVector<T>&pivotRow) {
+void SimplexTableau<T, SimplexTraitsT>::updateReducedCostsSparse(
+    const PivotData<T> &pivotData, const SparseVector<T> &pivotRow) {
   const auto &[leavingRowIdx, enteringColumnIdx, pivotingTermInverse] =
       pivotData;
   const auto commonCoeffReducedCost =
       _reducedCosts[enteringColumnIdx] * pivotingTermInverse;
   for (int j = 0; j < _variableInfos.size(); ++j)
-    _reducedCosts[j] = SimplexTraitsT::add(_reducedCosts[j], -(commonCoeffReducedCost * pivotRow._normalVec[j]));
+    _reducedCosts[j] = SimplexTraitsT::add(
+        _reducedCosts[j], -(commonCoeffReducedCost * pivotRow._normalVec[j]));
 }
 
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::updateInverseMatrixWithRHSSparse(
-    const PivotData<T> &pivotData, const SparseVector<T>&enteringColumn) {
+    const PivotData<T> &pivotData, const SparseVector<T> &enteringColumn) {
   const auto &[leavingRowIdx, enteringColumnIdx, pivotingTermInverse] =
       pivotData;
 
-  _sparsePfiEtms.push_back({
-      enteringColumn, pivotingTermInverse, leavingRowIdx});
-  SimplexTraitsT::template multiplyByETMSparse<typename SimplexTraitsT::SafeNumericalAddOp>(_sparsePfiEtms.back(), _rightHandSides);
+  _sparsePfiEtms.push_back(
+      {enteringColumn, pivotingTermInverse, leavingRowIdx});
+  SimplexTraitsT::template multiplyByETMSparse<
+      typename SimplexTraitsT::SafeNumericalAddOp>(_sparsePfiEtms.back(),
+                                                   _rightHandSides);
 }
 template <typename T, typename SimplexTraitsT>
-std::optional<T> SimplexTableau<T, SimplexTraitsT>::curSatisfiedBound(const int varIdx) {
+std::optional<T>
+SimplexTableau<T, SimplexTraitsT>::curSatisfiedBound(const int varIdx) {
   if (_simplexBasisData._isColumnAtLowerBoundBitset[varIdx])
     return *_variableLowerBounds[varIdx];
 
@@ -702,10 +741,12 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversion() {
 template <typename T, typename SimplexTraitsT>
 bool SimplexTableau<T, SimplexTraitsT>::reinversionExplicit() {
   const auto basisSize = _rowInfos.size();
-  std::vector<int> columnIndexesMapping = _simplexBasisData._rowToBasisColumnIdxMap;
+  std::vector<int> columnIndexesMapping =
+      _simplexBasisData._rowToBasisColumnIdxMap;
   std::vector<std::vector<T>> basisColumns(basisSize);
   for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx)
-    basisColumns[rowIdx] = _constraintMatrixNormalForm._columns[basicColumnIdx(rowIdx)];
+    basisColumns[rowIdx] =
+        _constraintMatrixNormalForm._columns[basicColumnIdx(rowIdx)];
 
   std::vector<std::vector<T>> newBasisMatrixInverse(basisSize);
   for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
@@ -752,7 +793,8 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversionExplicit() {
     }
 
     const T pivotingTermInverse{1.0 / basisColumns[*pivotColumnIdx][rowIdx]};
-    const ElementaryMatrix<T> etm{basisColumns[*pivotColumnIdx], pivotingTermInverse, rowIdx};
+    const ElementaryMatrix<T> etm{basisColumns[*pivotColumnIdx],
+                                  pivotingTermInverse, rowIdx};
     SimplexTraitsT::multiplyByETM(etm, newBasisMatrixInverse);
 
     isUnusedColumn[*pivotColumnIdx] = false;
@@ -773,10 +815,12 @@ template <typename T, typename SimplexTraitsT>
 bool SimplexTableau<T, SimplexTraitsT>::reinversionPFI() {
   // TODO - opt it by storing columns in vectors
   const auto basisSize = _rowInfos.size();
-  std::vector<int> columnIndexesMapping = _simplexBasisData._rowToBasisColumnIdxMap;
+  std::vector<int> columnIndexesMapping =
+      _simplexBasisData._rowToBasisColumnIdxMap;
   std::vector<std::vector<T>> basisColumns(basisSize);
   for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx)
-    basisColumns[rowIdx] = _constraintMatrixNormalForm._columns[basicColumnIdx(rowIdx)];
+    basisColumns[rowIdx] =
+        _constraintMatrixNormalForm._columns[basicColumnIdx(rowIdx)];
 
   std::vector<bool> isUnusedColumn(basisSize, true);
 
@@ -820,7 +864,8 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversionPFI() {
     }
 
     const T pivotingTermInverse{1.0 / basisColumns[*pivotColumnIdx][rowIdx]};
-    const ElementaryMatrix<T> etm{basisColumns[*pivotColumnIdx], pivotingTermInverse, rowIdx};
+    const ElementaryMatrix<T> etm{basisColumns[*pivotColumnIdx],
+                                  pivotingTermInverse, rowIdx};
 
     isUnusedColumn[*pivotColumnIdx] = false;
     _simplexBasisData._rowToBasisColumnIdxMap[rowIdx] =
@@ -830,7 +875,8 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversionPFI() {
       if (isUnusedColumn[colIdx])
         SimplexTraitsT::multiplyByETM(etm, basisColumns[colIdx]);
 
-    newPfiEtms.push_back(ElementaryMatrix<T>{std::move(basisColumns[*pivotColumnIdx]), pivotingTermInverse, rowIdx});
+    newPfiEtms.push_back(ElementaryMatrix<T>{
+        std::move(basisColumns[*pivotColumnIdx]), pivotingTermInverse, rowIdx});
   }
 
   _pfiEtms.swap(newPfiEtms);
@@ -841,10 +887,12 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversionPFI() {
 template <typename T, typename SimplexTraitsT>
 bool SimplexTableau<T, SimplexTraitsT>::reinversionPFISparse() {
   const auto basisSize = _rowInfos.size();
-  std::vector<int> columnIndexesMapping = _simplexBasisData._rowToBasisColumnIdxMap;
+  std::vector<int> columnIndexesMapping =
+      _simplexBasisData._rowToBasisColumnIdxMap;
   std::vector<SparseVector<T>> basisColumns(basisSize);
   for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx)
-    basisColumns[rowIdx] = _constraintMatrixSparseForm._columns[basicColumnIdx(rowIdx)];
+    basisColumns[rowIdx] =
+        _constraintMatrixSparseForm._columns[basicColumnIdx(rowIdx)];
 
   std::vector<bool> isUnusedColumn(basisSize, true);
 
@@ -852,7 +900,8 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversionPFISparse() {
       [&](const int rowIdx) -> std::optional<int> {
     for (int colIdx = 0; colIdx < basisSize; ++colIdx)
       if (isUnusedColumn[colIdx] &&
-          SimplexTraitsT::isEligibleForPivot(basisColumns[colIdx]._normalVec[rowIdx]))
+          SimplexTraitsT::isEligibleForPivot(
+              basisColumns[colIdx]._normalVec[rowIdx]))
         return colIdx;
 
     return std::nullopt;
@@ -864,7 +913,8 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversionPFISparse() {
     std::optional<int> maxAbsPivotColIdx;
     for (int colIdx = 0; colIdx < basisSize; ++colIdx)
       if (isUnusedColumn[colIdx] &&
-          SimplexTraitsT::isEligibleForPivot(basisColumns[colIdx]._normalVec[rowIdx])) {
+          SimplexTraitsT::isEligibleForPivot(
+              basisColumns[colIdx]._normalVec[rowIdx])) {
         const auto currentAbsPivotValue =
             std::fabs(basisColumns[colIdx]._normalVec[rowIdx]);
         if (!maxAbsPivotColIdx.has_value() ||
@@ -887,8 +937,10 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversionPFISparse() {
       return false;
     }
 
-    const T pivotingTermInverse{1.0 / basisColumns[*pivotColumnIdx]._normalVec[rowIdx]};
-    newSparsePfiEtms.push_back(SparseElementaryMatrix<T>{basisColumns[*pivotColumnIdx], pivotingTermInverse, rowIdx});
+    const T pivotingTermInverse{
+        1.0 / basisColumns[*pivotColumnIdx]._normalVec[rowIdx]};
+    newSparsePfiEtms.push_back(SparseElementaryMatrix<T>{
+        basisColumns[*pivotColumnIdx], pivotingTermInverse, rowIdx});
 
     isUnusedColumn[*pivotColumnIdx] = false;
     _simplexBasisData._rowToBasisColumnIdxMap[rowIdx] =
@@ -896,7 +948,9 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversionPFISparse() {
 
     for (int colIdx = 0; colIdx < basisSize; ++colIdx)
       if (isUnusedColumn[colIdx])
-        SimplexTraitsT::template multiplyByETMSparse<typename SimplexTraitsT::SafeNumericalAddOp>(newSparsePfiEtms.back(), basisColumns[colIdx]);
+        SimplexTraitsT::template multiplyByETMSparse<
+            typename SimplexTraitsT::SafeNumericalAddOp>(
+            newSparsePfiEtms.back(), basisColumns[colIdx]);
   }
 
   _sparsePfiEtms.swap(newSparsePfiEtms);
@@ -913,102 +967,110 @@ void SimplexTableau<T, SimplexTraitsT>::initMatrixRepresentations() {
   _constraintMatrixSparseForm._columns.resize(_variableInfos.size());
 
   _constraintMatrixNormalForm._rows.resize(_rowInfos.size());
-  for (int i = 0; i < _rowInfos.size(); ++i)
-  {
+  for (int i = 0; i < _rowInfos.size(); ++i) {
     _constraintMatrixNormalForm._rows[i].resize(_variableInfos.size());
-    _constraintMatrixSparseForm._rows[i]._normalVec.resize(_variableInfos.size());
+    _constraintMatrixSparseForm._rows[i]._normalVec.resize(
+        _variableInfos.size());
   }
 
   _constraintMatrixNormalForm._columns.resize(_variableInfos.size());
-  for (int j = 0; j < _variableInfos.size(); ++j)
-  {
+  for (int j = 0; j < _variableInfos.size(); ++j) {
     _constraintMatrixNormalForm._columns[j].resize(_rowInfos.size());
     _constraintMatrixSparseForm._columns[j]._normalVec.resize(_rowInfos.size());
   }
 
   for (int i = 0; i < _rowInfos.size(); ++i)
-    for (int j = 0; j < _variableInfos.size(); ++j)
-    {
+    for (int j = 0; j < _variableInfos.size(); ++j) {
       const auto currentValue = _constraintMatrix[i][j];
       _constraintMatrixNormalForm._rows[i][j] = currentValue;
       _constraintMatrixNormalForm._columns[j][i] = currentValue;
 
-      if (currentValue != T{})
-      {
+      if (currentValue != T{}) {
         _constraintMatrixSparseForm._rows[i]._normalVec[j] = currentValue;
-        _constraintMatrixSparseForm._rows[i]._elements.push_back({currentValue, j});
+        _constraintMatrixSparseForm._rows[i]._indexedValues.push_back(
+            {currentValue, j});
         _constraintMatrixSparseForm._columns[j]._normalVec[i] = currentValue;
-        _constraintMatrixSparseForm._columns[j]._elements.push_back({currentValue, i});
+        _constraintMatrixSparseForm._columns[j]._indexedValues.push_back(
+            {currentValue, i});
       }
     }
 
-//  int rowNonzeros = 0;
-//  for (int i = 0; i < _rowInfos.size(); ++i)
-//    SPDLOG_INFO("{} ROW NONZEROS COUNT {}", i,
-//                (rowNonzeros += _constraintMatrixSparseForm._rows[i]._elements.size(), _constraintMatrixSparseForm._rows[i]._elements.size()));
-//
-//  SPDLOG_INFO("TOTAL NONZEROS COUNT {}", rowNonzeros);
-//
-//  for (int j = 0; j < _variableInfos.size(); ++j)
-//    SPDLOG_INFO("{} COLUMN NONZEROS COUNT {}", j, _constraintMatrixSparseForm._columns[j]._elements.size());
+  //  int rowNonzeros = 0;
+  //  for (int i = 0; i < _rowInfos.size(); ++i)
+  //    SPDLOG_INFO("{} ROW NONZEROS COUNT {}", i,
+  //                (rowNonzeros +=
+  //                _constraintMatrixSparseForm._rows[i]._indexedValues.size(),
+  //                _constraintMatrixSparseForm._rows[i]._indexedValues.size()));
+  //
+  //  SPDLOG_INFO("TOTAL NONZEROS COUNT {}", rowNonzeros);
+  //
+  //  for (int j = 0; j < _variableInfos.size(); ++j)
+  //    SPDLOG_INFO("{} COLUMN NONZEROS COUNT {}", j,
+  //    _constraintMatrixSparseForm._columns[j]._indexedValues.size());
 }
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::setObjective(const std::vector<T>& newObjective) {
+void SimplexTableau<T, SimplexTraitsT>::setObjectiveImpl(
+    const std::vector<T> &newObjective, const bool useSparseRepresentation) {
   _objectiveRow = newObjective;
   _objectiveRow.resize(_variableInfos.size());
-  calculateDual();
+  useSparseRepresentation ? calculateDualPFISparse() : calculateDual();
   calculateReducedCostsBasedOnDual();
   calculateCurrentObjectiveValue();
-}
-template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::setObjectiveSparse(const std::vector<T>& newObjective) {
-  _objectiveRow = newObjective;
-  _objectiveRow.resize(_variableInfos.size());
-  calculateDualPFISparse();
-  calculateReducedCostsBasedOnDual();
-  calculateCurrentObjectiveValue();
-}
-template <typename T, typename SimplexTraitsT>
-void
-SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixLeftInverseUsingPFI(
-    std::vector<T> &vec) {
-  for (const auto& pfiEtm : _pfiEtms)
-    SimplexTraitsT::multiplyByETM(pfiEtm,
-                                  vec);
-}
-template <typename T, typename SimplexTraitsT>
-void
-SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixLeftInverseUsingPFISparse(SparseVector<T> &vec) {
-  for (const auto& pfiEtm : _sparsePfiEtms)
-    SimplexTraitsT::template multiplyByETMSparse<typename SimplexTraitsT::SafeNumericalAddOp>(pfiEtm, vec);
-}
-template <typename T, typename SimplexTraitsT>
-void
-SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixLeftInverseUsingPFISparseNormal(
-    std::vector<T> &vec) {
-  for (const auto& pfiEtm : _sparsePfiEtms)
-    SimplexTraitsT::template multiplyByETMSparse<typename SimplexTraitsT::SafeNumericalAddOp>(pfiEtm, vec);
 }
 
 template <typename T, typename SimplexTraitsT>
-void
-SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixRightInverseUsingPFI(std::vector<T> &vec) {
+void SimplexTableau<T, SimplexTraitsT>::setObjectiveNormal(
+    const std::vector<T> &newObjective) {
+  setObjectiveImpl(newObjective, false);
+}
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::setObjectiveSparse(
+    const std::vector<T> &newObjective) {
+  setObjectiveImpl(newObjective, true);
+}
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::
+    multiplyByBasisMatrixLeftInverseUsingPFI(std::vector<T> &vec) {
+  for (const auto &pfiEtm : _pfiEtms)
+    SimplexTraitsT::multiplyByETM(pfiEtm, vec);
+}
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::
+    multiplyByBasisMatrixLeftInverseUsingPFISparse(SparseVector<T> &vec) {
+  for (const auto &pfiEtm : _sparsePfiEtms)
+    SimplexTraitsT::template multiplyByETMSparse<
+        typename SimplexTraitsT::SafeNumericalAddOp>(pfiEtm, vec);
+}
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::
+    multiplyByBasisMatrixLeftInverseUsingPFISparseNormal(std::vector<T> &vec) {
+  for (const auto &pfiEtm : _sparsePfiEtms)
+    SimplexTraitsT::template multiplyByETMSparse<
+        typename SimplexTraitsT::SafeNumericalAddOp>(pfiEtm, vec);
+}
+
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::
+    multiplyByBasisMatrixRightInverseUsingPFI(std::vector<T> &vec) {
   for (int i = 0; i < _pfiEtms.size(); ++i)
-    SimplexTraitsT::multiplyByETMFromRight(vec, _pfiEtms[_pfiEtms.size() - 1 - i]);
+    SimplexTraitsT::multiplyByETMFromRight(vec,
+                                           _pfiEtms[_pfiEtms.size() - 1 - i]);
 }
 template <typename T, typename SimplexTraitsT>
-void
-SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixRightInverseUsingPFISparse(SparseVector<T> &vec) {
+void SimplexTableau<T, SimplexTraitsT>::
+    multiplyByBasisMatrixRightInverseUsingPFISparse(SparseVector<T> &vec) {
   for (int i = 0; i < _sparsePfiEtms.size(); ++i)
-    SimplexTraitsT::template multiplyByETMFromRightSparse<PositiveNegativeAdderSafe>(vec,
-                                                 _sparsePfiEtms[_sparsePfiEtms.size() - 1 - i]);
-
+    SimplexTraitsT::template multiplyByETMFromRightSparse<
+        PositiveNegativeAdderSafe>(
+        vec, _sparsePfiEtms[_sparsePfiEtms.size() - 1 - i]);
 }
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::multiplyByBasisMatrixRightInverseUsingPFISparseNormal(
-    std::vector<T> &vec) {
+void SimplexTableau<T, SimplexTraitsT>::
+    multiplyByBasisMatrixRightInverseUsingPFISparseNormal(std::vector<T> &vec) {
   for (int i = 0; i < _sparsePfiEtms.size(); ++i)
-    SimplexTraitsT::template multiplyByETMFromRightSparse<PositiveNegativeAdderSafe>(vec, _sparsePfiEtms[_sparsePfiEtms.size() - 1 - i]);
+    SimplexTraitsT::template multiplyByETMFromRightSparse<
+        PositiveNegativeAdderSafe>(
+        vec, _sparsePfiEtms[_sparsePfiEtms.size() - 1 - i]);
 }
 
 template class SimplexTableau<double>;

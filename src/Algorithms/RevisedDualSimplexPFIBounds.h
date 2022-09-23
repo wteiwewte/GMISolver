@@ -8,8 +8,7 @@
 
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
 
-template <typename T,
-          typename SimplexTraitsT = SimplexTraits<T>>
+template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class RevisedDualSimplexPFIBounds {
 public:
   RevisedDualSimplexPFIBounds(

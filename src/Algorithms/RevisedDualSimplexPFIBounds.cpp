@@ -86,8 +86,7 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
 }
 
 template <typename T, typename SimplexTraitsT>
-std::optional<int>
-RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRow() {
+std::optional<int> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRow() {
   switch (_dualSimplexRowPivotRule) {
   case DualSimplexRowPivotRule::FIRST_ELIGIBLE:
     return chooseRowFirstEligible();
@@ -106,14 +105,14 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowFirstEligible() {
         _simplexTableau._variableLowerBounds[basicColumnIdx];
     if (lowerBound.has_value() &&
         SimplexTraitsT::less(_simplexTableau._rightHandSides[rowIdx],
-                                *lowerBound))
+                             *lowerBound))
       return rowIdx;
 
     const auto upperBound =
         _simplexTableau._variableUpperBounds[basicColumnIdx];
     if (upperBound.has_value() &&
         SimplexTraitsT::greater(_simplexTableau._rightHandSides[rowIdx],
-                                   *upperBound))
+                                *upperBound))
       return rowIdx;
   }
   return std::nullopt;
@@ -139,7 +138,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowBiggestViolation() {
         _simplexTableau._variableLowerBounds[basicColumnIdx];
     if (lowerBound.has_value() &&
         SimplexTraitsT::less(_simplexTableau._rightHandSides[rowIdx],
-                                *lowerBound))
+                             *lowerBound))
       tryUpdateBest(rowIdx,
                     *lowerBound - _simplexTableau._rightHandSides[rowIdx]);
 
@@ -147,7 +146,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowBiggestViolation() {
         _simplexTableau._variableUpperBounds[basicColumnIdx];
     if (upperBound.has_value() &&
         SimplexTraitsT::greater(_simplexTableau._rightHandSides[rowIdx],
-                                   *upperBound))
+                                *upperBound))
       tryUpdateBest(rowIdx,
                     _simplexTableau._rightHandSides[rowIdx] - *upperBound);
   }

@@ -42,16 +42,16 @@ bool checkIfAllBoundAreSpeficied(
 }
 
 template <typename T>
-int countBoundsSpecified(
-    const std::vector<std::optional<T>> &bounds) {
+int countBoundsSpecified(const std::vector<std::optional<T>> &bounds) {
   return std::count_if(
       bounds.begin(), bounds.end(),
-             [](const std::optional<T> &bound) { return bound.has_value(); });
+      [](const std::optional<T> &bound) { return bound.has_value(); });
 }
 } // namespace
 
 template <typename T>
-std::optional<LinearProgram<T>> MpsReader<T>::read(const std::string &filePath) {
+std::optional<LinearProgram<T>>
+MpsReader<T>::read(const std::string &filePath) {
   std::ifstream fileStream(filePath);
   if (!fileStream.is_open()) {
     SPDLOG_DEBUG("Could not open {} file", filePath);
@@ -197,8 +197,8 @@ std::optional<LinearProgram<T>> MpsReader<T>::read(const std::string &filePath) 
     case SectionType::RHS: {
       if (linearProgram._rightHandSides.empty())
         SPDLOG_DEBUG("VARIABLE COUNT {}, ROW COUNT {} BEFORE RHS",
-                    linearProgram._variableInfos.size(),
-                    linearProgram._rowInfos.size());
+                     linearProgram._variableInfos.size(),
+                     linearProgram._rowInfos.size());
       if (lineParts.size() != 3 && lineParts.size() != 5) {
         SPDLOG_WARN("Unexpected number of elements in rhs line {}", readLine);
         break;
@@ -331,25 +331,25 @@ std::optional<LinearProgram<T>> MpsReader<T>::read(const std::string &filePath) 
 }
 
 template <typename T>
-bool MpsReader<T>::finalizeBounds(LinearProgram<T>& linearProgram) {
+bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
   for (int varIdx = 0; varIdx < linearProgram._variableInfos.size(); ++varIdx)
     if (!linearProgram._variableLowerBounds[varIdx].has_value() &&
         !linearProgram._variableUpperBounds[varIdx].has_value())
       linearProgram._variableLowerBounds[varIdx] = 0.0;
 
-  SPDLOG_INFO("PROGRAM NAME {}, VARIABLE COUNT {}, ROW COUNT {}, LOWER BOUNDS {}, UPPER BOUNDS {}",
-              linearProgram._name,
-              linearProgram._variableInfos.size(),
+  SPDLOG_INFO("PROGRAM NAME {}, VARIABLE COUNT {}, ROW COUNT {}, LOWER BOUNDS "
+              "{}, UPPER BOUNDS {}",
+              linearProgram._name, linearProgram._variableInfos.size(),
               linearProgram._rowInfos.size(),
               countBoundsSpecified(linearProgram._variableLowerBounds),
               countBoundsSpecified(linearProgram._variableUpperBounds));
 
-//  if (!checkIfAllBoundAreSpeficied(linearProgram._variableInfos,
-//                                   linearProgram._variableLowerBounds,
-//                                   linearProgram._variableUpperBounds)) {
-//    SPDLOG_WARN("Every variable must have defined bounds");
-//    return false;
-//  }
+  //  if (!checkIfAllBoundAreSpeficied(linearProgram._variableInfos,
+  //                                   linearProgram._variableLowerBounds,
+  //                                   linearProgram._variableUpperBounds)) {
+  //    SPDLOG_WARN("Every variable must have defined bounds");
+  //    return false;
+  //  }
 
   return true;
 }

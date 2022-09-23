@@ -30,8 +30,7 @@ public:
 
 private:
   friend struct MpsReader<T>;
-  template <typename U, typename ComparisonTraitsU>
-  friend class SimplexTableau;
+  template <typename U, typename ComparisonTraitsU> friend class SimplexTableau;
 
   std::string basicInformationStr() const;
 

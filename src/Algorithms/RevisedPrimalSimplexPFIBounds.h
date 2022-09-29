@@ -40,7 +40,7 @@ private:
                                     const int enteringColumnIdx,
                                     const std::vector<T> &enteringColumn);
 
-  bool removeArtificialVariablesFromBasis();
+  void removeArtificialVariablesFromBasis();
   void removeArtificialVariablesFromProgram();
   void removeRows(const std::vector<bool> &shouldRowBeRemoved);
 

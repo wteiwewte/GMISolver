@@ -940,7 +940,7 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversionPFISparse() {
     const T pivotingTermInverse{
         1.0 / basisColumns[*pivotColumnIdx]._normalVec[rowIdx]};
     newSparsePfiEtms.push_back(SparseElementaryMatrix<T>{
-        basisColumns[*pivotColumnIdx], pivotingTermInverse, rowIdx});
+        std::move(basisColumns[*pivotColumnIdx]), pivotingTermInverse, rowIdx});
 
     isUnusedColumn[*pivotColumnIdx] = false;
     _simplexBasisData._rowToBasisColumnIdxMap[rowIdx] =

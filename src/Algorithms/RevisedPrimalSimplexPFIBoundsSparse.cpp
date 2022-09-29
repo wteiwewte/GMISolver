@@ -57,12 +57,9 @@ bool RevisedPrimalSimplexPFIBoundsSparse<T, SimplexTraitsT>::runPhaseOne() {
     return false;
   }
 
-  //  if (!removeArtificialVariablesFromBasis()) {
-  //    SPDLOG_WARN("COULD NOT REMOVE PROPERLY ARTIFICIAL VARIABLES FROM
-  //    BASIS"); return false;
-  //  }
-  //  removeArtificialVariablesFromProgram();
-  return true;
+  removeArtificialVariablesFromBasis();
+  removeArtificialVariablesFromProgram();
+  return _simplexTableau.reinversionPFISparse();
 }
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBoundsSparse<T, SimplexTraitsT>::runPhaseTwo() {
@@ -381,7 +378,7 @@ void RevisedPrimalSimplexPFIBoundsSparse<
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedPrimalSimplexPFIBoundsSparse<
+void RevisedPrimalSimplexPFIBoundsSparse<
     T, SimplexTraitsT>::removeArtificialVariablesFromBasis() {
   std::vector<bool> shouldRowBeRemoved(_simplexTableau._rowInfos.size(), false);
 
@@ -412,6 +409,7 @@ bool RevisedPrimalSimplexPFIBoundsSparse<
                   fmt::join(pivotRow._normalVec, ", "));
       shouldRowBeRemoved[rowIdx] = true;
     } else {
+      SPDLOG_INFO("ROW IDX {}, PIVOT RHS {}", rowIdx, _simplexTableau._rightHandSides[rowIdx]);
       _simplexTableau.pivotImplicitBoundsSparse(
           rowIdx, *nonZeroEntryColumnIndex,
           _simplexTableau.computeTableauColumnPFISparse(
@@ -420,19 +418,18 @@ bool RevisedPrimalSimplexPFIBoundsSparse<
     }
   }
 
-  if (std::any_of(shouldRowBeRemoved.begin(), shouldRowBeRemoved.end(),
-                  [](const bool val) { return val; })) {
-    SPDLOG_INFO("REDUNDANT CONSTRAINTS IN LP FORMULATION");
-    removeRows(shouldRowBeRemoved);
-    return _simplexTableau.reinversionPFISparse();
-  }
-
-  return true;
+  removeRows(shouldRowBeRemoved);
 }
 
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBoundsSparse<T, SimplexTraitsT>::removeRows(
     const std::vector<bool> &shouldRowBeRemoved) {
+  const auto rowsToBeRemoved = std::count(shouldRowBeRemoved.begin(), shouldRowBeRemoved.end(), true);
+  if (rowsToBeRemoved == 0)
+    return;
+
+  SPDLOG_INFO("REDUNDANT {} CONSTRAINTS IN LP FORMULATION", rowsToBeRemoved);
+
   auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset, _1, _2] =
       _simplexTableau._simplexBasisData;
 

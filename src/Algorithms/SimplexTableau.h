@@ -12,7 +12,7 @@ template <typename T> class LinearProgram;
 template <typename T, typename SimplexTraitsT>
 class RevisedPrimalSimplexPFIBounds;
 template <typename T, typename SimplexTraitsT>
-class RevisedPrimalSimplexPFIBoundsSparse;
+class RevisedPrimalSimplexPFIBounds;
 template <typename T, typename SimplexTraitsT>
 class RevisedDualSimplexPFIBounds;
 
@@ -20,14 +20,14 @@ template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class SimplexTableau {
 public:
   SimplexTableau(const LinearProgram<T> &linearProgram,
-                 const bool isPrimalSimplex, const bool useProductFormOfInverse,
-                 const bool useSparseRepresentation);
+                 const bool isPrimalSimplex,
+                 const bool useProductFormOfInverse);
 
   void convertToStandardForm();
   void makeRightHandSidesNonNegative();
   void addBoundsToMatrix();
   void addArtificialVariables();
-  void init(const bool isPrimalSimplex, const bool useSparseRepresentation);
+  void init(const bool isPrimalSimplex);
 
   std::vector<T> artificialObjective() const;
   std::vector<T> originalObjective() const;
@@ -46,18 +46,20 @@ public:
 
 private:
   friend class RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>;
-  friend class RevisedPrimalSimplexPFIBoundsSparse<T, SimplexTraitsT>;
   friend class RevisedDualSimplexPFIBounds<T, SimplexTraitsT>;
 
-  using SimpleAdderSafe = typename SimplexTraitsT::template SimpleAdder<
-      typename SimplexTraitsT::SafeNumericalAddOp>;
+  using ElementaryMatrixT = typename SimplexTraitsT::ElementaryMatrixT;
+  using VectorT = typename SimplexTraitsT::VectorT;
+  using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
+  using SimpleAdderSafe = typename NumericalTraitsT::template SimpleAdder<
+      typename NumericalTraitsT::SafeNumericalAddOp>;
   using PositiveNegativeAdderSafe =
-      typename SimplexTraitsT::template PositiveNegativeAdder<
-          typename SimplexTraitsT::SafeNumericalAddOp>;
-  using KahanAdderSafe = typename SimplexTraitsT::template KahanAdder<
-      typename SimplexTraitsT::SafeNumericalAddOp>;
-  using KahanAdderNormal = typename SimplexTraitsT::template KahanAdder<
-      typename SimplexTraitsT::NormalAddOp>;
+      typename NumericalTraitsT::template PositiveNegativeAdder<
+          typename NumericalTraitsT::SafeNumericalAddOp>;
+  using KahanAdderSafe = typename NumericalTraitsT::template KahanAdder<
+      typename NumericalTraitsT::SafeNumericalAddOp>;
+  using KahanAdderNormal = typename NumericalTraitsT::template KahanAdder<
+      typename NumericalTraitsT::NormalAddOp>;
 
   std::optional<SimplexBasisData> createBasisFromArtificialVars() const;
 
@@ -66,6 +68,13 @@ private:
   }
   bool isColumnAllowedToEnterBasis(const int colIdx);
   std::optional<T> curSatisfiedBound(const int varIdx);
+
+  auto computeTableauColumnGeneric(const int colIdx) {
+    if constexpr (SimplexTraitsT::useSparseRepresentationValue)
+      return computeTableauColumnPFISparse(colIdx);
+    else
+      return computeTableauColumn(colIdx);
+  }
 
   std::vector<T> computeTableauColumn(const int colIdx);
   std::vector<T> computeTableauColumnExplicit(const int colIdx);
@@ -76,30 +85,24 @@ private:
   std::vector<T> computeTableauRowPFI(const int rowIdx);
   SparseVector<T> computeTableauRowPFISparse(const int rowIdx);
 
-  void pivot(const int rowIdx, const int enteringColumnIdx,
-             const std::vector<T> &enteringColumn,
-             const std::vector<T> &pivotRow);
-  void pivotImplicitBounds(const int pivotRowIdx, const int enteringColumnIdx,
-                           const std::vector<T> &enteringColumn,
-                           const std::vector<T> &pivotRow,
-                           const bool leavingVarBecomesLowerBound);
-  void updateReducedCosts(const PivotData<T> &pivotData,
-                          const std::vector<T> &pivotRow);
-  void updateInverseMatrixWithRHS(const PivotData<T> &pivotData,
-                                  const std::vector<T> &enteringColumn);
+  auto computeTableauRowGeneric(const int rowIdx) {
+    if constexpr (SimplexTraitsT::useSparseRepresentationValue)
+      return computeTableauRowPFISparse(rowIdx);
+    else
+      return computeTableauRow(rowIdx);
+  }
 
-  void pivotSparse(const int rowIdx, const int enteringColumnIdx,
-                   const SparseVector<T> &enteringColumn,
-                   const SparseVector<T> &pivotRow);
-  void pivotImplicitBoundsSparse(const int pivotRowIdx,
-                                 const int enteringColumnIdx,
-                                 const SparseVector<T> &enteringColumn,
-                                 const SparseVector<T> &pivotRow,
-                                 const bool leavingVarBecomesLowerBound);
-  void updateReducedCostsSparse(const PivotData<T> &pivotData,
-                                const SparseVector<T> &pivotRow);
-  void updateInverseMatrixWithRHSSparse(const PivotData<T> &pivotData,
-                                        const SparseVector<T> &enteringColumn);
+  void updateReducedCostsGeneric(const PivotData<T> &pivotData,
+                                 const VectorT &pivotRow);
+  void updateInverseMatrixWithRHSGeneric(const PivotData<T> &pivotData,
+                                         const VectorT &enteringColumn);
+  void pivotGeneric(const int rowIdx, const int enteringColumnIdx,
+                    const VectorT &enteringColumn, const VectorT &pivotRow);
+  void pivotImplicitBoundsGeneric(const int pivotRowIdx,
+                                  const int enteringColumnIdx,
+                                  const VectorT &enteringColumn,
+                                  const VectorT &pivotRow,
+                                  const bool leavingVarBecomesLowerBound);
 
   void initBasisMatrixInverse();
   void calculateDual();
@@ -120,10 +123,7 @@ private:
   bool reinversionExplicit();
   bool reinversionPFI();
   bool reinversionPFISparse();
-  void setObjectiveImpl(const std::vector<T> &newObjective,
-                        const bool useSparseRepresentation);
-  void setObjectiveNormal(const std::vector<T> &newObjective);
-  void setObjectiveSparse(const std::vector<T> &newObjective);
+  void setObjective(const std::vector<T> &newObjective);
   void multiplyByBasisMatrixLeftInverseUsingPFI(std::vector<T> &vec);
   void multiplyByBasisMatrixLeftInverseUsingPFISparse(SparseVector<T> &vec);
   void

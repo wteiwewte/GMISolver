@@ -18,6 +18,14 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::RevisedDualSimplexPFIBounds(
 }
 
 template <typename T, typename SimplexTraitsT>
+std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::name() const {
+  return "REVISED DUAL SIMPLEX (" +
+         std::string(SimplexTraitsT::useSparseRepresentationValue ? "SPARSE"
+                                                                  : "NORMAL") +
+         ')';
+}
+
+template <typename T, typename SimplexTraitsT>
 void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
   SPDLOG_INFO("BASIS SIZE {} COLUMN PIVOT RULE {}",
               _simplexTableau._rowInfos.size(),
@@ -41,7 +49,7 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
     }
     if (_reinversionFrequency && (iterCount % _reinversionFrequency == 0)) {
       if (!_simplexTableau.reinversion()) {
-        SPDLOG_WARN("STOPPING PRIMAL SIMPLEX BECAUSE OF FAILED REINVERSION");
+        SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", name());
         _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
         break;
       }
@@ -49,7 +57,7 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
 
     SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   }
-  SPDLOG_INFO("DUAL SIMPLEX ENDED, ITERATION COUNT {}", iterCount);
+  SPDLOG_INFO("{} ENDED, ITERATION COUNT {}", name(), iterCount);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -62,11 +70,10 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
 
   SPDLOG_DEBUG("PIVOT ROW IDX {} RHS VALUE {}", *pivotRowIdx,
                _simplexTableau._rightHandSides[*pivotRowIdx]);
-  const std::vector<T> pivotRow =
-      _simplexTableau.computeTableauRow(*pivotRowIdx);
+  const auto pivotRow = _simplexTableau.computeTableauRowGeneric(*pivotRowIdx);
   const auto basicColumnIdx =
       _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[*pivotRowIdx];
-  const bool isPivotRowUnderLowerBound = SimplexTraitsT::less(
+  const bool isPivotRowUnderLowerBound = NumericalTraitsT::less(
       _simplexTableau._rightHandSides[*pivotRowIdx],
       *_simplexTableau._variableLowerBounds[basicColumnIdx]);
   const auto enteringColumnIdx = chooseEnteringColumnIdx(
@@ -76,12 +83,12 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
     return true;
   }
 
-  const std::vector<T> enteringColumn =
-      _simplexTableau.computeTableauColumn(*enteringColumnIdx);
+  const auto enteringColumn =
+      _simplexTableau.computeTableauColumnGeneric(*enteringColumnIdx);
 
-  _simplexTableau.pivotImplicitBounds(*pivotRowIdx, *enteringColumnIdx,
-                                      enteringColumn, pivotRow,
-                                      isPivotRowUnderLowerBound);
+  _simplexTableau.pivotImplicitBoundsGeneric(*pivotRowIdx, *enteringColumnIdx,
+                                             enteringColumn, pivotRow,
+                                             isPivotRowUnderLowerBound);
   return false;
 }
 
@@ -104,15 +111,15 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowFirstEligible() {
     const auto lowerBound =
         _simplexTableau._variableLowerBounds[basicColumnIdx];
     if (lowerBound.has_value() &&
-        SimplexTraitsT::less(_simplexTableau._rightHandSides[rowIdx],
-                             *lowerBound))
+        NumericalTraitsT::less(_simplexTableau._rightHandSides[rowIdx],
+                               *lowerBound))
       return rowIdx;
 
     const auto upperBound =
         _simplexTableau._variableUpperBounds[basicColumnIdx];
     if (upperBound.has_value() &&
-        SimplexTraitsT::greater(_simplexTableau._rightHandSides[rowIdx],
-                                *upperBound))
+        NumericalTraitsT::greater(_simplexTableau._rightHandSides[rowIdx],
+                                  *upperBound))
       return rowIdx;
   }
   return std::nullopt;
@@ -137,16 +144,16 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowBiggestViolation() {
     const auto lowerBound =
         _simplexTableau._variableLowerBounds[basicColumnIdx];
     if (lowerBound.has_value() &&
-        SimplexTraitsT::less(_simplexTableau._rightHandSides[rowIdx],
-                             *lowerBound))
+        NumericalTraitsT::less(_simplexTableau._rightHandSides[rowIdx],
+                               *lowerBound))
       tryUpdateBest(rowIdx,
                     *lowerBound - _simplexTableau._rightHandSides[rowIdx]);
 
     const auto upperBound =
         _simplexTableau._variableUpperBounds[basicColumnIdx];
     if (upperBound.has_value() &&
-        SimplexTraitsT::greater(_simplexTableau._rightHandSides[rowIdx],
-                                *upperBound))
+        NumericalTraitsT::greater(_simplexTableau._rightHandSides[rowIdx],
+                                  *upperBound))
       tryUpdateBest(rowIdx,
                     _simplexTableau._rightHandSides[rowIdx] - *upperBound);
   }
@@ -157,7 +164,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowBiggestViolation() {
 template <typename T, typename SimplexTraitsT>
 std::optional<int>
 RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumnIdx(
-    const int pivotRowIdx, const std::vector<T> &pivotRow,
+    const int pivotRowIdx, const VectorT &pivotRow,
     const bool isPivotRowUnderLowerBound) {
   std::optional<int> mostRestrictiveColumnIdx;
   std::optional<T> mostRestrictiveColumnBound;
@@ -167,21 +174,21 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumnIdx(
 
   const auto currentRestrictionBound =
       [&](const int colIdx) -> std::optional<T> {
-    if (SimplexTraitsT::isEligibleForPivot(pivotRow[colIdx])) {
+    if (NumericalTraitsT::isEligibleForPivot(pivotRow[colIdx])) {
       if (isPivotRowUnderLowerBound) {
         if (isColumnAtLowerBoundBitset[colIdx]) {
-          if (SimplexTraitsT::less(pivotRow[colIdx], 0.0))
+          if (NumericalTraitsT::less(pivotRow[colIdx], 0.0))
             return _simplexTableau._reducedCosts[colIdx] / (-pivotRow[colIdx]);
         } else {
-          if (SimplexTraitsT::greater(pivotRow[colIdx], 0.0))
+          if (NumericalTraitsT::greater(pivotRow[colIdx], 0.0))
             return (-_simplexTableau._reducedCosts[colIdx]) / pivotRow[colIdx];
         }
       } else {
         if (isColumnAtLowerBoundBitset[colIdx]) {
-          if (SimplexTraitsT::greater(pivotRow[colIdx], 0.0))
+          if (NumericalTraitsT::greater(pivotRow[colIdx], 0.0))
             return _simplexTableau._reducedCosts[colIdx] / pivotRow[colIdx];
         } else {
-          if (SimplexTraitsT::less(pivotRow[colIdx], 0.0))
+          if (NumericalTraitsT::less(pivotRow[colIdx], 0.0))
             return (-_simplexTableau._reducedCosts[colIdx]) /
                    (-pivotRow[colIdx]);
         }
@@ -210,5 +217,6 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumnIdx(
   return mostRestrictiveColumnIdx;
 }
 
-template class RevisedDualSimplexPFIBounds<double>;
-template class RevisedDualSimplexPFIBounds<long double>;
+template class RevisedDualSimplexPFIBounds<double, SimplexTraits<double, true>>;
+template class RevisedDualSimplexPFIBounds<double,
+                                           SimplexTraits<double, false>>;

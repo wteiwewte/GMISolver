@@ -8,7 +8,7 @@
 #include <cmath>
 #include <numeric>
 
-template <typename T> struct SimplexTraits {
+template <typename T> struct NumericalTraits {
   static_assert(!std::numeric_limits<T>::is_integer);
 
   constexpr static T ABSOLUTE_EPSILON = 1e-9;
@@ -98,8 +98,79 @@ template <typename T> struct SimplexTraits {
   };
 
   static bool isZero(const T &x) { return std::fabs(x) < ABSOLUTE_TOLERANCE; }
+};
 
-  using CurrentAdder = SimpleAdder<NormalAddOp>;
+template <typename T, bool useSparseRepresentation = false,
+          typename NumericalTraitsType = NumericalTraits<T>>
+struct SimplexTraits {
+  using NumericalTraitsT = NumericalTraitsType;
+  using CurrentAdder = typename NumericalTraitsT::template SimpleAdder<
+      typename NumericalTraitsT::NormalAddOp>;
+
+  constexpr static bool useSparseRepresentationValue = useSparseRepresentation;
+  using ElementaryMatrixT =
+      std::conditional_t<useSparseRepresentationValue,
+                         SparseElementaryMatrix<T>, ElementaryMatrix<T>>;
+  using VectorT = std::conditional_t<useSparseRepresentationValue,
+                                     SparseVector<T>, std::vector<T>>;
+
+  template <typename AdderT = CurrentAdder>
+  static T dotProduct(const std::vector<T> &vec1, const std::vector<T> &vec2) {
+    AdderT adder;
+
+    for (int i = 0; i < vec1.size(); ++i)
+      adder.addValue(vec1[i] * vec2[i]);
+
+    return adder.currentSum();
+  }
+
+  template <typename AddOp = typename NumericalTraitsT::NormalAddOp>
+  static void multiplyByETM(const ElementaryMatrix<T> &etm,
+                            std::vector<T> &modifiedVec) {
+    const T pivotModifiedVecTerm = modifiedVec[etm._pivotRowIdx];
+    for (int i = 0; i < modifiedVec.size(); ++i) {
+      if (i == etm._pivotRowIdx)
+        modifiedVec[i] *= etm._pivotingTermInverse;
+      else
+        modifiedVec[i] =
+            AddOp{}(modifiedVec[i], -(etm._pivotingTermInverse * etm._vec[i] *
+                                      pivotModifiedVecTerm));
+    }
+  }
+
+  template <typename AdderT = CurrentAdder>
+  static void multiplyByETMFromRight(std::vector<T> &modifiedVec,
+                                     const ElementaryMatrix<T> &etm) {
+    AdderT adder;
+    for (int i = 0; i < modifiedVec.size(); ++i) {
+      if (i == etm._pivotRowIdx)
+        adder.addValue(modifiedVec[i] * etm._pivotingTermInverse);
+      else
+        adder.addValue(-modifiedVec[i] * etm._vec[i] *
+                       etm._pivotingTermInverse);
+    }
+
+    modifiedVec[etm._pivotRowIdx] = adder.currentSum();
+  }
+
+  template <typename AddOp = typename NumericalTraitsT::NormalAddOp>
+  static void multiplyByETM(const ElementaryMatrix<T> &etm,
+                            Matrix<T> &modifiedMatrix) {
+    for (int rowIdx = 0; rowIdx < modifiedMatrix.size(); ++rowIdx) {
+      if (rowIdx == etm._pivotRowIdx)
+        continue;
+
+      const auto commonCoeff = etm._vec[rowIdx] * etm._pivotingTermInverse;
+
+      for (int colIdx = 0; colIdx < modifiedMatrix[rowIdx].size(); ++colIdx)
+        modifiedMatrix[rowIdx][colIdx] =
+            AddOp{}(modifiedMatrix[rowIdx][colIdx],
+                    -(commonCoeff * modifiedMatrix[etm._pivotRowIdx][colIdx]));
+    }
+
+    for (int j = 0; j < modifiedMatrix[etm._pivotRowIdx].size(); ++j)
+      modifiedMatrix[etm._pivotRowIdx][j] *= etm._pivotingTermInverse;
+  }
 
   template <typename AdderT = CurrentAdder>
   static T dotProduct(const std::vector<T> &vecNormal,
@@ -115,33 +186,9 @@ template <typename T> struct SimplexTraits {
     return adder.currentSum();
   }
 
-  template <typename AdderT = CurrentAdder>
-  static T dotProduct(const std::vector<T> &vec1, const std::vector<T> &vec2) {
-    AdderT adder;
-
-    for (int i = 0; i < vec1.size(); ++i)
-      adder.addValue(vec1[i] * vec2[i]);
-
-    return adder.currentSum();
-  }
-
-  template <typename AddOp = NormalAddOp>
-  static void multiplyByETM(const ElementaryMatrix<T> &etm,
+  template <typename AddOp = typename NumericalTraitsT::NormalAddOp>
+  static void multiplyByETM(const SparseElementaryMatrix<T> &sparseEtm,
                             std::vector<T> &modifiedVec) {
-    const T pivotModifiedVecTerm = modifiedVec[etm._pivotRowIdx];
-    for (int i = 0; i < modifiedVec.size(); ++i) {
-      if (i == etm._pivotRowIdx)
-        modifiedVec[i] *= etm._pivotingTermInverse;
-      else
-        modifiedVec[i] =
-            AddOp{}(modifiedVec[i], -(etm._pivotingTermInverse * etm._vec[i] *
-                                      pivotModifiedVecTerm));
-    }
-  }
-
-  template <typename AddOp = NormalAddOp>
-  static void multiplyByETMSparse(const SparseElementaryMatrix<T> &sparseEtm,
-                                  std::vector<T> &modifiedVec) {
     const T pivotModifiedVecTerm = modifiedVec[sparseEtm._pivotRowIdx];
     for (const auto &etmElem : sparseEtm._sparseVec._indexedValues) {
       if (etmElem._index == sparseEtm._pivotRowIdx)
@@ -154,12 +201,12 @@ template <typename T> struct SimplexTraits {
     }
   }
 
-  template <typename AddOp = NormalAddOp>
-  static void multiplyByETMSparse(const SparseElementaryMatrix<T> &sparseEtm,
-                                  SparseVector<T> &modifiedVec) {
+  template <typename AddOp = typename NumericalTraitsT::NormalAddOp>
+  static void multiplyByETM(const SparseElementaryMatrix<T> &sparseEtm,
+                            SparseVector<T> &modifiedVec) {
     const T pivotModifiedVecTerm =
         modifiedVec._normalVec[sparseEtm._pivotRowIdx];
-    if (isZero(pivotModifiedVecTerm))
+    if (NumericalTraitsT::isZero(pivotModifiedVecTerm))
       return;
 
     auto currentModifiedVecIt = modifiedVec._indexedValues.begin();
@@ -179,7 +226,7 @@ template <typename T> struct SimplexTraits {
               AddOp{}(currentModifiedVecIt->_data,
                       -sparseEtm._pivotingTermInverse * etmElem._data *
                           pivotModifiedVecTerm);
-          if (isZero(updatedValue)) {
+          if (NumericalTraitsT::isZero(updatedValue)) {
             modifiedVec._normalVec[etmElem._index] = T{0.0};
             currentModifiedVecIt =
                 modifiedVec._indexedValues.erase(currentModifiedVecIt);
@@ -201,8 +248,8 @@ template <typename T> struct SimplexTraits {
   }
 
   template <typename AdderT = CurrentAdder>
-  static T dotProductSparse(const SparseVector<T> &vec1,
-                            const SparseVector<T> &vec2) {
+  static T dotProduct(const SparseVector<T> &vec1,
+                      const SparseVector<T> &vec2) {
     AdderT adder;
     //    std::vector<T> addedValues;
     auto currentVec2It = vec2._indexedValues.begin();
@@ -231,9 +278,8 @@ template <typename T> struct SimplexTraits {
   }
 
   template <typename AdderT = CurrentAdder>
-  static void
-  multiplyByETMFromRightSparse(SparseVector<T> &modifiedVec,
-                               const SparseElementaryMatrix<T> &etm) {
+  static void multiplyByETMFromRight(SparseVector<T> &modifiedVec,
+                                     const SparseElementaryMatrix<T> &etm) {
     AdderT adder;
     auto currentEtmIt = etm._sparseVec._indexedValues.begin();
     auto firstModifiecVecElemAfterPivotRowIt = modifiedVec._indexedValues.end();
@@ -264,7 +310,7 @@ template <typename T> struct SimplexTraits {
     }
 
     const auto sum = adder.currentSum();
-    if (isZero(sum)) {
+    if (NumericalTraitsT::isZero(sum)) {
       if ((firstModifiecVecElemAfterPivotRowIt !=
            modifiedVec._indexedValues.end()) &&
           (firstModifiecVecElemAfterPivotRowIt->_index == etm._pivotRowIdx)) {
@@ -286,24 +332,9 @@ template <typename T> struct SimplexTraits {
   }
 
   template <typename AdderT = CurrentAdder>
-  static void multiplyByETMFromRight(std::vector<T> &modifiedVec,
-                                     const ElementaryMatrix<T> &etm) {
-    AdderT adder;
-    for (int i = 0; i < modifiedVec.size(); ++i) {
-      if (i == etm._pivotRowIdx)
-        adder.addValue(modifiedVec[i] * etm._pivotingTermInverse);
-      else
-        adder.addValue(-modifiedVec[i] * etm._vec[i] *
-                       etm._pivotingTermInverse);
-    }
-
-    modifiedVec[etm._pivotRowIdx] = adder.currentSum();
-  }
-
-  template <typename AdderT = CurrentAdder>
   static void
-  multiplyByETMFromRightSparse(std::vector<T> &modifiedVec,
-                               const SparseElementaryMatrix<T> &sparseEtm) {
+  multiplyByETMFromRight(std::vector<T> &modifiedVec,
+                         const SparseElementaryMatrix<T> &sparseEtm) {
     AdderT adder;
     for (const auto &etmElem : sparseEtm._sparseVec._indexedValues) {
       if (etmElem._index == sparseEtm._pivotRowIdx)
@@ -316,33 +347,6 @@ template <typename T> struct SimplexTraits {
 
     modifiedVec[sparseEtm._pivotRowIdx] = adder.currentSum();
   }
-
-  template <typename AddOp = NormalAddOp>
-  static void multiplyByETM(const ElementaryMatrix<T> &etm,
-                            Matrix<T> &modifiedMatrix) {
-    for (int rowIdx = 0; rowIdx < modifiedMatrix.size(); ++rowIdx) {
-      if (rowIdx == etm._pivotRowIdx)
-        continue;
-
-      const auto commonCoeff = etm._vec[rowIdx] * etm._pivotingTermInverse;
-
-      for (int colIdx = 0; colIdx < modifiedMatrix[rowIdx].size(); ++colIdx)
-        modifiedMatrix[rowIdx][colIdx] =
-            AddOp{}(modifiedMatrix[rowIdx][colIdx],
-                    -(commonCoeff * modifiedMatrix[etm._pivotRowIdx][colIdx]));
-    }
-
-    for (int j = 0; j < modifiedMatrix[etm._pivotRowIdx].size(); ++j)
-      modifiedMatrix[etm._pivotRowIdx][j] *= etm._pivotingTermInverse;
-  }
-};
-
-template <typename T> struct SimpleComparisonTraits {
-  static bool equal(const T &x, const T &y) { return x == y; }
-
-  static bool less(const T &x, const T &y) { return x < y; }
-
-  static bool greater(const T &x, const T &y) { return x > y; }
 };
 
 #endif // GMISOLVER_SIMPLEXTRAITS_H

@@ -14,6 +14,8 @@ template <typename T,
               std::deque,
           typename... Args>
 struct SparseVector {
+  const T &operator[](const int index) const { return _normalVec[index]; }
+
   UnderlyingContainerT<IndexedValue<T>, Args...> _indexedValues;
   std::vector<T> _normalVec;
 };

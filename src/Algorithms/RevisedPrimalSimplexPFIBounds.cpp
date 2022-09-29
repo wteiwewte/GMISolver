@@ -31,9 +31,17 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
 }
 
 template <typename T, typename SimplexTraitsT>
+std::string RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::name() const {
+  return "REVISED PRIMAL SIMPLEX (" +
+         std::string(SimplexTraitsT::useSparseRepresentationValue ? "SPARSE"
+                                                                  : "NORMAL") +
+         ')';
+}
+
+template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::run() {
   if (!runPhaseOne()) {
-    SPDLOG_WARN("PHASE ONE OF PRIMAL SIMPLEX ALGORITHM FAILED");
+    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", name());
     return;
   }
 
@@ -47,9 +55,11 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
               primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
   runImpl();
 
-  if (SimplexTraitsT::greater(_simplexTableau._objectiveValue, 0.0)) {
-    SPDLOG_WARN("PROGRAM WITH ARTIFICIAL VARIABLE HAS OPTIMUM GREATER THAN 0 - "
-                "INITIAL PROGRAM IS INFEASIBLE");
+  if (NumericalTraitsT::greater(_simplexTableau._objectiveValue, 0.0)) {
+    SPDLOG_WARN(
+        "PROGRAM WITH ARTIFICIAL VARIABLE HAS OPTIMUM {} GREATER THAN 0 - "
+        "INITIAL PROGRAM IS INFEASIBLE",
+        _simplexTableau._objectiveValue);
     return false;
   }
 
@@ -59,8 +69,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
 }
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseTwo() {
-  _simplexTableau.setObjectiveNormal(
-      _simplexTableau._initialProgram.getObjective());
+  _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
   runImpl();
 }
 
@@ -84,7 +93,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl() {
     }
     if (_reinversionFrequency && (iterCount % _reinversionFrequency == 0)) {
       if (!_simplexTableau.reinversion()) {
-        SPDLOG_WARN("STOPPING PRIMAL SIMPLEX BECAUSE OF FAILED REINVERSION");
+        SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", name());
         _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
         break;
       }
@@ -92,7 +101,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl() {
 
     SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   }
-  SPDLOG_INFO("PRIMAL SIMPLEX ENDED, ITERATION COUNT {}", iterCount);
+  SPDLOG_INFO("{} ENDED, ITERATION COUNT {}", name(), iterCount);
 }
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
@@ -105,8 +114,8 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
   SPDLOG_DEBUG("ENTERING COLUMN IDX {} REDUCED COST {}", *enteringColumnIdx,
                _simplexTableau._reducedCosts[*enteringColumnIdx]);
 
-  const std::vector<T> enteringColumn =
-      _simplexTableau.computeTableauColumn(*enteringColumnIdx);
+  const auto enteringColumn =
+      _simplexTableau.computeTableauColumnGeneric(*enteringColumnIdx);
   const std::optional<PivotRowData<T>> pivotRowData =
       chooseRowIdx(*enteringColumnIdx, enteringColumn);
   if (!pivotRowData.has_value()) {
@@ -139,8 +148,9 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
         _simplexTableau._variableInfos[columnIdx]._isArtificial,
         _simplexTableau._simplexBasisData._isBasicColumnIndexBitset[columnIdx],
         _simplexTableau._reducedCosts[columnIdx],
-        SimplexTraitsT::less(_simplexTableau._reducedCosts[columnIdx], 0.0),
-        SimplexTraitsT::greater(_simplexTableau._reducedCosts[columnIdx], 0.0));
+        NumericalTraitsT::less(_simplexTableau._reducedCosts[columnIdx], 0.0),
+        NumericalTraitsT::greater(_simplexTableau._reducedCosts[columnIdx],
+                                  0.0));
 
     SPDLOG_TRACE("COL IDX {}, IS LB {}, IS UB {}", columnIdx,
                  _simplexTableau._simplexBasisData
@@ -151,13 +161,13 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
     if (!_simplexTableau.isColumnAllowedToEnterBasis(columnIdx))
       continue;
 
-    if (SimplexTraitsT::less(_simplexTableau._reducedCosts[columnIdx], 0.0) &&
+    if (NumericalTraitsT::less(_simplexTableau._reducedCosts[columnIdx], 0.0) &&
         _simplexTableau._simplexBasisData
             ._isColumnAtLowerBoundBitset[columnIdx])
       return columnIdx;
 
-    if (SimplexTraitsT::greater(_simplexTableau._reducedCosts[columnIdx],
-                                0.0) &&
+    if (NumericalTraitsT::greater(_simplexTableau._reducedCosts[columnIdx],
+                                  0.0) &&
         _simplexTableau._simplexBasisData
             ._isColumnAtUpperBoundBitset[columnIdx])
       return columnIdx;
@@ -174,10 +184,11 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
   const auto tryUpdateBest = [&](const int colIdx) {
     if ((_simplexTableau._simplexBasisData
              ._isColumnAtLowerBoundBitset[colIdx] &&
-         SimplexTraitsT::less(_simplexTableau._reducedCosts[colIdx], 0.0)) ||
+         NumericalTraitsT::less(_simplexTableau._reducedCosts[colIdx], 0.0)) ||
         (_simplexTableau._simplexBasisData
              ._isColumnAtUpperBoundBitset[colIdx] &&
-         SimplexTraitsT::greater(_simplexTableau._reducedCosts[colIdx], 0.0))) {
+         NumericalTraitsT::greater(_simplexTableau._reducedCosts[colIdx],
+                                   0.0))) {
       const auto currentAbsReducedCost =
           std::fabs(_simplexTableau._reducedCosts[colIdx]);
       if (!biggestAbsReducedCost.has_value() ||
@@ -199,14 +210,14 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::changeTableau(
     const PivotRowData<T> &pivotRowData, const int enteringColumnIdx,
-    const std::vector<T> &enteringColumn) {
+    const VectorT &enteringColumn) {
   if (pivotRowData._noBasisChangeNeeded)
     moveVarFromOneBoundToAnother(pivotRowData, enteringColumnIdx,
                                  enteringColumn);
   else
-    _simplexTableau.pivotImplicitBounds(
+    _simplexTableau.pivotImplicitBoundsGeneric(
         *pivotRowData._pivotRowIdx, enteringColumnIdx, enteringColumn,
-        _simplexTableau.computeTableauRow(*pivotRowData._pivotRowIdx),
+        _simplexTableau.computeTableauRowGeneric(*pivotRowData._pivotRowIdx),
         pivotRowData._departingIdxBecomesLowerBound);
 }
 
@@ -214,7 +225,7 @@ template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
     moveVarFromOneBoundToAnother(const PivotRowData<T> &pivotRowData,
                                  const int enteringColumnIdx,
-                                 const std::vector<T> &enteringColumn) {
+                                 const VectorT &enteringColumn) {
   SPDLOG_DEBUG("NO BASIS CHANGE NEEDED, ENTERING COLUMN IDX {}",
                enteringColumnIdx);
 
@@ -229,7 +240,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
     if (isVarIncreasing)
       addedValue = -addedValue;
 
-    _simplexTableau._rightHandSides[rowIdx] = SimplexTraitsT::add(
+    _simplexTableau._rightHandSides[rowIdx] = NumericalTraitsT::add(
         _simplexTableau._rightHandSides[rowIdx], addedValue);
   }
 
@@ -242,7 +253,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
 template <typename T, typename SimplexTraitsT>
 std::optional<PivotRowData<T>>
 RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::chooseRowIdx(
-    const int enteringColumnIdx, const std::vector<T> &enteringColumn) {
+    const int enteringColumnIdx, const VectorT &enteringColumn) {
   std::optional<int> rowIdxMostRestrictiveLowerBound;
   std::optional<T> mostRestrictiveLowerBound;
 
@@ -251,7 +262,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::chooseRowIdx(
 
   for (int rowIdx = 0; rowIdx < _simplexTableau.getRowInfos().size();
        ++rowIdx) {
-    if (!SimplexTraitsT::isEligibleForPivot(enteringColumn[rowIdx]))
+    if (!NumericalTraitsT::isEligibleForPivot(enteringColumn[rowIdx]))
       continue;
 
     const auto basicColumnIdx = _simplexTableau.basicColumnIdx(rowIdx);
@@ -387,25 +398,29 @@ void RevisedPrimalSimplexPFIBounds<
                  rowIdx, basicVarIdx, _simplexTableau._rightHandSides[rowIdx]);
 
     std::optional<int> nonZeroEntryColumnIndex;
-    const std::vector<T> pivotRow = _simplexTableau.computeTableauRow(rowIdx);
+    const auto pivotRow = _simplexTableau.computeTableauRowGeneric(rowIdx);
 
     for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j) {
       if (_simplexTableau._variableInfos[j]._isArtificial ||
           _simplexTableau._simplexBasisData._isBasicColumnIndexBitset[j])
         continue;
 
-      if (SimplexTraitsT::isEligibleForPivot(pivotRow[j])) {
+      if (NumericalTraitsT::isEligibleForPivot(pivotRow[j])) {
         nonZeroEntryColumnIndex = j;
         break;
       }
     }
 
     if (!nonZeroEntryColumnIndex.has_value()) {
+      //      SPDLOG_INFO("ZERO ROW IDX {} - {}", rowIdx,
+      //                  fmt::join(pivotRow._normalVec, ", "));
       shouldRowBeRemoved[rowIdx] = true;
     } else {
-      _simplexTableau.pivotImplicitBounds(
+      SPDLOG_INFO("ROW IDX {}, PIVOT RHS {}", rowIdx,
+                  _simplexTableau._rightHandSides[rowIdx]);
+      _simplexTableau.pivotImplicitBoundsGeneric(
           rowIdx, *nonZeroEntryColumnIndex,
-          _simplexTableau.computeTableauColumn(*nonZeroEntryColumnIndex),
+          _simplexTableau.computeTableauColumnGeneric(*nonZeroEntryColumnIndex),
           pivotRow, true);
     }
   }
@@ -416,7 +431,8 @@ void RevisedPrimalSimplexPFIBounds<
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::removeRows(
     const std::vector<bool> &shouldRowBeRemoved) {
-  const auto rowsToBeRemoved = std::count(shouldRowBeRemoved.begin(), shouldRowBeRemoved.end(), true);
+  const auto rowsToBeRemoved =
+      std::count(shouldRowBeRemoved.begin(), shouldRowBeRemoved.end(), true);
   if (rowsToBeRemoved == 0)
     return;
 
@@ -462,14 +478,13 @@ void RevisedPrimalSimplexPFIBounds<
     fixNonBasicVariables(varsFixedCount);
     if (!_simplexTableau._variableInfos[curVarIdxToBeOptimized]._isFixed) {
       SPDLOG_INFO("VAR IDX {} TO BE OPTIMIZED", curVarIdxToBeOptimized);
-      _simplexTableau.setObjectiveNormal(
+      _simplexTableau.setObjective(
           singleVarObjective(curVarIdxToBeOptimized, minimize));
       runImpl();
     }
     ++curVarIdxToBeOptimized;
   }
-  _simplexTableau.setObjectiveNormal(
-      _simplexTableau._initialProgram.getObjective());
+  _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
   unfixAllVariables();
 }
 template <typename T, typename SimplexTraitsT>
@@ -486,7 +501,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::fixNonBasicVariables(
   for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
        ++varIdx) {
     if (!_simplexTableau._simplexBasisData._isBasicColumnIndexBitset[varIdx] &&
-        !SimplexTraitsT::equal(_simplexTableau._reducedCosts[varIdx], 0.0)) {
+        !NumericalTraitsT::equal(_simplexTableau._reducedCosts[varIdx], 0.0)) {
       _simplexTableau._variableInfos[varIdx]._isFixed = true;
       ++varsFixedCount;
     }
@@ -505,5 +520,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::unfixAllVariables() {
   }
 }
 
-template class RevisedPrimalSimplexPFIBounds<double>;
-template class RevisedPrimalSimplexPFIBounds<long double>;
+template class RevisedPrimalSimplexPFIBounds<double,
+                                             SimplexTraits<double, true>>;
+template class RevisedPrimalSimplexPFIBounds<double,
+                                             SimplexTraits<double, false>>;

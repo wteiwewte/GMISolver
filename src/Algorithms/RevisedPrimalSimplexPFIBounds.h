@@ -17,6 +17,8 @@ public:
       const int32_t objValueLoggingFrequency,
       const int32_t reinversionFrequency);
 
+  std::string name() const;
+
   void run();
   bool runPhaseOne();
   void runPhaseTwo();
@@ -26,19 +28,21 @@ public:
   void lexicographicReoptimization(const bool minimize);
 
 private:
+  using VectorT = typename SimplexTraitsT::VectorT;
+  using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
+
   std::optional<int> chooseEnteringColumn();
   std::optional<int> chooseEnteringColumnFirstEligible();
   std::optional<int> chooseEnteringColumnBiggestAbsReducedCost();
 
-  std::optional<PivotRowData<T>>
-  chooseRowIdx(const int enteringColumnIdx,
-               const std::vector<T> &enteringColumn);
+  std::optional<PivotRowData<T>> chooseRowIdx(const int enteringColumnIdx,
+                                              const VectorT &enteringColumn);
   void changeTableau(const PivotRowData<T> &pivotRowData,
                      const int enteringColumnIdx,
-                     const std::vector<T> &enteringColumn);
+                     const VectorT &enteringColumn);
   void moveVarFromOneBoundToAnother(const PivotRowData<T> &pivotRowData,
                                     const int enteringColumnIdx,
-                                    const std::vector<T> &enteringColumn);
+                                    const VectorT &enteringColumn);
 
   void removeArtificialVariablesFromBasis();
   void removeArtificialVariablesFromProgram();

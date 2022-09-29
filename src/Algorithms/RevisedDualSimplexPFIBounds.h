@@ -17,15 +17,20 @@ public:
       const int32_t objValueLoggingFrequency,
       const int32_t reinversionFrequency);
 
+  std::string name() const;
+
   void run();
   bool runOneIteration();
 
 private:
+  using VectorT = typename SimplexTraitsT::VectorT;
+  using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
+
   std::optional<int> chooseRow();
   std::optional<int> chooseRowFirstEligible();
   std::optional<int> chooseRowBiggestViolation();
   std::optional<int>
-  chooseEnteringColumnIdx(const int pivotRowIdx, const std::vector<T> &pivotRow,
+  chooseEnteringColumnIdx(const int pivotRowIdx, const VectorT &pivotRow,
                           const bool isPivotRowUnderLowerBound);
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;

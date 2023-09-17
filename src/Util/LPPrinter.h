@@ -154,22 +154,8 @@ struct LPPrinter {
   template <typename T>
   void printCurrentObjectiveValue(const LPOptimizationResult lpResult,
                                   const T &objectiveValue) {
-    const auto lpResultStr = [&] {
-      switch (lpResult) {
-      case LPOptimizationResult::UNBOUNDED:
-        return "UNBOUNDED";
-      case LPOptimizationResult::INFEASIBLE:
-        return "INFEASIBLE";
-      case LPOptimizationResult::BOUNDED_AND_FEASIBLE:
-        return "BOUNDED_AND_FEASIBLE";
-      case LPOptimizationResult::FAILED_REINVERSION:
-        return "FAILED_REINVERSION";
-      }
-
-      return "";
-    };
     _oss << std::setprecision(std::numeric_limits<T>::digits10 + 1);
-    _oss << "LP RESULT -" << lpResultStr() << "\n";
+    _oss << "LP RESULT -" << lpOptimizationResultToStr(lpResult) << "\n";
     //    if (lpResult == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
     _oss << "CURRENT VALUE " << objectiveValue << '\n';
   }

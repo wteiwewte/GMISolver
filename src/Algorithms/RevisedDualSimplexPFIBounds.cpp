@@ -26,13 +26,15 @@ std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::name() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
+LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
   SPDLOG_INFO("BASIS SIZE {} COLUMN PIVOT RULE {}",
               _simplexTableau._rowInfos.size(),
               dualSimplexRowPivotRuleToStr(_dualSimplexRowPivotRule));
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
 
+  LPOptStatistics<T> lpOptStatistics{._lpName = _simplexTableau.getName(), ._simplexAlgorithmType = name(), ._reinversionFrequency = _reinversionFrequency};
   [[maybe_unused]] int iterCount = 1;
+  constexpr size_t HARD_ITERATION_LIMIT = 10000;
   while (true) {
     const bool iterResult = runOneIteration();
     if (iterResult)
@@ -41,7 +43,13 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
     _simplexTableau.calculateCurrentObjectiveValue();
     _simplexTableau.calculateSolution();
 
+    lpOptStatistics._consecutiveObjectiveValues.push_back(_simplexTableau.getCurrentObjectiveValue());
+
     ++iterCount;
+
+    if (iterCount > HARD_ITERATION_LIMIT)
+      break;
+
     if (_objValueLoggingFrequency &&
         (iterCount % _objValueLoggingFrequency == 0)) {
       SPDLOG_INFO("ITERATION {}", iterCount);
@@ -58,6 +66,11 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
     SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   }
   SPDLOG_INFO("{} ENDED, ITERATION COUNT {}", name(), iterCount);
+  lpOptStatistics._optResult = _simplexTableau.getLPOptResult();
+  lpOptStatistics._optimalValue = _simplexTableau.getCurrentObjectiveValue();
+  lpOptStatistics._iterationCount = iterCount;
+
+  return lpOptStatistics;
 }
 
 template <typename T, typename SimplexTraitsT>

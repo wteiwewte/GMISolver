@@ -2,6 +2,7 @@
 #define GMISOLVER_REVISEDPRIMALSIMPLEXPFIBOUNDS_H
 
 #include "src/DataModel/CommonTypes.h"
+#include "src/Util/LPOptStatistics.h"
 #include "src/Util/SimplexTraits.h"
 
 #include <optional>
@@ -19,17 +20,16 @@ public:
 
   std::string name() const;
 
-  void run();
-  bool runPhaseOne();
-  void runPhaseTwo();
-  void runImpl();
-  bool runOneIteration();
-
+  LPOptStatistics<T> runPhaseOne();
+  LPOptStatistics<T> runPhaseTwo();
   void lexicographicReoptimization(const bool minimize);
 
 private:
   using VectorT = typename SimplexTraitsT::VectorT;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
+
+  LPOptStatistics<T> runImpl(const bool isPhaseOne);
+  bool runOneIteration();
 
   std::optional<int> chooseEnteringColumn();
   std::optional<int> chooseEnteringColumnFirstEligible();

@@ -56,5 +56,7 @@ std::string primalSimplexColumnPivotRuleToStr(
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule);
 std::string dualSimplexRowPivotRuleToStr(
     const DualSimplexRowPivotRule dualSimplexRowPivotRule);
+std::string lpOptimizationResultToStr(
+    const LPOptimizationResult lpOptimizationResult);
 
 #endif // GMISOLVER_ENUMTYPES_H

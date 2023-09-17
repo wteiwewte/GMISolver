@@ -80,3 +80,21 @@ std::string dualSimplexRowPivotRuleToStr(
 
   return "";
 }
+
+std::string lpOptimizationResultToStr(
+    const LPOptimizationResult lpOptimizationResult)
+{
+  switch (lpOptimizationResult) {
+  case LPOptimizationResult::UNBOUNDED:
+    return "UNBOUNDED";
+  case LPOptimizationResult::INFEASIBLE:
+    return "INFEASIBLE";
+  case LPOptimizationResult::BOUNDED_AND_FEASIBLE:
+    return "BOUNDED_AND_FEASIBLE";
+  case LPOptimizationResult::FAILED_REINVERSION:
+    return "FAILED_REINVERSION";
+  }
+
+  return "";
+}
+

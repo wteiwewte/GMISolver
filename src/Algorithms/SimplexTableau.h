@@ -2,13 +2,13 @@
 #define GMISOLVER_SIMPLEXTABLEAU_H
 
 #include "src/DataModel/CommonTypes.h"
+#include "src/DataModel/LinearProgram.h"
 #include "src/DataModel/MatrixTypes.h"
 #include "src/DataModel/SimplexBasisData.h"
 #include "src/Util/SimplexTraits.h"
 
 #include <set>
 
-template <typename T> class LinearProgram;
 template <typename T, typename SimplexTraitsT>
 class RevisedPrimalSimplexPFIBounds;
 template <typename T, typename SimplexTraitsT>
@@ -43,6 +43,9 @@ public:
     return _variableInfos;
   }
   const std::vector<RowInfo> &getRowInfos() const { return _rowInfos; }
+  const T& getCurrentObjectiveValue() const { return _objectiveValue; }
+  LPOptimizationResult getLPOptResult() const { return _result; }
+  const std::string& getName() const { return _initialProgram.getName(); }
 
 private:
   friend class RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>;

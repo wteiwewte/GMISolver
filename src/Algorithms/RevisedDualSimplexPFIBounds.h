@@ -2,6 +2,7 @@
 #define GMISOLVER_REVISEDDUALSIMPLEXPFIBOUNDS_H
 
 #include "src/DataModel/CommonTypes.h"
+#include "src/Util/LPOptStatistics.h"
 #include "src/Util/SimplexTraits.h"
 
 #include <optional>
@@ -19,7 +20,7 @@ public:
 
   std::string name() const;
 
-  void run();
+  LPOptStatistics<T> run();
   bool runOneIteration();
 
 private:

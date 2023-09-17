@@ -82,7 +82,10 @@ MpsReader<T>::read(const std::string &filePath) {
     const bool newSectionLine = lineParts.size() == 1;
     if (newSectionLine) {
       if (!readSectionType.has_value())
+      {
         SPDLOG_WARN("Unrecognized new section type {}", lineParts[0]);
+        return std::nullopt;
+      }
 
       continue;
     }
@@ -98,7 +101,7 @@ MpsReader<T>::read(const std::string &filePath) {
                     readLine);
         for (const auto &linePart : lineParts)
           SPDLOG_INFO("LINE PART {}", linePart);
-        break;
+        return std::nullopt;
       }
 
       const auto &rowTypeStr = lineParts[0];
@@ -107,7 +110,7 @@ MpsReader<T>::read(const std::string &filePath) {
       const auto readRowType = stringToRowType(rowTypeStr);
       if (!readRowType.has_value()) {
         SPDLOG_WARN("Unrecognized row type {}", rowTypeStr);
-        break;
+        return std::nullopt;
       }
 
       const RowInfo newRowInfo{rowLabelStr, *readRowType};
@@ -117,7 +120,10 @@ MpsReader<T>::read(const std::string &filePath) {
         const auto [_, inserted] = rowLabelToRowIdxMap.try_emplace(
             rowLabelStr, linearProgram._rowInfos.size());
         if (!inserted)
+        {
           SPDLOG_WARN("Duplicated row label {}", rowLabelStr);
+          return std::nullopt;
+        }
 
         linearProgram._rowInfos.push_back(newRowInfo);
       }
@@ -128,7 +134,7 @@ MpsReader<T>::read(const std::string &filePath) {
       if (lineParts.size() != 3 && lineParts.size() != 5) {
         SPDLOG_WARN("Unexpected number of elements in column line {}",
                     readLine);
-        break;
+        return std::nullopt;
       }
 
       if (lineParts.size() == 3 && lineParts[1] == MARKER_KEYWORD) {
@@ -138,8 +144,11 @@ MpsReader<T>::read(const std::string &filePath) {
         else if (integerSectionStr == INTEGER_SECTION_END_KEYWORD)
           currentSectionIsInteger = false;
         else
+        {
           SPDLOG_WARN("Unrecognized integer section keyword {}",
                       integerSectionStr);
+          return std::nullopt;
+        }
 
         break;
       }
@@ -150,7 +159,7 @@ MpsReader<T>::read(const std::string &filePath) {
           variableLabelStr.find(Constants::ARTIFICIAL_SUFFIX) !=
               std::string::npos) {
         SPDLOG_WARN("Disallowed variable label {}", variableLabelStr);
-        break;
+        return std::nullopt;
       }
 
       const auto [variableIt, inserted] =
@@ -173,7 +182,7 @@ MpsReader<T>::read(const std::string &filePath) {
                                       const auto &coefficientValueStr) {
         if (rowLabelStr == linearProgram._objectiveInfo._label) {
           linearProgram._objective[variableIdx] = convert(coefficientValueStr);
-          return;
+          return true;
         }
 
         const auto foundRowIt = rowLabelToRowIdxMap.find(rowLabelStr);
@@ -181,27 +190,28 @@ MpsReader<T>::read(const std::string &filePath) {
           SPDLOG_WARN(
               "Row {} given in column section doesn't correspond to any row",
               rowLabelStr);
-          return;
+          return false;
         }
 
         linearProgram._constraintMatrix[foundRowIt->second][variableIdx] =
             convert(coefficientValueStr);
+        return true;
       };
 
-      updateLpMatrix(lineParts[1], lineParts[2]);
+      if (!updateLpMatrix(lineParts[1], lineParts[2]))
+        return std::nullopt;
       if (lineParts.size() == 5)
-        updateLpMatrix(lineParts[3], lineParts[4]);
+      {
+        if (!updateLpMatrix(lineParts[3], lineParts[4]))
+          return std::nullopt;
+      }
 
       break;
     }
     case SectionType::RHS: {
-      if (linearProgram._rightHandSides.empty())
-        SPDLOG_DEBUG("VARIABLE COUNT {}, ROW COUNT {} BEFORE RHS",
-                     linearProgram._variableInfos.size(),
-                     linearProgram._rowInfos.size());
       if (lineParts.size() != 3 && lineParts.size() != 5) {
         SPDLOG_WARN("Unexpected number of elements in rhs line {}", readLine);
-        break;
+        return std::nullopt;
       }
 
       const auto updateLpRhs = [&](const auto &rowLabelStr,
@@ -211,17 +221,22 @@ MpsReader<T>::read(const std::string &filePath) {
           SPDLOG_WARN("Row label {} given in column section doesn't "
                       "correspond to any row",
                       rowLabelStr);
-          return;
+          return false;
         }
 
         linearProgram._rightHandSides.resize(linearProgram._rowInfos.size());
         linearProgram._rightHandSides[foundRowIt->second] =
             convert(coefficientValueStr);
+        return true;
       };
 
-      updateLpRhs(lineParts[1], lineParts[2]);
+      if (!updateLpRhs(lineParts[1], lineParts[2]))
+        return std::nullopt;
       if (lineParts.size() == 5)
-        updateLpRhs(lineParts[3], lineParts[4]);
+      {
+        if (!updateLpRhs(lineParts[3], lineParts[4]))
+          return std::nullopt;
+      }
 
       break;
     }
@@ -229,14 +244,14 @@ MpsReader<T>::read(const std::string &filePath) {
       if (lineParts.size() != 4) {
         SPDLOG_WARN("Unexpected number of elements in bounds line {}",
                     readLine);
-        break;
+        return std::nullopt;
       }
 
       const auto &boundTypeStr = lineParts[0];
       const auto readBoundType = stringToBoundType(boundTypeStr);
       if (!readBoundType.has_value()) {
         SPDLOG_WARN("Unsupported bound type {}", boundTypeStr);
-        break;
+        return std::nullopt;
       }
 
       const auto &variableStr = lineParts[2];
@@ -246,7 +261,7 @@ MpsReader<T>::read(const std::string &filePath) {
         SPDLOG_WARN("Variable label {} given in bounds section doesn't "
                     "correspond to any variable",
                     variableStr);
-        break;
+        return std::nullopt;
       }
 
       const auto variableIdx = foundVariableIt->second;
@@ -273,7 +288,7 @@ MpsReader<T>::read(const std::string &filePath) {
       }
       case BoundType::BINARY_VARIABLE: {
         linearProgram._variableLowerBounds[variableIdx] = 0.0;
-        linearProgram._variableUpperBounds[variableIdx] = 0.1;
+        linearProgram._variableUpperBounds[variableIdx] = 1.0;
         linearProgram._variableInfos[variableIdx]._type = VariableType::INTEGER;
         break;
       }
@@ -293,7 +308,7 @@ MpsReader<T>::read(const std::string &filePath) {
       break;
     default: {
       SPDLOG_WARN("Undefined section type");
-      break;
+      return std::nullopt;
     }
     }
 

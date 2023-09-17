@@ -2,6 +2,7 @@
 
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/DataModel/LinearProgram.h"
+#include "src/Util/LPOptStatistics.h"
 #include "src/Util/SpdlogHeader.h"
 
 namespace {
@@ -39,44 +40,39 @@ std::string RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::name() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::run() {
-  if (!runPhaseOne()) {
-    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", name());
-    return;
-  }
-
-  runPhaseTwo();
-}
-
-template <typename T, typename SimplexTraitsT>
-bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
+LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
   SPDLOG_INFO("BASIS SIZE {}, COLUMN PIVOT RULE {}",
               _simplexTableau._rowInfos.size(),
               primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
-  runImpl();
+  auto artLpOptStats = runImpl(true);
 
   if (NumericalTraitsT::greater(_simplexTableau._objectiveValue, 0.0)) {
     SPDLOG_WARN(
         "PROGRAM WITH ARTIFICIAL VARIABLE HAS OPTIMUM {} GREATER THAN 0 - "
         "INITIAL PROGRAM IS INFEASIBLE",
         _simplexTableau._objectiveValue);
-    return false;
+    artLpOptStats._phaseOneSucceeded = false;
+    return artLpOptStats;
   }
 
   removeArtificialVariablesFromBasis();
   removeArtificialVariablesFromProgram();
-  return _simplexTableau.reinversion();
+  artLpOptStats._phaseOneSucceeded = _simplexTableau.reinversion();
+  return artLpOptStats;
 }
 template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseTwo() {
+LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseTwo() {
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
-  runImpl();
+  return runImpl(false);
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl() {
+LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(const bool isPhaseOne) {
   [[maybe_unused]] int iterCount = 1;
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
+  LPOptStatistics<T> lpOptStatistics{._lpName = (_simplexTableau.getName()
+  + (isPhaseOne ? "_PHASE_ONE" : "_PHASE_TWO")), ._simplexAlgorithmType = name(), ._reinversionFrequency = _reinversionFrequency};
+  constexpr size_t HARD_ITERATION_LIMIT = 10000;
   while (true) {
     const bool iterResult = runOneIteration();
     if (iterResult)
@@ -85,7 +81,13 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl() {
     _simplexTableau.calculateCurrentObjectiveValue();
     _simplexTableau.calculateSolution();
 
+    lpOptStatistics._consecutiveObjectiveValues.push_back(_simplexTableau.getCurrentObjectiveValue());
+
     ++iterCount;
+
+    if (iterCount > HARD_ITERATION_LIMIT)
+      break;
+
     if (_objValueLoggingFrequency &&
         (iterCount % _objValueLoggingFrequency == 0)) {
       SPDLOG_INFO("ITERATION {}", iterCount);
@@ -102,6 +104,12 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl() {
     SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   }
   SPDLOG_INFO("{} ENDED, ITERATION COUNT {}", name(), iterCount);
+
+  lpOptStatistics._optResult = _simplexTableau.getLPOptResult();
+  lpOptStatistics._optimalValue = _simplexTableau.getCurrentObjectiveValue();
+  lpOptStatistics._iterationCount = iterCount;
+
+  return lpOptStatistics;
 }
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
@@ -477,10 +485,9 @@ void RevisedPrimalSimplexPFIBounds<
          varsFixedCount < _simplexTableau._variableInfos.size()) {
     fixNonBasicVariables(varsFixedCount);
     if (!_simplexTableau._variableInfos[curVarIdxToBeOptimized]._isFixed) {
-      SPDLOG_INFO("VAR IDX {} TO BE OPTIMIZED", curVarIdxToBeOptimized);
       _simplexTableau.setObjective(
           singleVarObjective(curVarIdxToBeOptimized, minimize));
-      runImpl();
+      runImpl(false);
     }
     ++curVarIdxToBeOptimized;
   }
@@ -500,12 +507,14 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::fixNonBasicVariables(
     int &varsFixedCount) {
   for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
        ++varIdx) {
-    if (!_simplexTableau._simplexBasisData._isBasicColumnIndexBitset[varIdx] &&
+    if (!_simplexTableau._variableInfos[varIdx]._isFixed &&
+        !_simplexTableau._simplexBasisData._isBasicColumnIndexBitset[varIdx] &&
         !NumericalTraitsT::equal(_simplexTableau._reducedCosts[varIdx], 0.0)) {
       _simplexTableau._variableInfos[varIdx]._isFixed = true;
       ++varsFixedCount;
     }
   }
+//  spdlog::info("XD VAR COUNT {} ROW COUNT {} FIXED VAR COUNT {}", _simplexTableau._variableInfos.size(), _simplexTableau._rowInfos.size(), varsFixedCount);
 }
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::unfixAllVariables() {

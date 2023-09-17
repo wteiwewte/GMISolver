@@ -1,6 +1,7 @@
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
+#include "src/Util/GurobiOptimizer.h"
 #include "src/Util/LPOptStatisticsPrinter.h"
 #include "src/Util/MpsReader.h"
 #include "src/Util/SpdlogHeader.h"
@@ -15,7 +16,8 @@
 
 ABSL_FLAG(std::string, log_level, "info", "log level");
 ABSL_FLAG(std::string, log_file, "GMISolver_out.txt", "log file");
-ABSL_FLAG(std::string, lp_opt_stats_file, "LPOptStatistics.txt", "log file");
+ABSL_FLAG(std::string, lp_opt_stats_file, "LPOptStatistics.txt", "Lp opt statistics log file");
+ABSL_FLAG(std::string, gurobi_log_file, "Gurobi_logs.txt", "Gurobi log file");
 ABSL_FLAG(std::vector<std::string>, benchmark_simplex_types,
           std::vector<std::string>({"primal", "dual"}),
           "List of simplex algorithms to benchmark");
@@ -123,6 +125,13 @@ void readLPModelAndProcess(const std::filesystem::path &modelFileMpsPath, LPOptS
     runDualSimplexWithImplicitBounds<T, SimplexTraits<T, true>>(*linearProgram, lpOptStatisticsVec);
 }
 
+void readLPModelAndOptimizeByGurobi(const std::filesystem::path &modelFileMpsPath)
+{
+  GurobiOptimizer gurobiOptimizer(absl::GetFlag(FLAGS_gurobi_log_file), modelFileMpsPath);
+  gurobiOptimizer.relaxModel();
+  gurobiOptimizer.optimize();
+}
+
 void initFileLogger() {
   auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_st>(
       absl::GetFlag(FLAGS_log_file), true);
@@ -157,13 +166,19 @@ int main(int argc, char **argv) {
 
   if (const auto lpModelFile = absl::GetFlag(FLAGS_lp_model_file);
       lpModelFile.has_value())
+  {
     readLPModelAndProcess<FloatingPointT>(std::filesystem::path{*lpModelFile}, lpOptStatisticsVec);
+    readLPModelAndOptimizeByGurobi(std::filesystem::path{*lpModelFile});
+  }
   else if (const auto lpModelsDirectory =
                absl::GetFlag(FLAGS_lp_models_directory);
            lpModelsDirectory.has_value())
     for (const auto &lpModelFileEntry :
          std::filesystem::directory_iterator(*lpModelsDirectory))
+    {
       readLPModelAndProcess<FloatingPointT>(lpModelFileEntry.path(), lpOptStatisticsVec);
+      readLPModelAndOptimizeByGurobi(lpModelFileEntry.path());
+    }
 
   printLPOptStats(lpOptStatisticsVec);
 }

@@ -1,12 +1,13 @@
 --log_file=GMISolver_out.txt
 --lp_opt_stats_file=LPOptStatistics.txt
-#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib_couple_instances/bm23
-#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/lseu
-#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/pipex
---lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air03
-#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/mod010
-#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/fixnet6
-#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib_couple_instances/bm23_repeated_rows
+--gurobi_log_file=Gurobi_logs.txt
+#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib_couple_instances/bm23
+--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/lseu.mps
+#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/pipex
+#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/air03
+#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/mod010
+#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/fixnet6
+#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib_couple_instances/bm23_repeated_rows
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib3/swath
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2003/fast0507.mps
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/miplib2017-testscript-v1.0.3/instances/miplib2017_ungzipped/neos-911970.mps
@@ -16,15 +17,6 @@
 --reinversion_frequency=60
 --benchmark_simplex_types=all
 --use_product_form_of_inverse=true
-#--lp_models_directory=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib_couple_instances/
-#--lp_models_directory=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib_couple_instances_big/
+#--lp_models_directory=/Users/janmelech/Desktop/magisterka/dane testowe/miplib_couple_instances/
+#--lp_models_directory=/Users/janmelech/Desktop/magisterka/dane testowe/miplib_couple_instances_big/
 #--lp_models_directory=/Users/janmelech/Desktop/magisterka/dane testowe/miplib3/
-#   readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air02");
-#   readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air03");
-#   readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air04");
-#   readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/air05");
-#   readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/diamond");
-#   readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/bell5");
-#   readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/fixnet4");
-#   readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/miplib/sentoy");
-#   readLPModelAndProcess<double>("/Users/janmelech/Desktop/magisterka/dane tes towe/miplib2/miplib/mod010");

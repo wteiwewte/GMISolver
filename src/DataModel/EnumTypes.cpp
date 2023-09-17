@@ -93,6 +93,8 @@ std::string lpOptimizationResultToStr(
     return "BOUNDED_AND_FEASIBLE";
   case LPOptimizationResult::FAILED_REINVERSION:
     return "FAILED_REINVERSION";
+  case LPOptimizationResult::REACHED_ITERATION_LIMIT:
+    return "REACHED_ITERATION_LIMIT";
   }
 
   return "";

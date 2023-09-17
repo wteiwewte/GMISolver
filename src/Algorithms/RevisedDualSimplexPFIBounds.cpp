@@ -18,7 +18,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::RevisedDualSimplexPFIBounds(
 }
 
 template <typename T, typename SimplexTraitsT>
-std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::name() const {
+std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::type() const {
   return "REVISED DUAL SIMPLEX (" +
          std::string(SimplexTraitsT::useSparseRepresentationValue ? "SPARSE"
                                                                   : "NORMAL") +
@@ -32,9 +32,8 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
               dualSimplexRowPivotRuleToStr(_dualSimplexRowPivotRule));
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
 
-  LPOptStatistics<T> lpOptStatistics{._lpName = _simplexTableau.getName(), ._simplexAlgorithmType = name(), ._reinversionFrequency = _reinversionFrequency};
+  LPOptStatistics<T> lpOptStatistics{._lpName = _simplexTableau.getName(), ._simplexAlgorithmType = type(), ._reinversionFrequency = _reinversionFrequency};
   [[maybe_unused]] int iterCount = 1;
-  constexpr size_t HARD_ITERATION_LIMIT = 10000;
   while (true) {
     const bool iterResult = runOneIteration();
     if (iterResult)
@@ -46,31 +45,56 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
     lpOptStatistics._consecutiveObjectiveValues.push_back(_simplexTableau.getCurrentObjectiveValue());
 
     ++iterCount;
-
-    if (iterCount > HARD_ITERATION_LIMIT)
+    tryLogObjValue(iterCount);
+    if (!tryReinversion(iterCount))
       break;
 
-    if (_objValueLoggingFrequency &&
-        (iterCount % _objValueLoggingFrequency == 0)) {
-      SPDLOG_INFO("ITERATION {}", iterCount);
-      SPDLOG_INFO("{}\n", _simplexTableau.toStringObjectiveValue());
-    }
-    if (_reinversionFrequency && (iterCount % _reinversionFrequency == 0)) {
-      if (!_simplexTableau.reinversion()) {
-        SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", name());
-        _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
-        break;
-      }
-    }
+    if (!checkIterationLimit(iterCount))
+      break;
 
     SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   }
-  SPDLOG_INFO("{} ENDED, ITERATION COUNT {}", name(), iterCount);
+  SPDLOG_INFO("{} ENDED, ITERATION COUNT {}", type(), iterCount);
   lpOptStatistics._optResult = _simplexTableau.getLPOptResult();
   lpOptStatistics._optimalValue = _simplexTableau.getCurrentObjectiveValue();
   lpOptStatistics._iterationCount = iterCount;
 
   return lpOptStatistics;
+}
+
+template <typename T, typename SimplexTraitsT>
+void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(const int iterCount)
+{
+  if (_objValueLoggingFrequency &&
+      (iterCount % _objValueLoggingFrequency == 0)) {
+    SPDLOG_INFO("ITERATION {}", iterCount);
+    SPDLOG_INFO("{}\n", _simplexTableau.toStringObjectiveValue());
+  }
+}
+
+template <typename T, typename SimplexTraitsT>
+bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(const int iterCount)
+{
+  if (_reinversionFrequency && (iterCount % _reinversionFrequency == 0)) {
+    if (!_simplexTableau.reinversion()) {
+      SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
+      _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
+      return false;
+    }
+  }
+  return true;
+}
+
+template <typename T, typename SimplexTraitsT>
+bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(const int iterCount)
+{
+  constexpr size_t HARD_ITERATION_LIMIT = 10000;
+  if (iterCount > HARD_ITERATION_LIMIT)
+  {
+    _simplexTableau._result = LPOptimizationResult::REACHED_ITERATION_LIMIT;
+    return false;
+  }
+  return true;
 }
 
 template <typename T, typename SimplexTraitsT>

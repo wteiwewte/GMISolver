@@ -47,7 +47,7 @@ void runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram, L
   auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
   lpOptStatisticsVec.push_back(phaseOneLpOptStats);
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
-    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", revisedPrimalSimplexPfiBounds.name());
+    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", revisedPrimalSimplexPfiBounds.type());
     return;
   }
   lpOptStatisticsVec.push_back(revisedPrimalSimplexPfiBounds.runPhaseTwo());

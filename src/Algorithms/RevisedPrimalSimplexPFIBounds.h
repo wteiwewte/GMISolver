@@ -18,7 +18,7 @@ public:
       const int32_t objValueLoggingFrequency,
       const int32_t reinversionFrequency);
 
-  std::string name() const;
+  std::string type() const;
 
   LPOptStatistics<T> runPhaseOne();
   LPOptStatistics<T> runPhaseTwo();
@@ -29,6 +29,9 @@ private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
   LPOptStatistics<T> runImpl(const bool isPhaseOne);
+  void tryLogObjValue(const int iterCount);
+  bool tryReinversion(const int iterCount);
+  bool checkIterationLimit(const int iterCount);
   bool runOneIteration();
 
   std::optional<int> chooseEnteringColumn();

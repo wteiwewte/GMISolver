@@ -98,7 +98,7 @@ void readLPModelAndProcess(const std::filesystem::path &modelFileMpsPath, LPOptS
   auto linearProgram = MpsReader<T>::read(modelFileMpsPath);
   if (!linearProgram.has_value()) {
     spdlog::warn("Could not read properly lp from {} file", std::string{modelFileMpsPath});
-    lpOptStatisticsVec.push_back(LPOptStatistics<T>{._lpName = modelFileMpsPath.filename()});
+    lpOptStatisticsVec.push_back(LPOptStatistics<T>{._lpName = modelFileMpsPath.filename(), ._optResult=LPOptimizationResult::COULD_NOT_LOAD});
     return;
   }
 
@@ -113,23 +113,24 @@ void readLPModelAndProcess(const std::filesystem::path &modelFileMpsPath, LPOptS
       absl::GetFlag(FLAGS_benchmark_simplex_types);
   const bool processAllTypes = contains(simplexTypesToBenchmark, "all");
   if (processAllTypes || contains(simplexTypesToBenchmark, "primal"))
-    runPrimalSimplexWithImplicitBounds<T, SimplexTraits<T, false>>(*linearProgram, lpOptStatisticsVec);
+    runPrimalSimplexWithImplicitBounds<T, SimplexTraits<T, MatrixRepresentationType::NORMAL>>(*linearProgram, lpOptStatisticsVec);
 
   if (processAllTypes || contains(simplexTypesToBenchmark, "primal_sparse"))
-    runPrimalSimplexWithImplicitBounds<T, SimplexTraits<T, true>>(*linearProgram, lpOptStatisticsVec);
+    runPrimalSimplexWithImplicitBounds<T, SimplexTraits<T, MatrixRepresentationType::SPARSE>>(*linearProgram, lpOptStatisticsVec);
 
   if (processAllTypes || contains(simplexTypesToBenchmark, "dual"))
-    runDualSimplexWithImplicitBounds<T, SimplexTraits<T, false>>(*linearProgram, lpOptStatisticsVec);
+    runDualSimplexWithImplicitBounds<T, SimplexTraits<T, MatrixRepresentationType::NORMAL>>(*linearProgram, lpOptStatisticsVec);
 
   if (processAllTypes || contains(simplexTypesToBenchmark, "dual_sparse"))
-    runDualSimplexWithImplicitBounds<T, SimplexTraits<T, true>>(*linearProgram, lpOptStatisticsVec);
+    runDualSimplexWithImplicitBounds<T, SimplexTraits<T, MatrixRepresentationType::SPARSE>>(*linearProgram, lpOptStatisticsVec);
 }
 
-void readLPModelAndOptimizeByGurobi(const std::filesystem::path &modelFileMpsPath)
+template <typename T>
+void readLPModelAndOptimizeByGurobi(const std::filesystem::path &modelFileMpsPath, LPOptStatisticsVec<T>& lpOptStatisticsVec)
 {
   GurobiOptimizer gurobiOptimizer(absl::GetFlag(FLAGS_gurobi_log_file), modelFileMpsPath);
   gurobiOptimizer.relaxModel();
-  gurobiOptimizer.optimize();
+  lpOptStatisticsVec.push_back(convert<T>(gurobiOptimizer.optimize()));
 }
 
 void initFileLogger() {
@@ -168,7 +169,7 @@ int main(int argc, char **argv) {
       lpModelFile.has_value())
   {
     readLPModelAndProcess<FloatingPointT>(std::filesystem::path{*lpModelFile}, lpOptStatisticsVec);
-    readLPModelAndOptimizeByGurobi(std::filesystem::path{*lpModelFile});
+    readLPModelAndOptimizeByGurobi(std::filesystem::path{*lpModelFile}, lpOptStatisticsVec);
   }
   else if (const auto lpModelsDirectory =
                absl::GetFlag(FLAGS_lp_models_directory);
@@ -177,7 +178,7 @@ int main(int argc, char **argv) {
          std::filesystem::directory_iterator(*lpModelsDirectory))
     {
       readLPModelAndProcess<FloatingPointT>(lpModelFileEntry.path(), lpOptStatisticsVec);
-      readLPModelAndOptimizeByGurobi(lpModelFileEntry.path());
+      readLPModelAndOptimizeByGurobi(lpModelFileEntry.path(), lpOptStatisticsVec);
     }
 
   printLPOptStats(lpOptStatisticsVec);

@@ -1,6 +1,7 @@
 #ifndef GMISOLVER_GUROBIOPTIMIZER_H
 #define GMISOLVER_GUROBIOPTIMIZER_H
 
+#include "src/Util/LPOptStatistics.h"
 #include "src/Util/SpdlogHeader.h"
 
 #include <filesystem>
@@ -25,12 +26,8 @@ public:
   GurobiOptimizer(const std::string& logFileName, const std::filesystem::path &modelFileMpsPath) try
       : _grbEnvWrapper(logFileName), _grbModel(_grbEnvWrapper._grbEnv, modelFileMpsPath)
   {
-    if (_grbModel.get(GRB_IntAttr_IsMIP) != 0)
-    {
-      SPDLOG_INFO("The model {} is not a linear program", std::string{modelFileMpsPath});
-    }
   }
-  catch (GRBException e)
+  catch (const GRBException& e)
   {
     SPDLOG_INFO("Error code = {}", e.getErrorCode());
     SPDLOG_INFO(e.getMessage());
@@ -49,34 +46,27 @@ public:
     }
   }
 
-  void optimize()
+  LPOptStatistics<double> optimize()
   {
+    LPOptStatistics<double> lpOptStatistics{._lpName = _grbModel.get(GRB_StringAttr_ModelName), ._simplexAlgorithmType="GUROBI"};
     try
     {
       _grbModel.optimize();
 
-      int status = _grbModel.get(GRB_IntAttr_Status);
-
-      if ((status == GRB_INF_OR_UNBD) || (status == GRB_INFEASIBLE) ||
-          (status == GRB_UNBOUNDED))
-      {
-        SPDLOG_INFO("The model cannot be solved because it is infeasible or unbounded" );
-        return;
-      }
-
-      if (status != GRB_OPTIMAL)
-      {
-        SPDLOG_INFO("Optimization was stopped with status {}", status );
-        return;
-      }
-
+      LPOptimizationResult gurobiLpOptResult = gurobiStatusToLPOptResult(_grbModel.get(GRB_IntAttr_Status));
       double iterCount = _grbModel.get(GRB_DoubleAttr_IterCount);
       double runTime = _grbModel.get(GRB_DoubleAttr_Runtime);
+      double optimalValue = _grbModel.get(GRB_DoubleAttr_ObjVal);
 
       SPDLOG_INFO("Gurobi performed {} iterations in {} seconds", iterCount, runTime);
-      SPDLOG_INFO("Model {} has optimal value {}", _grbModel.get(GRB_StringAttr_ModelName), _grbModel.get(GRB_DoubleAttr_ObjVal));
+      SPDLOG_INFO("Model optimization status {}", lpOptimizationResultToStr(gurobiLpOptResult));
+      SPDLOG_INFO("Model {} has optimal value {}", _grbModel.get(GRB_StringAttr_ModelName), optimalValue);
+
+      lpOptStatistics._optResult = gurobiLpOptResult;
+      lpOptStatistics._iterationCount = iterCount;
+      lpOptStatistics._optimalValue = optimalValue;
     }
-    catch (GRBException e)
+    catch (const GRBException& e)
     {
       SPDLOG_INFO("Error code = {}", e.getErrorCode());
       SPDLOG_INFO(e.getMessage());
@@ -85,9 +75,30 @@ public:
     {
       SPDLOG_INFO("Error during optimization");
     }
+
+    return lpOptStatistics;
   }
 
 private:
+
+  LPOptimizationResult gurobiStatusToLPOptResult(const int gurobiStatus)
+  {
+    switch(gurobiStatus) {
+      case GRB_OPTIMAL:
+        return LPOptimizationResult::BOUNDED_AND_FEASIBLE;
+      case GRB_INFEASIBLE:
+        return LPOptimizationResult::INFEASIBLE;
+      case GRB_UNBOUNDED:
+        return LPOptimizationResult::UNBOUNDED;
+      case GRB_INF_OR_UNBD:
+        return LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED;
+      case GRB_ITERATION_LIMIT:
+        return LPOptimizationResult::REACHED_ITERATION_LIMIT;
+    }
+
+    return LPOptimizationResult::UNKNOWN;
+  }
+
   GurobiEnvWrapper _grbEnvWrapper;
   GRBModel _grbModel;
 };

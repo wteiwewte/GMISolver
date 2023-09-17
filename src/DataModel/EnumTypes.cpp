@@ -89,12 +89,18 @@ std::string lpOptimizationResultToStr(
     return "UNBOUNDED";
   case LPOptimizationResult::INFEASIBLE:
     return "INFEASIBLE";
+  case LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED:
+    return "INFEASIBLE_OR_UNBDUNDED";
   case LPOptimizationResult::BOUNDED_AND_FEASIBLE:
     return "BOUNDED_AND_FEASIBLE";
   case LPOptimizationResult::FAILED_REINVERSION:
     return "FAILED_REINVERSION";
   case LPOptimizationResult::REACHED_ITERATION_LIMIT:
     return "REACHED_ITERATION_LIMIT";
+  case LPOptimizationResult::COULD_NOT_LOAD:
+    return "COULD_NOT_LOAD";
+  case LPOptimizationResult::UNKNOWN:
+    return "UNKNOWN";
   }
 
   return "";

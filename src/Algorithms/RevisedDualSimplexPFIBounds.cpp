@@ -254,6 +254,6 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumnIdx(
   return mostRestrictiveColumnIdx;
 }
 
-template class RevisedDualSimplexPFIBounds<double, SimplexTraits<double, true>>;
+template class RevisedDualSimplexPFIBounds<double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
 template class RevisedDualSimplexPFIBounds<double,
-                                           SimplexTraits<double, false>>;
+                                           SimplexTraits<double, MatrixRepresentationType::NORMAL>>;

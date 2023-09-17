@@ -1002,6 +1002,6 @@ void SimplexTableau<T, SimplexTraitsT>::
 }
 
 // template class SimplexTableau<double>;
-template class SimplexTableau<double, SimplexTraits<double, true>>;
-template class SimplexTableau<double, SimplexTraits<double, false>>;
+template class SimplexTableau<double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
+template class SimplexTableau<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
 // template class SimplexTableau<long double>;

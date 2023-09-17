@@ -34,9 +34,12 @@ enum class BoundType : int8_t {
 enum class LPOptimizationResult : int8_t {
   UNBOUNDED = 0,
   INFEASIBLE,
+  INFEASIBLE_OR_UNBDUNDED,
   BOUNDED_AND_FEASIBLE,
   FAILED_REINVERSION,
-  REACHED_ITERATION_LIMIT
+  REACHED_ITERATION_LIMIT,
+  COULD_NOT_LOAD,
+  UNKNOWN
 };
 
 enum class PrimalSimplexColumnPivotRule : int8_t {

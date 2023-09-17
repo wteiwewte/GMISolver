@@ -58,17 +58,10 @@ struct LPOptStatisticsPrinter {
   {
     _oss << fmt::format("{:^{}}|", lpOptStatistics._lpName, LP_NAME_WIDTH);
     _oss << fmt::format("{:^{}}|", lpOptStatistics._simplexAlgorithmType, SIMPLEX_ALGO_TYPE_WIDTH);
-    if (!lpOptStatistics._optResult.has_value())
-    {
-      _oss << fmt::format("{:^{}}|", "COULD NOT LOAD", LP_OPT_RESULT_WIDTH);
-    }
-    else
-    {
-      _oss << fmt::format("{:^{}}|", lpOptimizationResultToStr(*lpOptStatistics._optResult), LP_OPT_RESULT_WIDTH);
-      _oss << fmt::format("{:^{}}|", lpOptStatistics._optimalValue, OPT_VALUE_WIDTH);
-      _oss << fmt::format("{:^{}}|", lpOptStatistics._iterationCount, ITERATION_COUNT_WIDTH);
-      _oss << fmt::format("{:^{}}|", lpOptStatistics._reinversionFrequency, REINVERSION_FREQUENCY_WIDTH);
-    }
+    _oss << fmt::format("{:^{}}|", lpOptimizationResultToStr(lpOptStatistics._optResult), LP_OPT_RESULT_WIDTH);
+    _oss << fmt::format("{:^{}}|", lpOptStatistics._optimalValue, OPT_VALUE_WIDTH);
+    _oss << fmt::format("{:^{}}|", lpOptStatistics._iterationCount, ITERATION_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", lpOptStatistics._reinversionFrequency, REINVERSION_FREQUENCY_WIDTH);
     printLineBreak();
   }
 

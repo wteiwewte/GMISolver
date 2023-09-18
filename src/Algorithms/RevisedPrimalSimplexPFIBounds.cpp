@@ -44,7 +44,7 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne
   SPDLOG_INFO("BASIS SIZE {}, COLUMN PIVOT RULE {}",
               _simplexTableau._rowInfos.size(),
               primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
-  auto artLpOptStats = runImpl(true);
+  auto artLpOptStats = runImpl("PHASE_ONE");
 
   if (NumericalTraitsT::greater(_simplexTableau._objectiveValue, 0.0)) {
     SPDLOG_WARN(
@@ -63,15 +63,15 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseTwo() {
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
-  return runImpl(false);
+  return runImpl("PHASE_TWO");
 }
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(const bool isPhaseOne) {
+LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(const std::string& lpNameSuffix) {
   [[maybe_unused]] int iterCount = 1;
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   LPOptStatistics<T> lpOptStatistics{._lpName = (_simplexTableau.getName()
-  + (isPhaseOne ? "_PHASE_ONE" : "_PHASE_TWO")), ._simplexAlgorithmType = type(), ._reinversionFrequency = _reinversionFrequency};
+  + '_' + lpNameSuffix), ._simplexAlgorithmType = type(), ._reinversionFrequency = _reinversionFrequency};
   while (true) {
     const bool iterResult = runOneIteration();
     if (iterResult)
@@ -503,7 +503,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::removeRows(
 }
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<
-    T, SimplexTraitsT>::lexicographicReoptimization(const bool minimize) {
+    T, SimplexTraitsT>::lexicographicReoptimization(const bool minimize, const std::string& lexOptId, LPOptStatisticsVec<T>& lpOptStatisticsVec) {
   int curVarIdxToBeOptimized = 0;
   int varsFixedCount = 0;
   while (curVarIdxToBeOptimized < _simplexTableau._variableInfos.size() &&
@@ -512,7 +512,8 @@ void RevisedPrimalSimplexPFIBounds<
     if (!_simplexTableau._variableInfos[curVarIdxToBeOptimized]._isFixed) {
       _simplexTableau.setObjective(
           singleVarObjective(curVarIdxToBeOptimized, minimize));
-      runImpl(false);
+      auto lpStatisticsFromSingleVarOpt = runImpl(fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized, (minimize ? "MIN" : "MAX")));
+      lpOptStatisticsVec.push_back(std::move(lpStatisticsFromSingleVarOpt));
     }
     ++curVarIdxToBeOptimized;
   }

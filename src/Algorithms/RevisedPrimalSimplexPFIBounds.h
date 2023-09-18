@@ -22,13 +22,13 @@ public:
 
   LPOptStatistics<T> runPhaseOne();
   LPOptStatistics<T> runPhaseTwo();
-  void lexicographicReoptimization(const bool minimize);
+  void lexicographicReoptimization(const bool minimize, const std::string& lexOptId, LPOptStatisticsVec<T>& lpOptStatisticsVec);
 
 private:
   using VectorT = typename SimplexTraitsT::VectorT;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  LPOptStatistics<T> runImpl(const bool isPhaseOne);
+  LPOptStatistics<T> runImpl(const std::string& lpNameSuffix);
   void tryLogObjValue(const int iterCount);
   bool tryReinversion(const int iterCount);
   bool checkIterationLimit(const int iterCount);

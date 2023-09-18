@@ -10,7 +10,7 @@
 #include <set>
 
 template <typename T, typename SimplexTraitsT>
-class RevisedPrimalSimplexPFIBounds;
+class DualSimplexGomoryWithPrimalCuts;
 template <typename T, typename SimplexTraitsT>
 class RevisedPrimalSimplexPFIBounds;
 template <typename T, typename SimplexTraitsT>
@@ -48,6 +48,7 @@ public:
   const std::string& getName() const { return _initialProgram.getName(); }
 
 private:
+  friend class DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>;
   friend class RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>;
   friend class RevisedDualSimplexPFIBounds<T, SimplexTraitsT>;
 

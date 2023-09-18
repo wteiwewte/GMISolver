@@ -26,13 +26,13 @@ std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run() {
+LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(const std::string& lpNameSuffix) {
   SPDLOG_INFO("BASIS SIZE {} COLUMN PIVOT RULE {}",
               _simplexTableau._rowInfos.size(),
               dualSimplexRowPivotRuleToStr(_dualSimplexRowPivotRule));
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
 
-  LPOptStatistics<T> lpOptStatistics{._lpName = _simplexTableau.getName(), ._simplexAlgorithmType = type(), ._reinversionFrequency = _reinversionFrequency};
+  LPOptStatistics<T> lpOptStatistics{._lpName = _simplexTableau.getName() + '_' + lpNameSuffix, ._simplexAlgorithmType = type(), ._reinversionFrequency = _reinversionFrequency};
   [[maybe_unused]] int iterCount = 1;
   while (true) {
     const bool iterResult = runOneIteration();

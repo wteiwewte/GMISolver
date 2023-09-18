@@ -20,7 +20,7 @@ public:
 
   std::string type() const;
 
-  LPOptStatistics<T> run();
+  LPOptStatistics<T> run(const std::string& lpNameSuffix);
   bool runOneIteration();
 
 private:

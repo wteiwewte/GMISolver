@@ -2,7 +2,8 @@
 --lp_opt_stats_file=LPOptStatistics.txt
 --gurobi_log_file=Gurobi_logs.txt
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib_couple_instances/bm23
---lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/lseu.mps
+#--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/lseu.mps
+--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib3/blend2.mps
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/pipex
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/air03
 #--lp_model_file=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/mod010
@@ -17,6 +18,7 @@
 --reinversion_frequency=60
 --benchmark_simplex_types=all
 --use_product_form_of_inverse=true
+--run_gomory=true
 #--lp_models_directory=/Users/janmelech/Desktop/magisterka/dane testowe/miplib_couple_instances/
 #--lp_models_directory=/Users/janmelech/Desktop/magisterka/dane testowe/miplib_couple_instances_big/
-#--lp_models_directory=/Users/janmelech/Desktop/magisterka/dane testowe/miplib3/
+#--lp_models_directory=/Users/janmelech/Desktop/magisterka/dane testowe/miplib2/

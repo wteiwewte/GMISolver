@@ -1,3 +1,4 @@
+#include "src/Algorithms/DualSimplexGomoryWithPrimalCuts.h"
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
@@ -32,6 +33,8 @@ ABSL_FLAG(int32_t, reinversion_frequency, 300,
           "Basis matrix should be reinverted every nth iteration of simplex");
 ABSL_FLAG(bool, use_product_form_of_inverse, true,
           "Basis matrix inverse is represented via product form of inverse");
+ABSL_FLAG(bool, run_gomory, false,
+          "Run gomory scheme");
 
 bool contains(const std::vector<std::string> &vec, const std::string &str) {
   return std::find(vec.begin(), vec.end(), str) != vec.end();
@@ -55,10 +58,6 @@ void runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram, L
   lpOptStatisticsVec.push_back(revisedPrimalSimplexPfiBounds.runPhaseTwo());
 
   SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
-//  SPDLOG_INFO(simplexTableau.toStringSolution());
-//  revisedPrimalSimplexPfiBounds.lexicographicReoptimization(true);
-//  SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
-//  SPDLOG_INFO(simplexTableau.toStringSolution());
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -69,19 +68,18 @@ void runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram, LPO
       simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_reinversion_frequency))
-      .run());
+      .run(""));
   SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
-//  SPDLOG_INFO(simplexTableau.toStringSolution());
+}
 
-  // primal lex opt
-//  RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> revisedPrimalSimplexPfiBounds(
-//      simplexTableau,
-//      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
-//      absl::GetFlag(FLAGS_obj_value_logging_frequency),
-//      absl::GetFlag(FLAGS_reinversion_frequency));
-//  revisedPrimalSimplexPfiBounds.lexicographicReoptimization(false);
-//  SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
-//  SPDLOG_INFO(simplexTableau.toStringSolution());
+template <typename T, typename SimplexTraitsT>
+void runDualSimplexGomoryWithPrimalCuts(const LinearProgram<T> &linearProgram, LPOptStatisticsVec<T>& lpOptStatisticsVec) {
+  SimplexTableau<T, SimplexTraitsT> simplexTableau(
+      linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse));
+  DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(simplexTableau, PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION, absl::GetFlag(FLAGS_obj_value_logging_frequency),
+absl::GetFlag(FLAGS_reinversion_frequency));
+  dualSimplexGomoryWithPrimalCuts.run(lpOptStatisticsVec);
 }
 
 template <typename T>
@@ -123,6 +121,12 @@ void readLPModelAndProcess(const std::filesystem::path &modelFileMpsPath, LPOptS
 
   if (processAllTypes || contains(simplexTypesToBenchmark, "dual_sparse"))
     runDualSimplexWithImplicitBounds<T, SimplexTraits<T, MatrixRepresentationType::SPARSE>>(*linearProgram, lpOptStatisticsVec);
+
+  if (absl::GetFlag(FLAGS_run_gomory))
+  {
+    runDualSimplexGomoryWithPrimalCuts<T, SimplexTraits<T, MatrixRepresentationType::SPARSE>>(*linearProgram, lpOptStatisticsVec);
+    runDualSimplexGomoryWithPrimalCuts<T, SimplexTraits<T, MatrixRepresentationType::NORMAL>>(*linearProgram, lpOptStatisticsVec);
+  }
 }
 
 template <typename T>

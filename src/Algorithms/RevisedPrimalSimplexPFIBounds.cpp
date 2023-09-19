@@ -555,7 +555,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::unfixAllVariables() {
   }
 }
 
-template class RevisedPrimalSimplexPFIBounds<double,
-                                             SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
-template class RevisedPrimalSimplexPFIBounds<double,
-                                             SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
+template class RevisedPrimalSimplexPFIBounds<double,SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
+template class RevisedPrimalSimplexPFIBounds<double,SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
+template class RevisedPrimalSimplexPFIBounds<long double,SimplexTraits<long double, MatrixRepresentationType::SPARSE>>;
+template class RevisedPrimalSimplexPFIBounds<long double,SimplexTraits<long double, MatrixRepresentationType::NORMAL>>;

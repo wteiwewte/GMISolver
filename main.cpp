@@ -130,11 +130,10 @@ void readLPModelAndProcess(const std::filesystem::path &modelFileMpsPath, LPOptS
 }
 
 template <typename T>
-void readLPModelAndOptimizeByGurobi(const std::filesystem::path &modelFileMpsPath, LPOptStatisticsVec<T>& lpOptStatisticsVec)
+LPOptStatistics<T> readLPModelAndOptimizeByGurobi(const std::filesystem::path &modelFileMpsPath)
 {
   GurobiOptimizer gurobiOptimizer(absl::GetFlag(FLAGS_gurobi_log_file), modelFileMpsPath);
-  gurobiOptimizer.relaxModel();
-  lpOptStatisticsVec.push_back(convert<T>(gurobiOptimizer.optimize()));
+  return convert<T>(gurobiOptimizer.optimize(LPOptimizationType::LINEAR_RELAXATION));
 }
 
 void initFileLogger() {
@@ -173,7 +172,7 @@ int main(int argc, char **argv) {
       lpModelFile.has_value())
   {
     readLPModelAndProcess<FloatingPointT>(std::filesystem::path{*lpModelFile}, lpOptStatisticsVec);
-    readLPModelAndOptimizeByGurobi(std::filesystem::path{*lpModelFile}, lpOptStatisticsVec);
+    lpOptStatisticsVec.push_back(readLPModelAndOptimizeByGurobi<FloatingPointT>(std::filesystem::path{*lpModelFile}));
   }
   else if (const auto lpModelsDirectory =
                absl::GetFlag(FLAGS_lp_models_directory);
@@ -182,7 +181,7 @@ int main(int argc, char **argv) {
          std::filesystem::directory_iterator(*lpModelsDirectory))
     {
       readLPModelAndProcess<FloatingPointT>(lpModelFileEntry.path(), lpOptStatisticsVec);
-      readLPModelAndOptimizeByGurobi(lpModelFileEntry.path(), lpOptStatisticsVec);
+      lpOptStatisticsVec.push_back(readLPModelAndOptimizeByGurobi<FloatingPointT>(lpModelFileEntry.path()));
     }
 
   printLPOptStats(lpOptStatisticsVec);

@@ -255,5 +255,6 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumnIdx(
 }
 
 template class RevisedDualSimplexPFIBounds<double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
-template class RevisedDualSimplexPFIBounds<double,
-                                           SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
+template class RevisedDualSimplexPFIBounds<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
+template class RevisedDualSimplexPFIBounds<long double, SimplexTraits<long double, MatrixRepresentationType::SPARSE>>;
+template class RevisedDualSimplexPFIBounds<long double, SimplexTraits<long double, MatrixRepresentationType::NORMAL>>;

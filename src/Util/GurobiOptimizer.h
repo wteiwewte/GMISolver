@@ -37,17 +37,9 @@ public:
     SPDLOG_INFO("Error during initialization");
   }
 
-  void relaxModel()
+  LPOptStatistics<double> optimize(const LPOptimizationType lpOptimizationType)
   {
-    auto vars = _grbModel.getVars();
-    for (int varIdx = 0; varIdx < _grbModel.get(GRB_IntAttr_NumVars); ++varIdx)
-    {
-      vars[varIdx].set(GRB_CharAttr_VType, 'C');
-    }
-  }
-
-  LPOptStatistics<double> optimize()
-  {
+    adjustModelToOptType(lpOptimizationType);
     LPOptStatistics<double> lpOptStatistics{._lpName = _grbModel.get(GRB_StringAttr_ModelName), ._simplexAlgorithmType="GUROBI"};
     try
     {
@@ -97,6 +89,28 @@ private:
     }
 
     return LPOptimizationResult::UNKNOWN;
+  }
+
+  void adjustModelToOptType(const LPOptimizationType lpOptimizationType)
+  {
+    switch (lpOptimizationType)
+    {
+    case LPOptimizationType::LINEAR_RELAXATION:
+        return setVariablesType('C');
+    case LPOptimizationType::INTEGER_PROGRAM:
+        return setVariablesType('I');
+    case LPOptimizationType::MIXED_INTEGER_PROGRAM:
+        return;
+    }
+  }
+
+  void setVariablesType(const char type)
+  {
+    auto vars = _grbModel.getVars();
+    for (int varIdx = 0; varIdx < _grbModel.get(GRB_IntAttr_NumVars); ++varIdx)
+    {
+        vars[varIdx].set(GRB_CharAttr_VType, type);
+    }
   }
 
   GurobiEnvWrapper _grbEnvWrapper;

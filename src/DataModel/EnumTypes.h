@@ -52,6 +52,12 @@ enum class DualSimplexRowPivotRule : int8_t {
   BIGGEST_BOUND_VIOLATION
 };
 
+enum class LPOptimizationType : int8_t {
+  LINEAR_RELAXATION = 0,
+  INTEGER_PROGRAM,
+  MIXED_INTEGER_PROGRAM
+};
+
 std::optional<SectionType> stringToSectionType(const std::string &string);
 std::optional<RowType> stringToRowType(const std::string &string);
 std::optional<BoundType> stringToBoundType(const std::string &string);

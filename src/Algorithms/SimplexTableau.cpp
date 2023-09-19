@@ -1001,7 +1001,7 @@ void SimplexTableau<T, SimplexTraitsT>::
         vec, _sparsePfiEtms[_sparsePfiEtms.size() - 1 - i]);
 }
 
-// template class SimplexTableau<double>;
 template class SimplexTableau<double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
 template class SimplexTableau<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
-// template class SimplexTableau<long double>;
+template class SimplexTableau<long double, SimplexTraits<long double, MatrixRepresentationType::SPARSE>>;
+template class SimplexTableau<long double, SimplexTraits<long double, MatrixRepresentationType::NORMAL>>;

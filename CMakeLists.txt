@@ -19,6 +19,7 @@ set(BASEPATH "${CMAKE_SOURCE_DIR}")
 include_directories("${BASEPATH}")
 include_directories("${GUROBI_INCLUDE_DIRS}")
 add_subdirectory(src)
+add_subdirectory(tests)
 
 add_executable(GMISolver main.cpp)
 target_link_libraries(GMISolver

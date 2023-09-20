@@ -10,7 +10,7 @@ struct RowInfo {
   bool isEqualityRow() const { return _type == RowType::EQUALITY; }
 
   std::string _label;
-  RowType _type;
+  RowType _type = RowType::UNKNOWN;
 };
 
 struct VariableInfo {

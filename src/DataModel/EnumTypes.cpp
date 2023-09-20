@@ -9,6 +9,8 @@ std::optional<SectionType> stringToSectionType(const std::string &string) {
     return SectionType::COLUMNS;
   else if (string == "RHS")
     return SectionType::RHS;
+  else if (string == "RANGES")
+    return SectionType::RANGES;
   else if (string == "BOUNDS")
     return SectionType::BOUNDS;
   else if (string == "ENDATA")
@@ -38,6 +40,10 @@ std::optional<BoundType> stringToBoundType(const std::string &string) {
     return BoundType::FIXED_VARIABLE;
   else if (string == "BV")
     return BoundType::BINARY_VARIABLE;
+  else if (string == "FR")
+    return BoundType::FREE_VARIABLE;
+  else if (string == "MI")
+    return BoundType::LOWER_BOUND_MINUS_INF;
 
   return std::nullopt;
 }
@@ -52,6 +58,8 @@ std::string rowTypeToStr(const RowType rowType) {
     return ">=";
   case RowType::OBJECTIVE:
     return "OBJ";
+  case RowType::UNKNOWN:
+    return "UNKNOWN";
   }
 
   return "";

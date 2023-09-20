@@ -12,6 +12,8 @@ template <typename T, typename SimplexTraitsT> class SimplexTableau;
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class RevisedDualSimplexPFIBounds {
 public:
+  using UnderlyingT = T;
+
   RevisedDualSimplexPFIBounds(
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
       const DualSimplexRowPivotRule dualSimplexRowPivotRule,

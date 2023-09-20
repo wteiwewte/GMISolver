@@ -127,7 +127,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(const int 
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(const int iterCount)
 {
-  constexpr size_t HARD_ITERATION_LIMIT = 10000;
+  constexpr size_t HARD_ITERATION_LIMIT = 100000;
   if (iterCount > HARD_ITERATION_LIMIT)
   {
     _simplexTableau._result = LPOptimizationResult::REACHED_ITERATION_LIMIT;

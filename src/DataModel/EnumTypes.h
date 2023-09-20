@@ -7,10 +7,11 @@
 
 enum class SectionType : int8_t {
   UNDEFINED = 0,
-  NAME = 1,
+  NAME,
   ROWS,
   COLUMNS,
   RHS,
+  RANGES,
   BOUNDS,
   END
 };
@@ -19,7 +20,8 @@ enum class RowType : char {
   EQUALITY = 'E',
   LESS_THAN_OR_EQUAL = 'L',
   GREATER_THAN_OR_EQUAL = 'G',
-  OBJECTIVE = 'N'
+  OBJECTIVE = 'N',
+  UNKNOWN = 'U'
 };
 
 enum class VariableType : int8_t { CONTINUOUS = 0, INTEGER };
@@ -28,7 +30,9 @@ enum class BoundType : int8_t {
   LOWER_BOUND = 0,
   UPPER_BOUND,
   FIXED_VARIABLE,
-  BINARY_VARIABLE
+  BINARY_VARIABLE,
+  FREE_VARIABLE,
+  LOWER_BOUND_MINUS_INF
 };
 
 enum class LPOptimizationResult : int8_t {

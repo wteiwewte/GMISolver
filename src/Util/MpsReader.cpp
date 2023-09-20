@@ -67,6 +67,64 @@ MpsReader<T>::read(const std::string &filePath) {
   std::map<std::string, int> rowLabelToRowIdxMap;
   std::map<std::string, int> variableLabelToVariableIdxMap;
 
+  const auto addNewRowInfo = [&](const auto& rowLabelStr, const auto rowType) -> std::optional<int>
+  {
+    const RowInfo newRowInfo{rowLabelStr, rowType};
+    const auto [_, inserted] = rowLabelToRowIdxMap.try_emplace(
+        rowLabelStr, linearProgram._rowInfos.size());
+    if (!inserted)
+    {
+      SPDLOG_WARN("Duplicated row label {}", rowLabelStr);
+      return false;
+    }
+
+    if (rowType == RowType::OBJECTIVE)
+    {
+      // Consecutive objective rows are discarded
+      if (linearProgram._objectiveInfo._type == RowType::UNKNOWN)
+      {
+        linearProgram._objectiveInfo = newRowInfo;
+      }
+    }
+    else {
+      linearProgram._rowInfos.push_back(newRowInfo);
+      linearProgram._constraintMatrix.resize(
+          linearProgram._rowInfos.size());
+      linearProgram._rightHandSides.resize(linearProgram._rowInfos.size());
+    }
+    return true;
+  };
+
+  const auto tryAddNewVar = [&](const auto& variableLabelStr) -> std::optional<int> {
+    if (variableLabelStr.find(Constants::SLACK_SUFFIX) != std::string::npos ||
+        variableLabelStr.find(Constants::ARTIFICIAL_SUFFIX) !=
+            std::string::npos) {
+      SPDLOG_WARN("Disallowed variable label {}", variableLabelStr);
+      return std::nullopt;
+    }
+
+    const auto [variableIt, inserted] =
+        variableLabelToVariableIdxMap.try_emplace(
+            variableLabelStr, linearProgram._variableInfos.size());
+    const auto variableIdx = variableIt->second;
+    if (inserted) {
+      linearProgram._variableInfos.push_back(
+          VariableInfo{variableLabelStr, currentSectionIsInteger
+                                             ? VariableType::INTEGER
+                                             : VariableType::CONTINUOUS});
+      linearProgram._variableLabelSet.insert(variableLabelStr);
+      linearProgram._variableLowerBounds.resize(
+          linearProgram._variableInfos.size());
+      linearProgram._variableUpperBounds.resize(
+          linearProgram._variableInfos.size());
+      linearProgram._objective.resize(linearProgram._variableInfos.size());
+      for (auto &coeffRow : linearProgram._constraintMatrix)
+        coeffRow.resize(linearProgram._variableInfos.size());
+    }
+    return variableIdx;
+  };
+
+
   while (std::getline(fileStream, readLine)) {
     if (readLine.empty() || readLine[0] == '*')
       continue;
@@ -85,6 +143,11 @@ MpsReader<T>::read(const std::string &filePath) {
       {
         SPDLOG_WARN("Unrecognized new section type {}", lineParts[0]);
         return std::nullopt;
+      }
+
+      if (*readSectionType == SectionType::END)
+      {
+        break;
       }
 
       continue;
@@ -113,20 +176,8 @@ MpsReader<T>::read(const std::string &filePath) {
         return std::nullopt;
       }
 
-      const RowInfo newRowInfo{rowLabelStr, *readRowType};
-      if (*readRowType == RowType::OBJECTIVE)
-        linearProgram._objectiveInfo = newRowInfo;
-      else {
-        const auto [_, inserted] = rowLabelToRowIdxMap.try_emplace(
-            rowLabelStr, linearProgram._rowInfos.size());
-        if (!inserted)
-        {
-          SPDLOG_WARN("Duplicated row label {}", rowLabelStr);
-          return std::nullopt;
-        }
-
-        linearProgram._rowInfos.push_back(newRowInfo);
-      }
+      if (!addNewRowInfo(rowLabelStr, *readRowType))
+        return std::nullopt;
 
       break;
     }
@@ -154,34 +205,14 @@ MpsReader<T>::read(const std::string &filePath) {
       }
 
       const auto &variableLabelStr = lineParts[0];
-
-      if (variableLabelStr.find(Constants::SLACK_SUFFIX) != std::string::npos ||
-          variableLabelStr.find(Constants::ARTIFICIAL_SUFFIX) !=
-              std::string::npos) {
-        SPDLOG_WARN("Disallowed variable label {}", variableLabelStr);
+      const auto variableIdx = tryAddNewVar(variableLabelStr);
+      if (!variableIdx.has_value())
         return std::nullopt;
-      }
-
-      const auto [variableIt, inserted] =
-          variableLabelToVariableIdxMap.try_emplace(
-              variableLabelStr, linearProgram._variableInfos.size());
-      const auto variableIdx = variableIt->second;
-      if (inserted) {
-        linearProgram._variableInfos.push_back(
-            VariableInfo{variableLabelStr, currentSectionIsInteger
-                                               ? VariableType::INTEGER
-                                               : VariableType::CONTINUOUS});
-        linearProgram._variableLabelSet.insert(variableLabelStr);
-        linearProgram._objective.resize(linearProgram._variableInfos.size());
-        linearProgram._constraintMatrix.resize(linearProgram._rowInfos.size());
-        for (auto &coeffRow : linearProgram._constraintMatrix)
-          coeffRow.resize(linearProgram._variableInfos.size());
-      }
 
       const auto updateLpMatrix = [&](const auto &rowLabelStr,
                                       const auto &coefficientValueStr) {
         if (rowLabelStr == linearProgram._objectiveInfo._label) {
-          linearProgram._objective[variableIdx] = convert(coefficientValueStr);
+          linearProgram._objective[*variableIdx] = convert(coefficientValueStr);
           return true;
         }
 
@@ -193,7 +224,7 @@ MpsReader<T>::read(const std::string &filePath) {
           return false;
         }
 
-        linearProgram._constraintMatrix[foundRowIt->second][variableIdx] =
+        linearProgram._constraintMatrix[foundRowIt->second][*variableIdx] =
             convert(coefficientValueStr);
         return true;
       };
@@ -240,8 +271,71 @@ MpsReader<T>::read(const std::string &filePath) {
 
       break;
     }
+    case SectionType::RANGES: {
+      if (lineParts.size() != 3 && lineParts.size() != 5) {
+        SPDLOG_WARN("Unexpected number of elements in ranges line {}", readLine);
+        return std::nullopt;
+      }
+
+      const auto addRangeConstraint = [&](const auto &rowLabelStr,
+                                          const auto &coefficientValueStr) {
+        const auto foundRowIt = rowLabelToRowIdxMap.find(rowLabelStr);
+        if (foundRowIt == rowLabelToRowIdxMap.end()) {
+          SPDLOG_WARN("Row label {} given in column section doesn't "
+                      "correspond to any row",
+                      rowLabelStr);
+          return false;
+        }
+        const auto rowIdx = foundRowIt->second;
+        const auto rowType = linearProgram._rowInfos[rowIdx]._type;
+
+        std::optional<RowType> rangeConstraintType;
+        std::optional<T> rangeRHS;
+        switch (rowType)
+        {
+        case RowType::GREATER_THAN_OR_EQUAL:
+        {
+          rangeConstraintType = RowType::LESS_THAN_OR_EQUAL;
+          rangeRHS = linearProgram._rightHandSides[rowIdx] + std::abs(convert(coefficientValueStr));
+          break;
+        }
+        case RowType::LESS_THAN_OR_EQUAL:
+        {
+          rangeConstraintType = RowType::GREATER_THAN_OR_EQUAL;
+          rangeRHS = linearProgram._rightHandSides[rowIdx] - std::abs(convert(coefficientValueStr));
+          break;
+        }
+        default:
+        {
+          SPDLOG_WARN("Row type {} given in ranges section isn't supported",
+                      rowTypeToStr(rowType));
+          return false;
+        }
+        }
+
+        if (!rangeConstraintType.has_value() || !rangeRHS.has_value())
+          return false;
+
+        if (!addNewRowInfo(rowLabelStr + "_RANGES", *rangeConstraintType))
+          return false;
+
+        linearProgram._constraintMatrix.back() = linearProgram._constraintMatrix[rowIdx];
+        linearProgram._rightHandSides.back() = *rangeRHS;
+        return true;
+      };
+
+      if (!addRangeConstraint(lineParts[1], lineParts[2]))
+        return std::nullopt;
+      if (lineParts.size() == 5)
+      {
+        if (!addRangeConstraint(lineParts[3], lineParts[4]))
+          return std::nullopt;
+      }
+
+      break;
+    }
     case SectionType::BOUNDS: {
-      if (lineParts.size() != 4) {
+      if (lineParts.size() != 3 && lineParts.size() != 4) {
         SPDLOG_WARN("Unexpected number of elements in bounds line {}",
                     readLine);
         return std::nullopt;
@@ -254,23 +348,34 @@ MpsReader<T>::read(const std::string &filePath) {
         return std::nullopt;
       }
 
-      const auto &variableStr = lineParts[2];
+      if (*readBoundType == BoundType::FREE_VARIABLE || *readBoundType == BoundType::LOWER_BOUND_MINUS_INF)
+      {
+        if (lineParts.size() != 3) {
+          SPDLOG_WARN("Unexpected number of elements in free|lower bound -inf bound line {}",
+                      readLine);
+          return std::nullopt;
+        }
+      }
+      else if (lineParts.size() != 4)
+      {
+        SPDLOG_WARN("Unexpected number of elements in non-(free|lower bound -inf) bound line {}",
+                    readLine);
+        return std::nullopt;
+      }
+
+      const auto &variableLabelStr = lineParts[2];
       const auto foundVariableIt =
-          variableLabelToVariableIdxMap.find(variableStr);
+          variableLabelToVariableIdxMap.find(variableLabelStr);
       if (foundVariableIt == variableLabelToVariableIdxMap.end()) {
         SPDLOG_WARN("Variable label {} given in bounds section doesn't "
                     "correspond to any variable",
-                    variableStr);
+                    variableLabelStr);
         return std::nullopt;
       }
 
       const auto variableIdx = foundVariableIt->second;
       const auto &coefficientValueStr = lineParts[3];
 
-      linearProgram._variableLowerBounds.resize(
-          linearProgram._variableInfos.size());
-      linearProgram._variableUpperBounds.resize(
-          linearProgram._variableInfos.size());
       switch (*readBoundType) {
       // TODO: optimize handling bounds
       case BoundType::LOWER_BOUND: {
@@ -300,12 +405,35 @@ MpsReader<T>::read(const std::string &filePath) {
                 convert(coefficientValueStr);
         break;
       }
+      case BoundType::FREE_VARIABLE: {
+        const auto newMinusVariableIdx = tryAddNewVar(variableLabelStr + "_MINUS_VAR");
+        if (!newMinusVariableIdx.has_value())
+          return std::nullopt;
+
+        linearProgram._objective[*newMinusVariableIdx] = -linearProgram._objective[variableIdx];
+        for (auto &coeffRow : linearProgram._constraintMatrix)
+          coeffRow[*newMinusVariableIdx] = -coeffRow[variableIdx];
+
+        linearProgram._variableLowerBounds[variableIdx] = 0.0;
+        linearProgram._variableLowerBounds[*newMinusVariableIdx] = 0.0;
+        break;
+      }
+      case BoundType::LOWER_BOUND_MINUS_INF: {
+        linearProgram._variableLowerBounds[variableIdx] = 0.0;
+        linearProgram._objective[variableIdx] = -linearProgram._objective[variableIdx];
+        for (auto &coeffRow : linearProgram._constraintMatrix)
+          coeffRow[variableIdx] = -coeffRow[variableIdx];
+
+        break;
+      }
       }
 
       break;
     }
     case SectionType::END:
+    {
       break;
+    }
     default: {
       SPDLOG_WARN("Undefined section type");
       return std::nullopt;

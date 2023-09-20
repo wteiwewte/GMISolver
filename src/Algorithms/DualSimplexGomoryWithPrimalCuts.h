@@ -6,9 +6,10 @@
 #include "src/Util/SimplexTraits.h"
 
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
-template <typename T, typename SimplexTraitsT> class RevisedDualSimplexPFIBounds;
-template <typename T, typename SimplexTraitsT> class RevisedPrimalSimplexPFIBounds;
-
+template <typename T, typename SimplexTraitsT>
+class RevisedDualSimplexPFIBounds;
+template <typename T, typename SimplexTraitsT>
+class RevisedPrimalSimplexPFIBounds;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class DualSimplexGomoryWithPrimalCuts {
@@ -22,7 +23,8 @@ public:
 
   std::string type() const;
 
-  void run(LPOptStatisticsVec<T>& lpOptStatisticsVec);
+  void run(LPOptStatisticsVec<T> &lpOptStatisticsVec);
+
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
@@ -30,7 +32,7 @@ private:
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> primalSimplex() const;
 
   void addCutsForFractionalVars() const;
-//  bool
+  //  bool
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;

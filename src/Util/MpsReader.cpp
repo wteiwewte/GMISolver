@@ -67,35 +67,31 @@ MpsReader<T>::read(const std::string &filePath) {
   std::map<std::string, int> rowLabelToRowIdxMap;
   std::map<std::string, int> variableLabelToVariableIdxMap;
 
-  const auto addNewRowInfo = [&](const auto& rowLabelStr, const auto rowType) -> std::optional<int>
-  {
+  const auto addNewRowInfo = [&](const auto &rowLabelStr,
+                                 const auto rowType) -> std::optional<int> {
     const RowInfo newRowInfo{rowLabelStr, rowType};
     const auto [_, inserted] = rowLabelToRowIdxMap.try_emplace(
         rowLabelStr, linearProgram._rowInfos.size());
-    if (!inserted)
-    {
+    if (!inserted) {
       SPDLOG_WARN("Duplicated row label {}", rowLabelStr);
       return false;
     }
 
-    if (rowType == RowType::OBJECTIVE)
-    {
+    if (rowType == RowType::OBJECTIVE) {
       // Consecutive objective rows are discarded
-      if (linearProgram._objectiveInfo._type == RowType::UNKNOWN)
-      {
+      if (linearProgram._objectiveInfo._type == RowType::UNKNOWN) {
         linearProgram._objectiveInfo = newRowInfo;
       }
-    }
-    else {
+    } else {
       linearProgram._rowInfos.push_back(newRowInfo);
-      linearProgram._constraintMatrix.resize(
-          linearProgram._rowInfos.size());
+      linearProgram._constraintMatrix.resize(linearProgram._rowInfos.size());
       linearProgram._rightHandSides.resize(linearProgram._rowInfos.size());
     }
     return true;
   };
 
-  const auto tryAddNewVar = [&](const auto& variableLabelStr) -> std::optional<int> {
+  const auto tryAddNewVar =
+      [&](const auto &variableLabelStr) -> std::optional<int> {
     if (variableLabelStr.find(Constants::SLACK_SUFFIX) != std::string::npos ||
         variableLabelStr.find(Constants::ARTIFICIAL_SUFFIX) !=
             std::string::npos) {
@@ -124,7 +120,6 @@ MpsReader<T>::read(const std::string &filePath) {
     return variableIdx;
   };
 
-
   while (std::getline(fileStream, readLine)) {
     if (readLine.empty() || readLine[0] == '*')
       continue;
@@ -139,14 +134,12 @@ MpsReader<T>::read(const std::string &filePath) {
 
     const bool newSectionLine = lineParts.size() == 1;
     if (newSectionLine) {
-      if (!readSectionType.has_value())
-      {
+      if (!readSectionType.has_value()) {
         SPDLOG_WARN("Unrecognized new section type {}", lineParts[0]);
         return std::nullopt;
       }
 
-      if (*readSectionType == SectionType::END)
-      {
+      if (*readSectionType == SectionType::END) {
         break;
       }
 
@@ -194,8 +187,7 @@ MpsReader<T>::read(const std::string &filePath) {
           currentSectionIsInteger = true;
         else if (integerSectionStr == INTEGER_SECTION_END_KEYWORD)
           currentSectionIsInteger = false;
-        else
-        {
+        else {
           SPDLOG_WARN("Unrecognized integer section keyword {}",
                       integerSectionStr);
           return std::nullopt;
@@ -231,8 +223,7 @@ MpsReader<T>::read(const std::string &filePath) {
 
       if (!updateLpMatrix(lineParts[1], lineParts[2]))
         return std::nullopt;
-      if (lineParts.size() == 5)
-      {
+      if (lineParts.size() == 5) {
         if (!updateLpMatrix(lineParts[3], lineParts[4]))
           return std::nullopt;
       }
@@ -263,8 +254,7 @@ MpsReader<T>::read(const std::string &filePath) {
 
       if (!updateLpRhs(lineParts[1], lineParts[2]))
         return std::nullopt;
-      if (lineParts.size() == 5)
-      {
+      if (lineParts.size() == 5) {
         if (!updateLpRhs(lineParts[3], lineParts[4]))
           return std::nullopt;
       }
@@ -273,7 +263,8 @@ MpsReader<T>::read(const std::string &filePath) {
     }
     case SectionType::RANGES: {
       if (lineParts.size() != 3 && lineParts.size() != 5) {
-        SPDLOG_WARN("Unexpected number of elements in ranges line {}", readLine);
+        SPDLOG_WARN("Unexpected number of elements in ranges line {}",
+                    readLine);
         return std::nullopt;
       }
 
@@ -291,22 +282,20 @@ MpsReader<T>::read(const std::string &filePath) {
 
         std::optional<RowType> rangeConstraintType;
         std::optional<T> rangeRHS;
-        switch (rowType)
-        {
-        case RowType::GREATER_THAN_OR_EQUAL:
-        {
+        switch (rowType) {
+        case RowType::GREATER_THAN_OR_EQUAL: {
           rangeConstraintType = RowType::LESS_THAN_OR_EQUAL;
-          rangeRHS = linearProgram._rightHandSides[rowIdx] + std::abs(convert(coefficientValueStr));
+          rangeRHS = linearProgram._rightHandSides[rowIdx] +
+                     std::abs(convert(coefficientValueStr));
           break;
         }
-        case RowType::LESS_THAN_OR_EQUAL:
-        {
+        case RowType::LESS_THAN_OR_EQUAL: {
           rangeConstraintType = RowType::GREATER_THAN_OR_EQUAL;
-          rangeRHS = linearProgram._rightHandSides[rowIdx] - std::abs(convert(coefficientValueStr));
+          rangeRHS = linearProgram._rightHandSides[rowIdx] -
+                     std::abs(convert(coefficientValueStr));
           break;
         }
-        default:
-        {
+        default: {
           SPDLOG_WARN("Row type {} given in ranges section isn't supported",
                       rowTypeToStr(rowType));
           return false;
@@ -319,15 +308,15 @@ MpsReader<T>::read(const std::string &filePath) {
         if (!addNewRowInfo(rowLabelStr + "_RANGES", *rangeConstraintType))
           return false;
 
-        linearProgram._constraintMatrix.back() = linearProgram._constraintMatrix[rowIdx];
+        linearProgram._constraintMatrix.back() =
+            linearProgram._constraintMatrix[rowIdx];
         linearProgram._rightHandSides.back() = *rangeRHS;
         return true;
       };
 
       if (!addRangeConstraint(lineParts[1], lineParts[2]))
         return std::nullopt;
-      if (lineParts.size() == 5)
-      {
+      if (lineParts.size() == 5) {
         if (!addRangeConstraint(lineParts[3], lineParts[4]))
           return std::nullopt;
       }
@@ -348,17 +337,17 @@ MpsReader<T>::read(const std::string &filePath) {
         return std::nullopt;
       }
 
-      if (*readBoundType == BoundType::FREE_VARIABLE || *readBoundType == BoundType::LOWER_BOUND_MINUS_INF)
-      {
+      if (*readBoundType == BoundType::FREE_VARIABLE ||
+          *readBoundType == BoundType::LOWER_BOUND_MINUS_INF) {
         if (lineParts.size() != 3) {
-          SPDLOG_WARN("Unexpected number of elements in free|lower bound -inf bound line {}",
+          SPDLOG_WARN("Unexpected number of elements in free|lower bound -inf "
+                      "bound line {}",
                       readLine);
           return std::nullopt;
         }
-      }
-      else if (lineParts.size() != 4)
-      {
-        SPDLOG_WARN("Unexpected number of elements in non-(free|lower bound -inf) bound line {}",
+      } else if (lineParts.size() != 4) {
+        SPDLOG_WARN("Unexpected number of elements in non-(free|lower bound "
+                    "-inf) bound line {}",
                     readLine);
         return std::nullopt;
       }
@@ -406,11 +395,13 @@ MpsReader<T>::read(const std::string &filePath) {
         break;
       }
       case BoundType::FREE_VARIABLE: {
-        const auto newMinusVariableIdx = tryAddNewVar(variableLabelStr + "_MINUS_VAR");
+        const auto newMinusVariableIdx =
+            tryAddNewVar(variableLabelStr + "_MINUS_VAR");
         if (!newMinusVariableIdx.has_value())
           return std::nullopt;
 
-        linearProgram._objective[*newMinusVariableIdx] = -linearProgram._objective[variableIdx];
+        linearProgram._objective[*newMinusVariableIdx] =
+            -linearProgram._objective[variableIdx];
         for (auto &coeffRow : linearProgram._constraintMatrix)
           coeffRow[*newMinusVariableIdx] = -coeffRow[variableIdx];
 
@@ -420,7 +411,8 @@ MpsReader<T>::read(const std::string &filePath) {
       }
       case BoundType::LOWER_BOUND_MINUS_INF: {
         linearProgram._variableLowerBounds[variableIdx] = 0.0;
-        linearProgram._objective[variableIdx] = -linearProgram._objective[variableIdx];
+        linearProgram._objective[variableIdx] =
+            -linearProgram._objective[variableIdx];
         for (auto &coeffRow : linearProgram._constraintMatrix)
           coeffRow[variableIdx] = -coeffRow[variableIdx];
 
@@ -430,8 +422,7 @@ MpsReader<T>::read(const std::string &filePath) {
 
       break;
     }
-    case SectionType::END:
-    {
+    case SectionType::END: {
       break;
     }
     default: {

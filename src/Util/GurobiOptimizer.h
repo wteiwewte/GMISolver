@@ -8,10 +8,8 @@
 
 #include "gurobi_c++.h"
 
-struct GurobiEnvWrapper
-{
-  GurobiEnvWrapper(const std::string& logFileName)
-      : _grbEnv(true) {
+struct GurobiEnvWrapper {
+  GurobiEnvWrapper(const std::string &logFileName) : _grbEnv(true) {
     _grbEnv.set(GRB_StringParam_LogFile, logFileName);
     _grbEnv.set(GRB_IntParam_LogToConsole, 0);
     _grbEnv.start();
@@ -20,51 +18,48 @@ struct GurobiEnvWrapper
   GRBEnv _grbEnv;
 };
 
-class GurobiOptimizer
-{
+class GurobiOptimizer {
 public:
-  GurobiOptimizer(const std::string& logFileName, const std::filesystem::path &modelFileMpsPath) try
-      : _grbEnvWrapper(logFileName), _grbModel(_grbEnvWrapper._grbEnv, modelFileMpsPath)
-  {
-  }
-  catch (const GRBException& e)
-  {
+  GurobiOptimizer(const std::string &logFileName,
+                  const std::filesystem::path &modelFileMpsPath) try
+      : _grbEnvWrapper(logFileName),
+        _grbModel(_grbEnvWrapper._grbEnv, modelFileMpsPath) {
+  } catch (const GRBException &e) {
     SPDLOG_INFO("Error code = {}", e.getErrorCode());
     SPDLOG_INFO(e.getMessage());
-  }
-  catch (...)
-  {
+  } catch (...) {
     SPDLOG_INFO("Error during initialization");
   }
 
-  LPOptStatistics<double> optimize(const LPOptimizationType lpOptimizationType)
-  {
+  LPOptStatistics<double>
+  optimize(const LPOptimizationType lpOptimizationType) {
     adjustModelToOptType(lpOptimizationType);
-    LPOptStatistics<double> lpOptStatistics{._lpName = _grbModel.get(GRB_StringAttr_ModelName), ._simplexAlgorithmType="GUROBI"};
-    try
-    {
+    LPOptStatistics<double> lpOptStatistics{
+        ._lpName = _grbModel.get(GRB_StringAttr_ModelName),
+        ._simplexAlgorithmType = "GUROBI"};
+    try {
       _grbModel.optimize();
 
-      LPOptimizationResult gurobiLpOptResult = gurobiStatusToLPOptResult(_grbModel.get(GRB_IntAttr_Status));
+      LPOptimizationResult gurobiLpOptResult =
+          gurobiStatusToLPOptResult(_grbModel.get(GRB_IntAttr_Status));
       double iterCount = _grbModel.get(GRB_DoubleAttr_IterCount);
       double runTime = _grbModel.get(GRB_DoubleAttr_Runtime);
       double optimalValue = _grbModel.get(GRB_DoubleAttr_ObjVal);
 
-      SPDLOG_INFO("Gurobi performed {} iterations in {} seconds", iterCount, runTime);
-      SPDLOG_INFO("Model optimization status {}", lpOptimizationResultToStr(gurobiLpOptResult));
-      SPDLOG_INFO("Model {} has optimal value {}", _grbModel.get(GRB_StringAttr_ModelName), optimalValue);
+      SPDLOG_INFO("Gurobi performed {} iterations in {} seconds", iterCount,
+                  runTime);
+      SPDLOG_INFO("Model optimization status {}",
+                  lpOptimizationResultToStr(gurobiLpOptResult));
+      SPDLOG_INFO("Model {} has optimal value {}",
+                  _grbModel.get(GRB_StringAttr_ModelName), optimalValue);
 
       lpOptStatistics._optResult = gurobiLpOptResult;
       lpOptStatistics._iterationCount = iterCount;
       lpOptStatistics._optimalValue = optimalValue;
-    }
-    catch (const GRBException& e)
-    {
+    } catch (const GRBException &e) {
       SPDLOG_INFO("Error code = {}", e.getErrorCode());
       SPDLOG_INFO(e.getMessage());
-    }
-    catch (...)
-    {
+    } catch (...) {
       SPDLOG_INFO("Error during optimization");
     }
 
@@ -72,44 +67,39 @@ public:
   }
 
 private:
-
-  LPOptimizationResult gurobiStatusToLPOptResult(const int gurobiStatus)
-  {
-    switch(gurobiStatus) {
-      case GRB_OPTIMAL:
-        return LPOptimizationResult::BOUNDED_AND_FEASIBLE;
-      case GRB_INFEASIBLE:
-        return LPOptimizationResult::INFEASIBLE;
-      case GRB_UNBOUNDED:
-        return LPOptimizationResult::UNBOUNDED;
-      case GRB_INF_OR_UNBD:
-        return LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED;
-      case GRB_ITERATION_LIMIT:
-        return LPOptimizationResult::REACHED_ITERATION_LIMIT;
+  LPOptimizationResult gurobiStatusToLPOptResult(const int gurobiStatus) {
+    switch (gurobiStatus) {
+    case GRB_OPTIMAL:
+      return LPOptimizationResult::BOUNDED_AND_FEASIBLE;
+    case GRB_INFEASIBLE:
+      return LPOptimizationResult::INFEASIBLE;
+    case GRB_UNBOUNDED:
+      return LPOptimizationResult::UNBOUNDED;
+    case GRB_INF_OR_UNBD:
+      return LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED;
+    case GRB_ITERATION_LIMIT:
+      return LPOptimizationResult::REACHED_ITERATION_LIMIT;
     }
 
     return LPOptimizationResult::UNKNOWN;
   }
 
-  void adjustModelToOptType(const LPOptimizationType lpOptimizationType)
-  {
-    switch (lpOptimizationType)
-    {
+  void adjustModelToOptType(const LPOptimizationType lpOptimizationType) {
+    switch (lpOptimizationType) {
     case LPOptimizationType::LINEAR_RELAXATION:
-        return setVariablesType('C');
+      return setVariablesType('C');
     case LPOptimizationType::INTEGER_PROGRAM:
-        return setVariablesType('I');
+      return setVariablesType('I');
     case LPOptimizationType::MIXED_INTEGER_PROGRAM:
-        return;
+      return;
     }
   }
 
-  void setVariablesType(const char type)
-  {
+  void setVariablesType(const char type) {
     auto vars = _grbModel.getVars();
-    for (int varIdx = 0; varIdx < _grbModel.get(GRB_IntAttr_NumVars); ++varIdx)
-    {
-        vars[varIdx].set(GRB_CharAttr_VType, type);
+    for (int varIdx = 0; varIdx < _grbModel.get(GRB_IntAttr_NumVars);
+         ++varIdx) {
+      vars[varIdx].set(GRB_CharAttr_VType, type);
     }
   }
 

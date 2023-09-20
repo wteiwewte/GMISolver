@@ -26,13 +26,17 @@ std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(const std::string& lpNameSuffix) {
+LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
+    const std::string &lpNameSuffix) {
   SPDLOG_INFO("BASIS SIZE {} COLUMN PIVOT RULE {}",
               _simplexTableau._rowInfos.size(),
               dualSimplexRowPivotRuleToStr(_dualSimplexRowPivotRule));
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
 
-  LPOptStatistics<T> lpOptStatistics{._lpName = _simplexTableau.getName() + '_' + lpNameSuffix, ._simplexAlgorithmType = type(), ._reinversionFrequency = _reinversionFrequency};
+  LPOptStatistics<T> lpOptStatistics{
+      ._lpName = _simplexTableau.getName() + '_' + lpNameSuffix,
+      ._simplexAlgorithmType = type(),
+      ._reinversionFrequency = _reinversionFrequency};
   [[maybe_unused]] int iterCount = 1;
   while (true) {
     const bool iterResult = runOneIteration();
@@ -42,7 +46,8 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(const std
     _simplexTableau.calculateCurrentObjectiveValue();
     _simplexTableau.calculateSolution();
 
-    lpOptStatistics._consecutiveObjectiveValues.push_back(_simplexTableau.getCurrentObjectiveValue());
+    lpOptStatistics._consecutiveObjectiveValues.push_back(
+        _simplexTableau.getCurrentObjectiveValue());
 
     ++iterCount;
     tryLogObjValue(iterCount);
@@ -63,8 +68,8 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(const std
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(const int iterCount)
-{
+void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(
+    const int iterCount) {
   if (_objValueLoggingFrequency &&
       (iterCount % _objValueLoggingFrequency == 0)) {
     SPDLOG_INFO("ITERATION {}", iterCount);
@@ -73,8 +78,8 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(const int it
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(const int iterCount)
-{
+bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
+    const int iterCount) {
   if (_reinversionFrequency && (iterCount % _reinversionFrequency == 0)) {
     if (!_simplexTableau.reinversion()) {
       SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
@@ -86,11 +91,10 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(const int it
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(const int iterCount)
-{
+bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
+    const int iterCount) {
   constexpr size_t HARD_ITERATION_LIMIT = 100000;
-  if (iterCount > HARD_ITERATION_LIMIT)
-  {
+  if (iterCount > HARD_ITERATION_LIMIT) {
     _simplexTableau._result = LPOptimizationResult::REACHED_ITERATION_LIMIT;
     return false;
   }
@@ -254,7 +258,11 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumnIdx(
   return mostRestrictiveColumnIdx;
 }
 
-template class RevisedDualSimplexPFIBounds<double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
-template class RevisedDualSimplexPFIBounds<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
-template class RevisedDualSimplexPFIBounds<long double, SimplexTraits<long double, MatrixRepresentationType::SPARSE>>;
-template class RevisedDualSimplexPFIBounds<long double, SimplexTraits<long double, MatrixRepresentationType::NORMAL>>;
+template class RevisedDualSimplexPFIBounds<
+    double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
+template class RevisedDualSimplexPFIBounds<
+    double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
+template class RevisedDualSimplexPFIBounds<
+    long double, SimplexTraits<long double, MatrixRepresentationType::SPARSE>>;
+template class RevisedDualSimplexPFIBounds<
+    long double, SimplexTraits<long double, MatrixRepresentationType::NORMAL>>;

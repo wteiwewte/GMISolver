@@ -7,8 +7,7 @@
 #include <string>
 #include <vector>
 
-template <typename T>
-struct IPOptStatistics {
+template <typename T> struct IPOptStatistics {
   T _integerOptimum{};
   std::vector<LPStatistics<T>> _lpRelaxationsStats;
 };

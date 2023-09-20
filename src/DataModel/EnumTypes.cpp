@@ -89,9 +89,8 @@ std::string dualSimplexRowPivotRuleToStr(
   return "";
 }
 
-std::string lpOptimizationResultToStr(
-    const LPOptimizationResult lpOptimizationResult)
-{
+std::string
+lpOptimizationResultToStr(const LPOptimizationResult lpOptimizationResult) {
   switch (lpOptimizationResult) {
   case LPOptimizationResult::UNBOUNDED:
     return "UNBOUNDED";
@@ -113,4 +112,3 @@ std::string lpOptimizationResultToStr(
 
   return "";
 }
-

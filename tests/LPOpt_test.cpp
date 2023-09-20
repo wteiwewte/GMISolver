@@ -1,6 +1,6 @@
-#include "Algorithms/SimplexTableau.h"
 #include "Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "Algorithms/RevisedPrimalSimplexPFIBounds.h"
+#include "Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
 #include "src/Util/LPOptStatistics.h"
 #include "src/Util/MpsReader.h"
@@ -19,60 +19,57 @@ ABSL_FLAG(int32_t, reinversion_frequency, 60,
 ABSL_FLAG(bool, use_product_form_of_inverse, true,
           "Basis matrix inverse is represented via product form of inverse");
 
-template <typename... Ts>
-struct TypeTuple
-{
-  using types = std::tuple<Ts...>;
-};
+template <typename... Ts> struct TypeTuple { using types = std::tuple<Ts...>; };
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
+LPOptStatistics<T>
+runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse));
   return RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
-                                   simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
-                                   absl::GetFlag(FLAGS_obj_value_logging_frequency),
-                                   absl::GetFlag(FLAGS_reinversion_frequency))
-                                   .run("");
+             simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+             absl::GetFlag(FLAGS_obj_value_logging_frequency),
+             absl::GetFlag(FLAGS_reinversion_frequency))
+      .run("");
 }
 
-template <typename T>
-struct PrimalSimplexOutput {
+template <typename T> struct PrimalSimplexOutput {
   LPOptStatistics<T> _phaseOneLpOptStats;
   std::optional<LPOptStatistics<T>> _phaseTwoLpOptStats;
 };
 
 template <typename T, typename SimplexTraitsT>
 PrimalSimplexOutput<T>
-    runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
+runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, true, absl::GetFlag(FLAGS_use_product_form_of_inverse));
-  RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> revisedPrimalSimplexPfiBounds(
-      simplexTableau,
-      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
-      absl::GetFlag(FLAGS_obj_value_logging_frequency),
-      absl::GetFlag(FLAGS_reinversion_frequency));
+  RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
+      revisedPrimalSimplexPfiBounds(
+          simplexTableau,
+          PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+          absl::GetFlag(FLAGS_obj_value_logging_frequency),
+          absl::GetFlag(FLAGS_reinversion_frequency));
   auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
-    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", revisedPrimalSimplexPfiBounds.type());
-    return {._phaseOneLpOptStats = phaseOneLpOptStats, ._phaseTwoLpOptStats = std::nullopt};
+    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED",
+                revisedPrimalSimplexPfiBounds.type());
+    return {._phaseOneLpOptStats = phaseOneLpOptStats,
+            ._phaseTwoLpOptStats = std::nullopt};
   }
-  return {._phaseOneLpOptStats = phaseOneLpOptStats, ._phaseTwoLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseTwo()};
+  return {._phaseOneLpOptStats = phaseOneLpOptStats,
+          ._phaseTwoLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseTwo()};
 }
 
-template <typename T>
-class LPOptTest : public ::testing::Test {
+template <typename T> class LPOptTest : public ::testing::Test {
 protected:
-  void SetUp() override {
-
-  }
-
+  void SetUp() override {}
 };
 
 TYPED_TEST_SUITE_P(LPOptTest);
 
 TYPED_TEST_P(LPOptTest, runDualSimplexAndCompareWithGurobi) {
-  constexpr auto DUAL_SIMPLEX_TEST_DIR_PATH = "../../tests/dual_simplex_working_instances";
+  constexpr auto DUAL_SIMPLEX_TEST_DIR_PATH =
+      "../../tests/dual_simplex_working_instances";
   constexpr size_t DUAL_SIMPLEX_BASIS_SIZE_LIMIT = 800;
 
   using TypeTupleT = TypeParam;
@@ -80,15 +77,14 @@ TYPED_TEST_P(LPOptTest, runDualSimplexAndCompareWithGurobi) {
   using SimplexTraitsT = std::tuple_element_t<1, typename TypeTupleT::types>;
 
   for (const auto &lpModelSetDirectory :
-       std::filesystem::directory_iterator(DUAL_SIMPLEX_TEST_DIR_PATH))
-  {
+       std::filesystem::directory_iterator(DUAL_SIMPLEX_TEST_DIR_PATH)) {
     if (!lpModelSetDirectory.is_directory())
       continue;
 
-    SPDLOG_INFO("MODEL SET DIRECTORY {}", std::string{lpModelSetDirectory.path().filename()});
+    SPDLOG_INFO("MODEL SET DIRECTORY {}",
+                std::string{lpModelSetDirectory.path().filename()});
     for (const auto &lpModelFileEntry :
-         std::filesystem::directory_iterator(lpModelSetDirectory))
-    {
+         std::filesystem::directory_iterator(lpModelSetDirectory)) {
       SPDLOG_INFO("MODEL {}", std::string{lpModelFileEntry.path().filename()});
       auto linearProgram =
           MpsReader<FloatingPointT>::read(lpModelFileEntry.path());
@@ -115,7 +111,8 @@ TYPED_TEST_P(LPOptTest, runDualSimplexAndCompareWithGurobi) {
   }
 }
 TYPED_TEST_P(LPOptTest, runPrimalSimplexAndCompareWithGurobi) {
-  constexpr auto PRIMAL_SIMPLEX_TEST_DIR_PATH = "../../tests/primal_simplex_working_instances";
+  constexpr auto PRIMAL_SIMPLEX_TEST_DIR_PATH =
+      "../../tests/primal_simplex_working_instances";
   constexpr size_t PRIMAL_SIMPLEX_BASIS_SIZE_LIMIT = 200;
   using TypeTupleT = TypeParam;
   using FloatingPointT = std::tuple_element_t<0, typename TypeTupleT::types>;
@@ -164,10 +161,14 @@ TYPED_TEST_P(LPOptTest, runPrimalSimplexAndCompareWithGurobi) {
   }
 }
 
-REGISTER_TYPED_TEST_SUITE_P(LPOptTest, runDualSimplexAndCompareWithGurobi, runPrimalSimplexAndCompareWithGurobi);
+REGISTER_TYPED_TEST_SUITE_P(LPOptTest, runDualSimplexAndCompareWithGurobi,
+                            runPrimalSimplexAndCompareWithGurobi);
 
-using SimplexTypes = ::testing::Types<TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>,
-                         TypeTuple<long double, SimplexTraits<long double, MatrixRepresentationType::SPARSE>>,
-                         TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>,
-                         TypeTuple<long double, SimplexTraits<long double, MatrixRepresentationType::SPARSE>>>;
+using SimplexTypes = ::testing::Types<
+    TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>,
+    TypeTuple<long double,
+              SimplexTraits<long double, MatrixRepresentationType::SPARSE>>,
+    TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>,
+    TypeTuple<long double,
+              SimplexTraits<long double, MatrixRepresentationType::SPARSE>>>;
 INSTANTIATE_TYPED_TEST_SUITE_P(LpOptSuite, LPOptTest, SimplexTypes);

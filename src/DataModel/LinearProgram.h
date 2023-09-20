@@ -27,7 +27,7 @@ public:
   const Matrix<T> &getConstraintMatrix() const { return _constraintMatrix; }
   const std::vector<T> &getRightHandSides() const { return _rightHandSides; }
   const std::vector<T> &getObjective() const { return _objective; }
-  const std::string& getName() const { return _name; }
+  const std::string &getName() const { return _name; }
 
 private:
   friend struct MpsReader<T>;

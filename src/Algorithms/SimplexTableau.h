@@ -43,9 +43,9 @@ public:
     return _variableInfos;
   }
   const std::vector<RowInfo> &getRowInfos() const { return _rowInfos; }
-  const T& getCurrentObjectiveValue() const { return _objectiveValue; }
+  const T &getCurrentObjectiveValue() const { return _objectiveValue; }
   LPOptimizationResult getLPOptResult() const { return _result; }
-  const std::string& getName() const { return _initialProgram.getName(); }
+  const std::string &getName() const { return _initialProgram.getName(); }
 
 private:
   friend class DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>;

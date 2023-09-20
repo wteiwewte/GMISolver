@@ -100,14 +100,17 @@ template <typename T> struct NumericalTraits {
   static bool isZero(const T &x) { return std::fabs(x) < ABSOLUTE_TOLERANCE; }
 };
 
-template <typename T, MatrixRepresentationType representationType = MatrixRepresentationType::NORMAL,
+template <typename T,
+          MatrixRepresentationType representationType =
+              MatrixRepresentationType::NORMAL,
           typename NumericalTraitsType = NumericalTraits<T>>
 struct SimplexTraits {
   using NumericalTraitsT = NumericalTraitsType;
   using CurrentAdder = typename NumericalTraitsT::template SimpleAdder<
       typename NumericalTraitsT::NormalAddOp>;
 
-  constexpr static bool useSparseRepresentationValue = representationType == MatrixRepresentationType::SPARSE;
+  constexpr static bool useSparseRepresentationValue =
+      representationType == MatrixRepresentationType::SPARSE;
   using ElementaryMatrixT =
       std::conditional_t<useSparseRepresentationValue,
                          SparseElementaryMatrix<T>, ElementaryMatrix<T>>;

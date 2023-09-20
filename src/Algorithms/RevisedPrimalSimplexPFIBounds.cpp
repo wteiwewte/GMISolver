@@ -40,7 +40,8 @@ std::string RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
+LPOptStatistics<T>
+RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
   SPDLOG_INFO("BASIS SIZE {}, COLUMN PIVOT RULE {}",
               _simplexTableau._rowInfos.size(),
               primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
@@ -61,17 +62,21 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne
   return artLpOptStats;
 }
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseTwo() {
+LPOptStatistics<T>
+RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseTwo() {
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
   return runImpl("PHASE_TWO");
 }
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(const std::string& lpNameSuffix) {
+LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
+    const std::string &lpNameSuffix) {
   [[maybe_unused]] int iterCount = 1;
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
-  LPOptStatistics<T> lpOptStatistics{._lpName = (_simplexTableau.getName()
-  + '_' + lpNameSuffix), ._simplexAlgorithmType = type(), ._reinversionFrequency = _reinversionFrequency};
+  LPOptStatistics<T> lpOptStatistics{
+      ._lpName = (_simplexTableau.getName() + '_' + lpNameSuffix),
+      ._simplexAlgorithmType = type(),
+      ._reinversionFrequency = _reinversionFrequency};
   while (true) {
     const bool iterResult = runOneIteration();
     if (iterResult)
@@ -80,7 +85,8 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(con
     _simplexTableau.calculateCurrentObjectiveValue();
     _simplexTableau.calculateSolution();
 
-    lpOptStatistics._consecutiveObjectiveValues.push_back(_simplexTableau.getCurrentObjectiveValue());
+    lpOptStatistics._consecutiveObjectiveValues.push_back(
+        _simplexTableau.getCurrentObjectiveValue());
 
     ++iterCount;
     tryLogObjValue(iterCount);
@@ -102,8 +108,8 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(con
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(const int iterCount)
-{
+void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(
+    const int iterCount) {
   if (_objValueLoggingFrequency &&
       (iterCount % _objValueLoggingFrequency == 0)) {
     SPDLOG_INFO("ITERATION {}", iterCount);
@@ -112,8 +118,8 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(const int 
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(const int iterCount)
-{
+bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
+    const int iterCount) {
   if (_reinversionFrequency && (iterCount % _reinversionFrequency == 0)) {
     if (!_simplexTableau.reinversion()) {
       SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
@@ -125,11 +131,10 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(const int 
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(const int iterCount)
-{
+bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
+    const int iterCount) {
   constexpr size_t HARD_ITERATION_LIMIT = 100000;
-  if (iterCount > HARD_ITERATION_LIMIT)
-  {
+  if (iterCount > HARD_ITERATION_LIMIT) {
     _simplexTableau._result = LPOptimizationResult::REACHED_ITERATION_LIMIT;
     return false;
   }
@@ -502,8 +507,10 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::removeRows(
   removeElements(_simplexTableau._basisMatrixInverse, shouldRowBeRemoved);
 }
 template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<
-    T, SimplexTraitsT>::lexicographicReoptimization(const bool minimize, const std::string& lexOptId, LPOptStatisticsVec<T>& lpOptStatisticsVec) {
+void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
+    lexicographicReoptimization(const bool minimize,
+                                const std::string &lexOptId,
+                                LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   int curVarIdxToBeOptimized = 0;
   int varsFixedCount = 0;
   while (curVarIdxToBeOptimized < _simplexTableau._variableInfos.size() &&
@@ -512,7 +519,9 @@ void RevisedPrimalSimplexPFIBounds<
     if (!_simplexTableau._variableInfos[curVarIdxToBeOptimized]._isFixed) {
       _simplexTableau.setObjective(
           singleVarObjective(curVarIdxToBeOptimized, minimize));
-      auto lpStatisticsFromSingleVarOpt = runImpl(fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized, (minimize ? "MIN" : "MAX")));
+      auto lpStatisticsFromSingleVarOpt =
+          runImpl(fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized,
+                              (minimize ? "MIN" : "MAX")));
       lpOptStatisticsVec.push_back(std::move(lpStatisticsFromSingleVarOpt));
     }
     ++curVarIdxToBeOptimized;
@@ -540,7 +549,9 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::fixNonBasicVariables(
       ++varsFixedCount;
     }
   }
-//  spdlog::info("XD VAR COUNT {} ROW COUNT {} FIXED VAR COUNT {}", _simplexTableau._variableInfos.size(), _simplexTableau._rowInfos.size(), varsFixedCount);
+  //  spdlog::info("XD VAR COUNT {} ROW COUNT {} FIXED VAR COUNT {}",
+  //  _simplexTableau._variableInfos.size(), _simplexTableau._rowInfos.size(),
+  //  varsFixedCount);
 }
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::unfixAllVariables() {
@@ -555,7 +566,11 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::unfixAllVariables() {
   }
 }
 
-template class RevisedPrimalSimplexPFIBounds<double,SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
-template class RevisedPrimalSimplexPFIBounds<double,SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
-template class RevisedPrimalSimplexPFIBounds<long double,SimplexTraits<long double, MatrixRepresentationType::SPARSE>>;
-template class RevisedPrimalSimplexPFIBounds<long double,SimplexTraits<long double, MatrixRepresentationType::NORMAL>>;
+template class RevisedPrimalSimplexPFIBounds<
+    double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
+template class RevisedPrimalSimplexPFIBounds<
+    double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
+template class RevisedPrimalSimplexPFIBounds<
+    long double, SimplexTraits<long double, MatrixRepresentationType::SPARSE>>;
+template class RevisedPrimalSimplexPFIBounds<
+    long double, SimplexTraits<long double, MatrixRepresentationType::NORMAL>>;

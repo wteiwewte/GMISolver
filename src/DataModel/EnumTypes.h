@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <set>
 #include <string>
 
 enum class SectionType : int8_t {
@@ -32,7 +33,8 @@ enum class BoundType : int8_t {
   FIXED_VARIABLE,
   BINARY_VARIABLE,
   FREE_VARIABLE,
-  LOWER_BOUND_MINUS_INF
+  LOWER_BOUND_MINUS_INF,
+  UPPER_BOUND_INTEGER
 };
 
 enum class LPOptimizationResult : int8_t {
@@ -65,6 +67,7 @@ enum class LPOptimizationType : int8_t {
 std::optional<SectionType> stringToSectionType(const std::string &string);
 std::optional<RowType> stringToRowType(const std::string &string);
 std::optional<BoundType> stringToBoundType(const std::string &string);
+std::set<size_t> allowedLinesCount(const BoundType boundType);
 std::string rowTypeToStr(const RowType rowType);
 std::string primalSimplexColumnPivotRuleToStr(
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule);

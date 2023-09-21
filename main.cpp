@@ -17,7 +17,8 @@
 
 ABSL_FLAG(std::string, log_level, "info", "log level");
 ABSL_FLAG(std::string, log_file, "GMISolver_out.txt", "log file");
-ABSL_FLAG(std::string, lp_opt_stats_file, "LPOptStatistics.txt", "Lp opt statistics log file");
+ABSL_FLAG(std::string, lp_opt_stats_file, "LPOptStatistics.txt",
+          "Lp opt statistics log file");
 ABSL_FLAG(std::string, gurobi_log_file, "Gurobi_logs.txt", "Gurobi log file");
 ABSL_FLAG(std::vector<std::string>, benchmark_simplex_types,
           std::vector<std::string>({"primal", "dual"}),
@@ -33,26 +34,29 @@ ABSL_FLAG(int32_t, reinversion_frequency, 300,
           "Basis matrix should be reinverted every nth iteration of simplex");
 ABSL_FLAG(bool, use_product_form_of_inverse, true,
           "Basis matrix inverse is represented via product form of inverse");
-ABSL_FLAG(bool, run_gomory, false,
-          "Run gomory scheme");
+ABSL_FLAG(bool, run_gomory, false, "Run gomory scheme");
 
 bool contains(const std::vector<std::string> &vec, const std::string &str) {
   return std::find(vec.begin(), vec.end(), str) != vec.end();
 }
 
 template <typename T, typename SimplexTraitsT>
-void runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram, LPOptStatisticsVec<T>& lpOptStatisticsVec) {
+void runPrimalSimplexWithImplicitBounds(
+    const LinearProgram<T> &linearProgram,
+    LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, true, absl::GetFlag(FLAGS_use_product_form_of_inverse));
-  RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> revisedPrimalSimplexPfiBounds(
-      simplexTableau,
-      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
-      absl::GetFlag(FLAGS_obj_value_logging_frequency),
-      absl::GetFlag(FLAGS_reinversion_frequency));
+  RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
+      revisedPrimalSimplexPfiBounds(
+          simplexTableau,
+          PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+          absl::GetFlag(FLAGS_obj_value_logging_frequency),
+          absl::GetFlag(FLAGS_reinversion_frequency));
   auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
   lpOptStatisticsVec.push_back(phaseOneLpOptStats);
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
-    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", revisedPrimalSimplexPfiBounds.type());
+    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED",
+                revisedPrimalSimplexPfiBounds.type());
     return;
   }
   lpOptStatisticsVec.push_back(revisedPrimalSimplexPfiBounds.runPhaseTwo());
@@ -61,49 +65,62 @@ void runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram, L
 }
 
 template <typename T, typename SimplexTraitsT>
-void runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram, LPOptStatisticsVec<T>& lpOptStatisticsVec) {
+void runDualSimplexWithImplicitBounds(
+    const LinearProgram<T> &linearProgram,
+    LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse));
-  lpOptStatisticsVec.push_back(RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
-      simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
-      absl::GetFlag(FLAGS_obj_value_logging_frequency),
-      absl::GetFlag(FLAGS_reinversion_frequency))
-      .run(""));
+  lpOptStatisticsVec.push_back(
+      RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
+          simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+          absl::GetFlag(FLAGS_obj_value_logging_frequency),
+          absl::GetFlag(FLAGS_reinversion_frequency))
+          .run(""));
   SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
 }
 
 template <typename T, typename SimplexTraitsT>
-void runDualSimplexGomoryWithPrimalCuts(const LinearProgram<T> &linearProgram, LPOptStatisticsVec<T>& lpOptStatisticsVec) {
+void runDualSimplexGomoryWithPrimalCuts(
+    const LinearProgram<T> &linearProgram,
+    LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse));
-  DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(simplexTableau, PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
-DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION, absl::GetFlag(FLAGS_obj_value_logging_frequency),
-absl::GetFlag(FLAGS_reinversion_frequency));
+  DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>
+      dualSimplexGomoryWithPrimalCuts(
+          simplexTableau,
+          PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+          DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+          absl::GetFlag(FLAGS_obj_value_logging_frequency),
+          absl::GetFlag(FLAGS_reinversion_frequency));
   dualSimplexGomoryWithPrimalCuts.run(lpOptStatisticsVec);
 }
 
-template <typename T>
-bool isLPTooBig(const LinearProgram<T>& linearProgram)
-{
+template <typename T> bool isLPTooBig(const LinearProgram<T> &linearProgram) {
   constexpr int MAX_NUMBER_OF_CONTRAINTS = 500;
   constexpr int MAX_NUMBER_OF_VARIABLES = 500;
-  return linearProgram.getRowInfos().size() > MAX_NUMBER_OF_CONTRAINTS || linearProgram.getVariableInfos().size() > MAX_NUMBER_OF_VARIABLES;
+  return linearProgram.getRowInfos().size() > MAX_NUMBER_OF_CONTRAINTS ||
+         linearProgram.getVariableInfos().size() > MAX_NUMBER_OF_VARIABLES;
 }
 
 template <typename T>
-void readLPModelAndProcess(const std::filesystem::path &modelFileMpsPath, LPOptStatisticsVec<T>& lpOptStatisticsVec) {
-  SPDLOG_INFO("Processing lp model from file {}", std::string{modelFileMpsPath});
+void readLPModelAndProcess(const std::filesystem::path &modelFileMpsPath,
+                           LPOptStatisticsVec<T> &lpOptStatisticsVec) {
+  SPDLOG_INFO("Processing lp model from file {}",
+              std::string{modelFileMpsPath});
   auto linearProgram = MpsReader<T>::read(modelFileMpsPath);
   if (!linearProgram.has_value()) {
-    spdlog::warn("Could not read properly lp from {} file", std::string{modelFileMpsPath});
-    lpOptStatisticsVec.push_back(LPOptStatistics<T>{._lpName = modelFileMpsPath.filename(), ._optResult=LPOptimizationResult::COULD_NOT_LOAD});
+    spdlog::warn("Could not read properly lp from {} file",
+                 std::string{modelFileMpsPath});
+    lpOptStatisticsVec.push_back(
+        LPOptStatistics<T>{._lpName = modelFileMpsPath.filename(),
+                           ._optResult = LPOptimizationResult::COULD_NOT_LOAD});
     return;
   }
 
   constexpr bool SKIP_TO_BIG_LPS = false;
-  if (SKIP_TO_BIG_LPS && isLPTooBig(*linearProgram))
-  {
-    SPDLOG_INFO("Skipped too big LP from file {}", std::string{modelFileMpsPath});
+  if (SKIP_TO_BIG_LPS && isLPTooBig(*linearProgram)) {
+    SPDLOG_INFO("Skipped too big LP from file {}",
+                std::string{modelFileMpsPath});
     return;
   }
 
@@ -111,29 +128,42 @@ void readLPModelAndProcess(const std::filesystem::path &modelFileMpsPath, LPOptS
       absl::GetFlag(FLAGS_benchmark_simplex_types);
   const bool processAllTypes = contains(simplexTypesToBenchmark, "all");
   if (processAllTypes || contains(simplexTypesToBenchmark, "primal"))
-    runPrimalSimplexWithImplicitBounds<T, SimplexTraits<T, MatrixRepresentationType::NORMAL>>(*linearProgram, lpOptStatisticsVec);
+    runPrimalSimplexWithImplicitBounds<
+        T, SimplexTraits<T, MatrixRepresentationType::NORMAL>>(
+        *linearProgram, lpOptStatisticsVec);
 
   if (processAllTypes || contains(simplexTypesToBenchmark, "primal_sparse"))
-    runPrimalSimplexWithImplicitBounds<T, SimplexTraits<T, MatrixRepresentationType::SPARSE>>(*linearProgram, lpOptStatisticsVec);
+    runPrimalSimplexWithImplicitBounds<
+        T, SimplexTraits<T, MatrixRepresentationType::SPARSE>>(
+        *linearProgram, lpOptStatisticsVec);
 
   if (processAllTypes || contains(simplexTypesToBenchmark, "dual"))
-    runDualSimplexWithImplicitBounds<T, SimplexTraits<T, MatrixRepresentationType::NORMAL>>(*linearProgram, lpOptStatisticsVec);
+    runDualSimplexWithImplicitBounds<
+        T, SimplexTraits<T, MatrixRepresentationType::NORMAL>>(
+        *linearProgram, lpOptStatisticsVec);
 
   if (processAllTypes || contains(simplexTypesToBenchmark, "dual_sparse"))
-    runDualSimplexWithImplicitBounds<T, SimplexTraits<T, MatrixRepresentationType::SPARSE>>(*linearProgram, lpOptStatisticsVec);
+    runDualSimplexWithImplicitBounds<
+        T, SimplexTraits<T, MatrixRepresentationType::SPARSE>>(
+        *linearProgram, lpOptStatisticsVec);
 
-  if (absl::GetFlag(FLAGS_run_gomory))
-  {
-    runDualSimplexGomoryWithPrimalCuts<T, SimplexTraits<T, MatrixRepresentationType::SPARSE>>(*linearProgram, lpOptStatisticsVec);
-    runDualSimplexGomoryWithPrimalCuts<T, SimplexTraits<T, MatrixRepresentationType::NORMAL>>(*linearProgram, lpOptStatisticsVec);
+  if (absl::GetFlag(FLAGS_run_gomory)) {
+    runDualSimplexGomoryWithPrimalCuts<
+        T, SimplexTraits<T, MatrixRepresentationType::SPARSE>>(
+        *linearProgram, lpOptStatisticsVec);
+    runDualSimplexGomoryWithPrimalCuts<
+        T, SimplexTraits<T, MatrixRepresentationType::NORMAL>>(
+        *linearProgram, lpOptStatisticsVec);
   }
 }
 
 template <typename T>
-LPOptStatistics<T> readLPModelAndOptimizeByGurobi(const std::filesystem::path &modelFileMpsPath)
-{
-  GurobiOptimizer gurobiOptimizer(absl::GetFlag(FLAGS_gurobi_log_file), modelFileMpsPath);
-  return convert<T>(gurobiOptimizer.optimize(LPOptimizationType::LINEAR_RELAXATION));
+LPOptStatistics<T>
+readLPModelAndOptimizeByGurobi(const std::filesystem::path &modelFileMpsPath) {
+  GurobiOptimizer gurobiOptimizer(absl::GetFlag(FLAGS_gurobi_log_file),
+                                  modelFileMpsPath);
+  return convert<T>(
+      gurobiOptimizer.optimize(LPOptimizationType::LINEAR_RELAXATION));
 }
 
 void initFileLogger() {
@@ -149,8 +179,7 @@ void initFileLogger() {
 }
 
 template <typename T>
-void printLPOptStats(const LPOptStatisticsVec<T>& lpOptStatisticsVec)
-{
+void printLPOptStats(const LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_st>(
       absl::GetFlag(FLAGS_lp_opt_stats_file), true);
   auto fileLogger = std::make_shared<spdlog::logger>("fileLogger", fileSink);
@@ -169,19 +198,21 @@ int main(int argc, char **argv) {
   LPOptStatisticsVec<FloatingPointT> lpOptStatisticsVec;
 
   if (const auto lpModelFile = absl::GetFlag(FLAGS_lp_model_file);
-      lpModelFile.has_value())
-  {
-    readLPModelAndProcess<FloatingPointT>(std::filesystem::path{*lpModelFile}, lpOptStatisticsVec);
-    lpOptStatisticsVec.push_back(readLPModelAndOptimizeByGurobi<FloatingPointT>(std::filesystem::path{*lpModelFile}));
-  }
-  else if (const auto lpModelsDirectory =
-               absl::GetFlag(FLAGS_lp_models_directory);
-           lpModelsDirectory.has_value())
+      lpModelFile.has_value()) {
+    readLPModelAndProcess<FloatingPointT>(std::filesystem::path{*lpModelFile},
+                                          lpOptStatisticsVec);
+    lpOptStatisticsVec.push_back(readLPModelAndOptimizeByGurobi<FloatingPointT>(
+        std::filesystem::path{*lpModelFile}));
+  } else if (const auto lpModelsDirectory =
+                 absl::GetFlag(FLAGS_lp_models_directory);
+             lpModelsDirectory.has_value())
     for (const auto &lpModelFileEntry :
-         std::filesystem::directory_iterator(*lpModelsDirectory))
-    {
-      readLPModelAndProcess<FloatingPointT>(lpModelFileEntry.path(), lpOptStatisticsVec);
-      lpOptStatisticsVec.push_back(readLPModelAndOptimizeByGurobi<FloatingPointT>(lpModelFileEntry.path()));
+         std::filesystem::directory_iterator(*lpModelsDirectory)) {
+      readLPModelAndProcess<FloatingPointT>(lpModelFileEntry.path(),
+                                            lpOptStatisticsVec);
+      lpOptStatisticsVec.push_back(
+          readLPModelAndOptimizeByGurobi<FloatingPointT>(
+              lpModelFileEntry.path()));
     }
 
   printLPOptStats(lpOptStatisticsVec);

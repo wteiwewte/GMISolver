@@ -337,18 +337,8 @@ MpsReader<T>::read(const std::string &filePath) {
         return std::nullopt;
       }
 
-      if (*readBoundType == BoundType::FREE_VARIABLE ||
-          *readBoundType == BoundType::LOWER_BOUND_MINUS_INF) {
-        if (lineParts.size() != 3) {
-          SPDLOG_WARN("Unexpected number of elements in free|lower bound -inf "
-                      "bound line {}",
-                      readLine);
-          return std::nullopt;
-        }
-      } else if (lineParts.size() != 4) {
-        SPDLOG_WARN("Unexpected number of elements in non-(free|lower bound "
-                    "-inf) bound line {}",
-                    readLine);
+      if (!allowedLinesCount(*readBoundType).contains(lineParts.size())) {
+        SPDLOG_WARN("Unexpected number of elements in bound line {}", readLine);
         return std::nullopt;
       }
 
@@ -378,6 +368,15 @@ MpsReader<T>::read(const std::string &filePath) {
 
         linearProgram._variableUpperBounds[variableIdx] =
             convert(coefficientValueStr);
+        break;
+      }
+      case BoundType::UPPER_BOUND_INTEGER: {
+        if (!linearProgram._variableLowerBounds[variableIdx].has_value())
+          linearProgram._variableLowerBounds[variableIdx] = 0.0;
+
+        linearProgram._variableUpperBounds[variableIdx] =
+            convert(coefficientValueStr);
+        linearProgram._variableInfos[variableIdx]._type = VariableType::INTEGER;
         break;
       }
       case BoundType::BINARY_VARIABLE: {

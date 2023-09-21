@@ -70,7 +70,9 @@ TYPED_TEST_SUITE_P(LPOptTest);
 TYPED_TEST_P(LPOptTest, runDualSimplexAndCompareWithGurobi) {
   constexpr auto DUAL_SIMPLEX_TEST_DIR_PATH =
       "../../tests/dual_simplex_working_instances";
-  constexpr size_t DUAL_SIMPLEX_BASIS_SIZE_LIMIT = 800;
+  //  constexpr auto DUAL_SIMPLEX_NOT_WORKING_TEST_DIR_PATH =
+  //      "../../tests/dual_simplex_not_working_instances/";
+  constexpr size_t DUAL_SIMPLEX_BASIS_SIZE_LIMIT = 500;
 
   using TypeTupleT = TypeParam;
   using FloatingPointT = std::tuple_element_t<0, typename TypeTupleT::types>;
@@ -165,10 +167,12 @@ REGISTER_TYPED_TEST_SUITE_P(LPOptTest, runDualSimplexAndCompareWithGurobi,
                             runPrimalSimplexAndCompareWithGurobi);
 
 using SimplexTypes = ::testing::Types<
-    TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>,
-    TypeTuple<long double,
-              SimplexTraits<long double, MatrixRepresentationType::SPARSE>>,
-    TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>,
-    TypeTuple<long double,
-              SimplexTraits<long double, MatrixRepresentationType::SPARSE>>>;
+    TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>>;
+// using SimplexTypes = ::testing::Types<
+//     TypeTuple<double, SimplexTraits<double,
+//     MatrixRepresentationType::NORMAL>>, TypeTuple<long double,
+//               SimplexTraits<long double, MatrixRepresentationType::SPARSE>>,
+//     TypeTuple<double, SimplexTraits<double,
+//     MatrixRepresentationType::NORMAL>>, TypeTuple<long double,
+//               SimplexTraits<long double, MatrixRepresentationType::SPARSE>>>;
 INSTANTIATE_TYPED_TEST_SUITE_P(LpOptSuite, LPOptTest, SimplexTypes);

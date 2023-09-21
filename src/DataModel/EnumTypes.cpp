@@ -44,8 +44,29 @@ std::optional<BoundType> stringToBoundType(const std::string &string) {
     return BoundType::FREE_VARIABLE;
   else if (string == "MI")
     return BoundType::LOWER_BOUND_MINUS_INF;
+  else if (string == "UI")
+    return BoundType::UPPER_BOUND_INTEGER;
 
   return std::nullopt;
+}
+
+std::set<size_t> allowedLinesCount(const BoundType boundType) {
+  switch (boundType) {
+  case BoundType::LOWER_BOUND:
+    return {4};
+  case BoundType::UPPER_BOUND:
+    return {4};
+  case BoundType::FIXED_VARIABLE:
+    return {4};
+  case BoundType::BINARY_VARIABLE:
+    return {3, 4};
+  case BoundType::FREE_VARIABLE:
+    return {3};
+  case BoundType::LOWER_BOUND_MINUS_INF:
+    return {3};
+  case BoundType::UPPER_BOUND_INTEGER:
+    return {4};
+  }
 }
 
 std::string rowTypeToStr(const RowType rowType) {

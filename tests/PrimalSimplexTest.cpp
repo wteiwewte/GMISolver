@@ -4,38 +4,12 @@
 #include "src/Util/GurobiOptimizer.h"
 #include "src/Util/LPOptStatistics.h"
 #include "src/Util/MpsReader.h"
+#include "tests/CommonDefs.h"
 
 #include <filesystem>
 
-#include <absl/flags/flag.h>
 #include <gtest/gtest.h>
 #include <spdlog/spdlog.h>
-
-ABSL_FLAG(
-    int32_t, obj_value_logging_frequency, 0,
-    "Current objective value should be logged every nth iteration of simplex");
-ABSL_FLAG(int32_t, reinversion_frequency, 60,
-          "Basis matrix should be reinverted every nth iteration of simplex");
-ABSL_FLAG(bool, use_product_form_of_inverse, true,
-          "Basis matrix inverse is represented via product form of inverse");
-ABSL_FLAG(bool, validate_simplex, false, "Validate simplex implementations");
-
-template <typename... Ts> struct TypeTuple {
-  using types = std::tuple<Ts...>;
-};
-
-template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T>
-runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
-  SimplexTableau<T, SimplexTraitsT> simplexTableau(
-      linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse));
-  return RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
-             simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
-             absl::GetFlag(FLAGS_obj_value_logging_frequency),
-             absl::GetFlag(FLAGS_reinversion_frequency),
-             absl::GetFlag(FLAGS_validate_simplex))
-      .run("");
-}
 
 template <typename T> struct PrimalSimplexOutput {
   LPOptStatistics<T> _phaseOneLpOptStats;
@@ -65,59 +39,13 @@ runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
           ._phaseTwoLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseTwo()};
 }
 
-template <typename T> class LPOptTest : public ::testing::Test {
+template <typename T> class PrimalSimplexTest : public ::testing::Test {
 protected:
   void SetUp() override {}
 };
 
-TYPED_TEST_SUITE_P(LPOptTest);
-
-TYPED_TEST_P(LPOptTest, runDualSimplexAndCompareWithGurobi) {
-  constexpr auto DUAL_SIMPLEX_TEST_DIR_PATH =
-      "../../tests/dual_simplex_working_instances";
-  //  constexpr auto DUAL_SIMPLEX_NOT_WORKING_TEST_DIR_PATH =
-  //      "../../tests/dual_simplex_not_working_instances/";
-  constexpr size_t DUAL_SIMPLEX_BASIS_SIZE_LIMIT = 500;
-
-  using TypeTupleT = TypeParam;
-  using FloatingPointT = std::tuple_element_t<0, typename TypeTupleT::types>;
-  using SimplexTraitsT = std::tuple_element_t<1, typename TypeTupleT::types>;
-
-  for (const auto &lpModelSetDirectory :
-       std::filesystem::directory_iterator(DUAL_SIMPLEX_TEST_DIR_PATH)) {
-    if (!lpModelSetDirectory.is_directory())
-      continue;
-
-    SPDLOG_INFO("MODEL SET DIRECTORY {}",
-                std::string{lpModelSetDirectory.path().filename()});
-    for (const auto &lpModelFileEntry :
-         std::filesystem::directory_iterator(lpModelSetDirectory)) {
-      SPDLOG_INFO("MODEL {}", std::string{lpModelFileEntry.path().filename()});
-      auto linearProgram =
-          MpsReader<FloatingPointT>::read(lpModelFileEntry.path());
-      ASSERT_TRUE(linearProgram.has_value());
-
-      if (linearProgram->getRowInfos().size() > DUAL_SIMPLEX_BASIS_SIZE_LIMIT)
-        continue;
-
-      const auto dualSimplexLpOptStats =
-          runDualSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
-              *linearProgram);
-      const auto gurobiLPOptStats =
-          GurobiOptimizer("", lpModelFileEntry.path())
-              .optimize(LPOptimizationType::LINEAR_RELAXATION);
-      ASSERT_EQ(gurobiLPOptStats._optResult, dualSimplexLpOptStats._optResult);
-      if (dualSimplexLpOptStats._optResult ==
-          LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
-        SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
-        SPDLOG_INFO("SIMPLEX OPT {}", dualSimplexLpOptStats._optimalValue);
-        EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                    dualSimplexLpOptStats._optimalValue, 0.00001);
-      }
-    }
-  }
-}
-TYPED_TEST_P(LPOptTest, runPrimalSimplexAndCompareWithGurobi) {
+TYPED_TEST_SUITE_P(PrimalSimplexTest);
+TYPED_TEST_P(PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobi) {
   constexpr auto PRIMAL_SIMPLEX_TEST_DIR_PATH =
       "../../tests/primal_simplex_working_instances";
   constexpr size_t PRIMAL_SIMPLEX_BASIS_SIZE_LIMIT = 200;
@@ -168,16 +96,17 @@ TYPED_TEST_P(LPOptTest, runPrimalSimplexAndCompareWithGurobi) {
   }
 }
 
-REGISTER_TYPED_TEST_SUITE_P(LPOptTest, runDualSimplexAndCompareWithGurobi,
+REGISTER_TYPED_TEST_SUITE_P(PrimalSimplexTest,
                             runPrimalSimplexAndCompareWithGurobi);
 
-using SimplexTypes = ::testing::Types<
+using PrimalSimplexTypes = ::testing::Types<
     TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>>;
-// using SimplexTypes = ::testing::Types<
+// using PrimalSimplexTypes = ::testing::Types<
 //     TypeTuple<double, SimplexTraits<double,
 //     MatrixRepresentationType::NORMAL>>, TypeTuple<long double,
 //               SimplexTraits<long double, MatrixRepresentationType::SPARSE>>,
 //     TypeTuple<double, SimplexTraits<double,
 //     MatrixRepresentationType::NORMAL>>, TypeTuple<long double,
 //               SimplexTraits<long double, MatrixRepresentationType::SPARSE>>>;
-INSTANTIATE_TYPED_TEST_SUITE_P(LpOptSuite, LPOptTest, SimplexTypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(PrimalSimplexTestSuite, PrimalSimplexTest,
+                               PrimalSimplexTypes);

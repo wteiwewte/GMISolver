@@ -6,7 +6,7 @@
 
 template <typename T, typename SimplexTraitsT>
 SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
-    const LinearProgram<T> &linearProgram, const bool isPrimalSimplex,
+    const LinearProgram<T> &linearProgram, const SimplexType simplexType,
     const bool useProductFormOfInverse)
     : _initialProgram(linearProgram),
       _variableInfos(linearProgram._variableInfos),
@@ -24,7 +24,7 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
   convertToStandardForm();
   SPDLOG_TRACE(toString());
 
-  if (isPrimalSimplex) {
+  if (simplexType == SimplexType::PRIMAL) {
     SPDLOG_INFO("Making RHS non-negative");
     makeRightHandSidesNonNegative();
     SPDLOG_TRACE(toString());
@@ -33,7 +33,7 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
   SPDLOG_INFO("Adding artificial variables");
   addArtificialVariables();
   initMatrixRepresentations();
-  init(isPrimalSimplex);
+  init(simplexType);
   SPDLOG_TRACE("Simplex tableau with artificial variables");
   SPDLOG_TRACE(toString());
   SPDLOG_TRACE(toStringLpSolveFormat());
@@ -111,15 +111,16 @@ SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::init(const bool isPrimalSimplex) {
+void SimplexTableau<T, SimplexTraitsT>::init(const SimplexType simplexType) {
   if (auto simplexBasisData = createBasisFromArtificialVars();
       simplexBasisData.has_value())
     _simplexBasisData = std::move(*simplexBasisData);
 
   initBasisMatrixInverse();
-  setObjective(isPrimalSimplex ? artificialObjective() : originalObjective());
+  setObjective((simplexType == SimplexType::PRIMAL) ? artificialObjective()
+                                                    : originalObjective());
 
-  if (!isPrimalSimplex) {
+  if (simplexType == SimplexType::DUAL) {
     initBoundsForDualSimplex();
     calculateCurrentObjectiveValue();
     calculateSolution();

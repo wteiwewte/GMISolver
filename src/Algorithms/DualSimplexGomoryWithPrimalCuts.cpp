@@ -11,7 +11,8 @@ DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::
         const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
         const DualSimplexRowPivotRule dualSimplexRowPivotRule,
         const int32_t objValueLoggingFrequency,
-        const int32_t reinversionFrequency, const bool validateSimplex)
+        const int32_t reinversionFrequency,
+        const ValidateSimplex validateSimplex)
     : _simplexTableau(simplexTableau),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),

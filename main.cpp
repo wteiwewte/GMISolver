@@ -34,7 +34,8 @@ ABSL_FLAG(int32_t, reinversion_frequency, 300,
           "Basis matrix should be reinverted every nth iteration of simplex");
 ABSL_FLAG(bool, use_product_form_of_inverse, true,
           "Basis matrix inverse is represented via product form of inverse");
-ABSL_FLAG(bool, validate_simplex, false, "Validate simplex implementations");
+ABSL_FLAG(ValidateSimplex, validate_simplex, ValidateSimplex::NO,
+          "Validate simplex implementations");
 ABSL_FLAG(bool, run_gomory, false, "Run gomory scheme");
 
 bool contains(const std::vector<std::string> &vec, const std::string &str) {
@@ -46,7 +47,8 @@ void runPrimalSimplexWithImplicitBounds(
     const LinearProgram<T> &linearProgram,
     LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
-      linearProgram, true, absl::GetFlag(FLAGS_use_product_form_of_inverse));
+      linearProgram, SimplexType::PRIMAL,
+      absl::GetFlag(FLAGS_use_product_form_of_inverse));
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
       revisedPrimalSimplexPfiBounds(
           simplexTableau,
@@ -71,7 +73,8 @@ void runDualSimplexWithImplicitBounds(
     const LinearProgram<T> &linearProgram,
     LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
-      linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse));
+      linearProgram, SimplexType::DUAL,
+      absl::GetFlag(FLAGS_use_product_form_of_inverse));
   lpOptStatisticsVec.push_back(
       RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
           simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
@@ -87,7 +90,8 @@ void runDualSimplexGomoryWithPrimalCuts(
     const LinearProgram<T> &linearProgram,
     LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
-      linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse));
+      linearProgram, SimplexType::DUAL,
+      absl::GetFlag(FLAGS_use_product_form_of_inverse));
   DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>
       dualSimplexGomoryWithPrimalCuts(
           simplexTableau,

@@ -6,6 +6,8 @@
 #include <set>
 #include <string>
 
+#include <absl/strings/string_view.h>
+
 enum class SectionType : int8_t {
   UNDEFINED = 0,
   NAME,
@@ -64,6 +66,16 @@ enum class LPOptimizationType : int8_t {
   INTEGER_PROGRAM,
   MIXED_INTEGER_PROGRAM
 };
+
+enum class SimplexType : int8_t {
+  PRIMAL = 0,
+  DUAL,
+};
+
+enum class ValidateSimplex : int8_t { YES = 0, NO, UNKNOWN };
+bool AbslParseFlag(absl::string_view text, ValidateSimplex *validateSimplex,
+                   std::string *error);
+std::string AbslUnparseFlag(ValidateSimplex validateSimplex);
 
 std::optional<SectionType> stringToSectionType(const std::string &string);
 std::optional<RowType> stringToRowType(const std::string &string);

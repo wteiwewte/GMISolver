@@ -135,3 +135,32 @@ lpOptimizationResultToStr(const LPOptimizationResult lpOptimizationResult) {
 
   return "";
 }
+
+bool AbslParseFlag(absl::string_view text, ValidateSimplex *validateSimplex,
+                   std::string *error) {
+  if (text == "yes") {
+    *validateSimplex = ValidateSimplex::YES;
+    return true;
+  }
+  if (text == "no") {
+    *validateSimplex = ValidateSimplex::NO;
+    return true;
+  }
+  *error = "unknown value for enumeration";
+  return false;
+}
+
+// AbslUnparseFlag converts from an OutputMode to a string.
+// Must be in same namespace as OutputMode.
+
+// Returns a textual flag value corresponding to the OutputMode `mode`.
+std::string AbslUnparseFlag(ValidateSimplex validateSimplex) {
+  switch (validateSimplex) {
+  case ValidateSimplex::YES:
+    return "yes";
+  case ValidateSimplex::NO:
+    return "no";
+  default:
+    return "unknown";
+  }
+}

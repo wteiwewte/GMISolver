@@ -16,7 +16,8 @@ public:
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
       const DualSimplexRowPivotRule dualSimplexRowPivotRule,
       const int32_t objValueLoggingFrequency,
-      const int32_t reinversionFrequency, const bool validateSimplex);
+      const int32_t reinversionFrequency,
+      const ValidateSimplex validateSimplex);
 
   std::string type() const;
 
@@ -44,7 +45,7 @@ private:
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;
   const int32_t _objValueLoggingFrequency;
   const int32_t _reinversionFrequency;
-  const bool _validateSimplex;
+  const ValidateSimplex _validateSimplex;
 };
 
 #endif // GMISOLVER_REVISEDDUALSIMPLEXPFIBOUNDS_H

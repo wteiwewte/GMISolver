@@ -20,7 +20,8 @@ template <typename T, typename SimplexTraitsT>
 PrimalSimplexOutput<T>
 runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
-      linearProgram, true, absl::GetFlag(FLAGS_use_product_form_of_inverse));
+      linearProgram, SimplexType::PRIMAL,
+      absl::GetFlag(FLAGS_use_product_form_of_inverse));
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
       revisedPrimalSimplexPfiBounds(
           simplexTableau,

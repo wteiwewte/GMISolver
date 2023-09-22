@@ -23,7 +23,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
     const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency,
-    const bool validateSimplex)
+    const ValidateSimplex validateSimplex)
     : _simplexTableau(simplexTableau),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
@@ -146,7 +146,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
     const LPOptStatistics<T> &lpOptStatistics) {
-  if (!_validateSimplex)
+  if (_validateSimplex == ValidateSimplex::NO)
     return true;
 
   if (!SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
@@ -161,11 +161,11 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
     tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics) {
-  if (!_validateSimplex)
+  if (_validateSimplex == ValidateSimplex::NO)
     return;
 
   if (!SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-           .validateOptimality(true)) {
+           .validateOptimality(SimplexType::PRIMAL)) {
     _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
   }
 }

@@ -21,14 +21,14 @@ template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class SimplexTableau {
 public:
   SimplexTableau(const LinearProgram<T> &linearProgram,
-                 const bool isPrimalSimplex,
+                 const SimplexType simplexType,
                  const bool useProductFormOfInverse);
 
   void convertToStandardForm();
   void makeRightHandSidesNonNegative();
   void addBoundsToMatrix();
   void addArtificialVariables();
-  void init(const bool isPrimalSimplex);
+  void init(const SimplexType simplexType);
 
   std::vector<T> artificialObjective() const;
   std::vector<T> originalObjective() const;

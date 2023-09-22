@@ -12,16 +12,18 @@ public:
         _simplexLpOptStats(simplexLpOptStats) {}
 
   bool validatePrimalIteration() const {
-    return validatePrimalFeasibility() && validateObjectiveMonotonicity(true);
+    return validatePrimalFeasibility() &&
+           validateObjectiveMonotonicity(SimplexType::PRIMAL);
   }
 
   bool validateDualIteration() const {
-    return validateDualFeasibility() && validateObjectiveMonotonicity(false);
+    return validateDualFeasibility() &&
+           validateObjectiveMonotonicity(SimplexType::DUAL);
   }
 
-  bool validateOptimality(const bool isPrimalSimplex) const {
+  bool validateOptimality(const SimplexType simplexType) const {
     return validatePrimalFeasibility() && validateDualFeasibility() &&
-           validateObjectiveMonotonicity(isPrimalSimplex);
+           validateObjectiveMonotonicity(simplexType);
   }
 
 private:
@@ -77,8 +79,6 @@ private:
               ._isColumnAtLowerBoundBitset[varIdx] &&
           (_simplexTableau._reducedCosts[varIdx] <
            -NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE)) {
-        SPDLOG_INFO("LB VAR IDX {} REDUCED COST {}", varIdx,
-                    _simplexTableau._reducedCosts[varIdx]);
         return false;
       }
 
@@ -93,7 +93,7 @@ private:
     return true;
   }
 
-  bool validateObjectiveMonotonicity(const bool isPrimalSimplex) const {
+  bool validateObjectiveMonotonicity(const SimplexType simplexType) const {
     const auto &consecutiveObjValues =
         _simplexLpOptStats._consecutiveObjectiveValues;
     if (consecutiveObjValues.size() <= 1)
@@ -103,7 +103,7 @@ private:
         consecutiveObjValues[consecutiveObjValues.size() - 1];
     const auto beforeLastObjectiveValue =
         consecutiveObjValues[consecutiveObjValues.size() - 2];
-    if (isPrimalSimplex)
+    if (simplexType == SimplexType::PRIMAL)
       return lastObjectiveValue <
              beforeLastObjectiveValue +
                  NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE;

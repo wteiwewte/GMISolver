@@ -15,7 +15,8 @@ template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T>
 runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
-      linearProgram, false, absl::GetFlag(FLAGS_use_product_form_of_inverse));
+      linearProgram, SimplexType::DUAL,
+      absl::GetFlag(FLAGS_use_product_form_of_inverse));
   return RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
              simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
              absl::GetFlag(FLAGS_obj_value_logging_frequency),

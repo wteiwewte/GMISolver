@@ -28,20 +28,6 @@ std::vector<std::string> splitString(const std::string &str) {
 double convert(const std::string &str) { return std::stod(str); }
 
 template <typename T>
-bool checkIfAllBoundAreSpeficied(
-    const std::vector<VariableInfo> &variableInfos,
-    const std::vector<std::optional<T>> &variableLowerBounds,
-    const std::vector<std::optional<T>> &variableUpperBounds) {
-  return (variableLowerBounds.size() == variableInfos.size()) &&
-         std::all_of(
-             variableLowerBounds.begin(), variableLowerBounds.end(),
-             [](const std::optional<T> &lb) { return lb.has_value(); }) &&
-         (variableUpperBounds.size() == variableInfos.size()) &&
-         std::all_of(variableUpperBounds.begin(), variableUpperBounds.end(),
-                     [](const std::optional<T> &up) { return up.has_value(); });
-}
-
-template <typename T>
 int countBoundsSpecified(const std::vector<std::optional<T>> &bounds) {
   return std::count_if(
       bounds.begin(), bounds.end(),
@@ -476,13 +462,6 @@ bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
               linearProgram._rowInfos.size(),
               countBoundsSpecified(linearProgram._variableLowerBounds),
               countBoundsSpecified(linearProgram._variableUpperBounds));
-
-  //  if (!checkIfAllBoundAreSpeficied(linearProgram._variableInfos,
-  //                                   linearProgram._variableLowerBounds,
-  //                                   linearProgram._variableUpperBounds)) {
-  //    SPDLOG_WARN("Every variable must have defined bounds");
-  //    return false;
-  //  }
 
   return true;
 }

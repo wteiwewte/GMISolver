@@ -29,6 +29,8 @@ public:
   const std::vector<T> &getObjective() const { return _objective; }
   const std::string &getName() const { return _name; }
 
+  bool checkIfAllBoundsAreSpeficied() const;
+
 private:
   friend struct MpsReader<T>;
   template <typename U, typename ComparisonTraitsU> friend class SimplexTableau;

@@ -14,7 +14,8 @@ template <typename T> struct LPOptStatisticsPrinter {
   constexpr static int LP_NAME_WIDTH = 30;
   constexpr static int SIMPLEX_ALGO_TYPE_WIDTH = 35;
   constexpr static int LP_OPT_RESULT_WIDTH = 25;
-  constexpr static int OPT_VALUE_WIDTH_WIDTH = 12;
+  constexpr static int OPT_VALUE_WIDTH = 20;
+  constexpr static int ITERATION_COUNT_WIDTH = 12;
   constexpr static int REINVERSION_FREQUENCY_WIDTH = 12;
 
   LPOptStatisticsPrinter(const LPOptStatisticsVec<T> &lpOptStatisticsVec)

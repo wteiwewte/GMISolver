@@ -104,12 +104,12 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
 
     SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   }
-  SPDLOG_INFO("{} ENDED, LP OPT RESULT {}, ITERATION COUNT {}", type(),
-              lpOptimizationResultToStr(_simplexTableau._result), iterCount);
-
   if (_simplexTableau.getLPOptResult() ==
       LPOptimizationResult::BOUNDED_AND_FEASIBLE)
     tryValidateOptimalSolutions(lpOptStatistics);
+
+  SPDLOG_INFO("{} ENDED, LP OPT RESULT {}, ITERATION COUNT {}", type(),
+              lpOptimizationResultToStr(_simplexTableau._result), iterCount);
 
   lpOptStatistics._optResult = _simplexTableau.getLPOptResult();
   lpOptStatistics._optimalValue = _simplexTableau.getCurrentObjectiveValue();
@@ -515,16 +515,18 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::removeRows(
 
   SPDLOG_INFO("REDUNDANT {} CONSTRAINTS IN LP FORMULATION", rowsToBeRemoved);
 
-  auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset, _1, _2] =
-      _simplexTableau._simplexBasisData;
+  auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset,
+         isColumnAtLowerBoundBitset, _2] = _simplexTableau._simplexBasisData;
 
   std::vector<int> oldRowIdxToNewRowIdx(shouldRowBeRemoved.size());
   int curNewRowIdx = 0;
 
   for (int rowIdx = 0; rowIdx < shouldRowBeRemoved.size(); ++rowIdx)
-    if (shouldRowBeRemoved[rowIdx])
-      isBasicColumnIndexBitset[rowToBasisColumnIdxMap[rowIdx]] = false;
-    else
+    if (shouldRowBeRemoved[rowIdx]) {
+      const auto basicColumnIdx = rowToBasisColumnIdxMap[rowIdx];
+      isBasicColumnIndexBitset[basicColumnIdx] = false;
+      isColumnAtLowerBoundBitset[basicColumnIdx] = true;
+    } else
       oldRowIdxToNewRowIdx[rowIdx] = curNewRowIdx++;
 
   std::vector<int> newRowToBasisColumnIdxMap(curNewRowIdx);

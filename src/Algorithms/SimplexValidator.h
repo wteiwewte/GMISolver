@@ -4,6 +4,8 @@
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/LPOptStatistics.h"
 
+#include <unordered_set>
+
 template <typename T, typename SimplexTraitsT> class SimplexValidator {
 public:
   SimplexValidator(const SimplexTableau<T, SimplexTraitsT> &_simplexTableau,
@@ -12,17 +14,18 @@ public:
         _simplexLpOptStats(simplexLpOptStats) {}
 
   bool validatePrimalIteration() const {
-    return validatePrimalFeasibility() &&
+    return validateBasis() && validatePrimalFeasibility() &&
            validateObjectiveMonotonicity(SimplexType::PRIMAL);
   }
 
   bool validateDualIteration() const {
-    return validateDualFeasibility() &&
+    return validateBasis() && validateDualFeasibility() &&
            validateObjectiveMonotonicity(SimplexType::DUAL);
   }
 
   bool validateOptimality(const SimplexType simplexType) const {
-    return validatePrimalFeasibility() && validateDualFeasibility() &&
+    return validateBasis() && validatePrimalFeasibility() &&
+           validateDualFeasibility() &&
            validateObjectiveMonotonicity(simplexType);
   }
 
@@ -44,8 +47,9 @@ private:
       const auto lhs = adder.currentSum();
       const auto rhs = _simplexTableau._initialRightHandSides[rowIdx];
       if (!NumericalTraitsT::equal(
-              lhs, rhs, NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE))
+              lhs, rhs, NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)) {
         return false;
+      }
     }
     return true;
   }
@@ -114,9 +118,60 @@ private:
   }
 
   bool validateBasis() const {
-    for (int colIdx = 0; colIdx < _simplexTableau._variableInfos.size();
-         ++colIdx) {
+    return validateCorrectBasisDistribution() && validateBoundExistence() &&
+           validateRowToColumnMapping();
+  }
+
+  bool validateCorrectBasisDistribution() const {
+    const auto &simplexBasisData = _simplexTableau._simplexBasisData;
+    if ((simplexBasisData._isBasicColumnIndexBitset &
+         simplexBasisData._isColumnAtLowerBoundBitset &
+         simplexBasisData._isColumnAtUpperBoundBitset)
+            .any()) {
+      return false;
     }
+    if (!(simplexBasisData._isBasicColumnIndexBitset |
+          simplexBasisData._isColumnAtLowerBoundBitset |
+          simplexBasisData._isColumnAtUpperBoundBitset)
+             .all()) {
+      return false;
+    }
+    return true;
+  }
+
+  bool validateBoundExistence() const {
+    const auto &simplexBasisData = _simplexTableau._simplexBasisData;
+    for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
+         ++varIdx) {
+      if (simplexBasisData._isColumnAtLowerBoundBitset[varIdx] &&
+          !_simplexTableau._variableLowerBounds[varIdx].has_value())
+        return false;
+
+      if (simplexBasisData._isColumnAtUpperBoundBitset[varIdx] &&
+          !_simplexTableau._variableUpperBounds[varIdx].has_value())
+        return false;
+    }
+    return true;
+  }
+
+  bool validateRowToColumnMapping() const {
+    const auto &simplexBasisData = _simplexTableau._simplexBasisData;
+    std::unordered_set<int> uniqueBasicColumnIndices;
+    for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
+      const auto basicColumnIdx =
+          simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
+      if (basicColumnIdx < 0 ||
+          basicColumnIdx >= _simplexTableau._variableInfos.size())
+        return false;
+
+      uniqueBasicColumnIndices.insert(
+          simplexBasisData._rowToBasisColumnIdxMap[rowIdx]);
+    }
+
+    if (uniqueBasicColumnIndices.size() != _simplexTableau._rowInfos.size())
+      return false;
+
+    return true;
   }
 
   const SimplexTableau<T, SimplexTraitsT> &_simplexTableau;

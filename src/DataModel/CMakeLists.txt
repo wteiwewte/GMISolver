@@ -9,7 +9,10 @@ add_library(CommonTypes INTERFACE CommonTypes.h)
 target_link_libraries(CommonTypes INTERFACE EnumTypes)
 
 add_library(CommonConstants INTERFACE CommonConstants.h)
+
 add_library(SimplexBasisData INTERFACE SimplexBasisData.h)
+target_link_libraries(SimplexBasisData INTERFACE Boost::dynamic_bitset)
+
 add_library(MatrixTypes INTERFACE MatrixTypes.h)
 
 set_target_properties(CommonTypes CommonConstants MatrixTypes SimplexBasisData

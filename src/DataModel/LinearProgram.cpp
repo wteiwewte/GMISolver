@@ -34,5 +34,16 @@ std::string LinearProgram<T>::basicInformationStr() const {
   return oss.str();
 }
 
+template <typename T>
+bool LinearProgram<T>::checkIfAllBoundsAreSpeficied() const {
+  return (_variableLowerBounds.size() == _variableInfos.size()) &&
+         std::all_of(
+             _variableLowerBounds.begin(), _variableLowerBounds.end(),
+             [](const std::optional<T> &lb) { return lb.has_value(); }) &&
+         (_variableUpperBounds.size() == _variableInfos.size()) &&
+         std::all_of(_variableUpperBounds.begin(), _variableUpperBounds.end(),
+                     [](const std::optional<T> &up) { return up.has_value(); });
+}
+
 template class LinearProgram<double>;
 template class LinearProgram<long double>;

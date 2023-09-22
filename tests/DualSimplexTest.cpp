@@ -27,7 +27,10 @@ runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
 
 template <typename T> class DualSimplexTest : public ::testing::Test {
 protected:
-  void SetUp() override {}
+  void SetUp() override {
+    absl::SetFlag(&FLAGS_validate_simplex, ValidateSimplex::YES);
+    absl::SetFlag(&FLAGS_use_product_form_of_inverse, true);
+  }
 };
 
 TYPED_TEST_SUITE_P(DualSimplexTest);
@@ -37,12 +40,16 @@ TYPED_TEST_P(DualSimplexTest, runDualSimplexAndCompareWithGurobi) {
       "../../tests/dual_simplex_working_instances";
   //  constexpr auto DUAL_SIMPLEX_NOT_WORKING_TEST_DIR_PATH =
   //      "../../tests/dual_simplex_not_working_instances/";
-  constexpr size_t DUAL_SIMPLEX_BASIS_SIZE_LIMIT = 500;
+  constexpr size_t DUAL_SIMPLEX_BASIS_SIZE_LIMIT = 1000;
 
   using TypeTupleT = TypeParam;
   using FloatingPointT = std::tuple_element_t<0, typename TypeTupleT::types>;
   using SimplexTraitsT = std::tuple_element_t<1, typename TypeTupleT::types>;
 
+  int processedModelsCount = 0;
+  int tooBigModelsCount = 0;
+  int modelsWithNoBoundsCount = 0;
+  int totalModelsCount = 0;
   for (const auto &lpModelSetDirectory :
        std::filesystem::directory_iterator(DUAL_SIMPLEX_TEST_DIR_PATH)) {
     if (!lpModelSetDirectory.is_directory())
@@ -52,13 +59,28 @@ TYPED_TEST_P(DualSimplexTest, runDualSimplexAndCompareWithGurobi) {
                 std::string{lpModelSetDirectory.path().filename()});
     for (const auto &lpModelFileEntry :
          std::filesystem::directory_iterator(lpModelSetDirectory)) {
+      ++totalModelsCount;
       SPDLOG_INFO("MODEL {}", std::string{lpModelFileEntry.path().filename()});
       auto linearProgram =
           MpsReader<FloatingPointT>::read(lpModelFileEntry.path());
       ASSERT_TRUE(linearProgram.has_value());
 
-      if (linearProgram->getRowInfos().size() > DUAL_SIMPLEX_BASIS_SIZE_LIMIT)
+      if (linearProgram->getRowInfos().size() > DUAL_SIMPLEX_BASIS_SIZE_LIMIT ||
+          linearProgram->getVariableInfos().size() >
+              2 * DUAL_SIMPLEX_BASIS_SIZE_LIMIT) {
+        ++tooBigModelsCount;
         continue;
+      }
+
+      if (!linearProgram->checkIfAllBoundsAreSpeficied()) {
+        ++modelsWithNoBoundsCount;
+        SPDLOG_INFO(
+            "SKIPPING MODEL {} BECAUSE NOT ALL VARIABLES HAVE BOUNDS SPECIFIED",
+            std::string{lpModelFileEntry.path().filename()});
+        continue;
+      }
+
+      ++processedModelsCount;
 
       const auto dualSimplexLpOptStats =
           runDualSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
@@ -76,6 +98,10 @@ TYPED_TEST_P(DualSimplexTest, runDualSimplexAndCompareWithGurobi) {
       }
     }
   }
+  SPDLOG_INFO(
+      "PROCESSED {} MODELS FROM {} TOTAL ({} TOO BIG, {} WITHOUT BOUNDS)",
+      processedModelsCount, totalModelsCount, tooBigModelsCount,
+      modelsWithNoBoundsCount);
 }
 
 REGISTER_TYPED_TEST_SUITE_P(DualSimplexTest,

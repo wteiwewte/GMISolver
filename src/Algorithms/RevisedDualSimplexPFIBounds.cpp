@@ -66,12 +66,13 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
 
     SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   }
-  SPDLOG_INFO("{} ENDED, LP OPT RESULT {}, ITERATION COUNT {}", type(),
-              lpOptimizationResultToStr(_simplexTableau._result), iterCount);
 
   if (_simplexTableau.getLPOptResult() ==
       LPOptimizationResult::BOUNDED_AND_FEASIBLE)
     tryValidateOptimalSolutions(lpOptStatistics);
+
+  SPDLOG_INFO("{} ENDED, LP OPT RESULT {}, ITERATION COUNT {}", type(),
+              lpOptimizationResultToStr(_simplexTableau._result), iterCount);
 
   lpOptStatistics._optResult = _simplexTableau.getLPOptResult();
   lpOptStatistics._optimalValue = _simplexTableau.getCurrentObjectiveValue();

@@ -42,7 +42,9 @@ runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
 
 template <typename T> class PrimalSimplexTest : public ::testing::Test {
 protected:
-  void SetUp() override {}
+  void SetUp() override {
+    absl::SetFlag(&FLAGS_validate_simplex, ValidateSimplex::YES);
+  }
 };
 
 TYPED_TEST_SUITE_P(PrimalSimplexTest);

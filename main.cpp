@@ -131,6 +131,12 @@ void readLPModelAndProcess(const std::filesystem::path &modelFileMpsPath,
                 std::string{modelFileMpsPath});
     return;
   }
+  if (!linearProgram->checkIfAllBoundsAreSpeficied()) {
+    SPDLOG_INFO(
+        "SKIPPING MODEL {} BECAUSE NOT ALL VARIABLES HAVE BOUNDS SPECIFIED",
+        std::string{modelFileMpsPath});
+    return;
+  }
 
   const auto simplexTypesToBenchmark =
       absl::GetFlag(FLAGS_benchmark_simplex_types);

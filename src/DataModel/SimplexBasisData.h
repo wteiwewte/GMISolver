@@ -3,11 +3,13 @@
 
 #include <vector>
 
+#include <boost/dynamic_bitset.hpp>
+
 struct SimplexBasisData {
   std::vector<int> _rowToBasisColumnIdxMap;
-  std::vector<bool> _isBasicColumnIndexBitset;
-  std::vector<bool> _isColumnAtLowerBoundBitset;
-  std::vector<bool> _isColumnAtUpperBoundBitset;
+  boost::dynamic_bitset<> _isBasicColumnIndexBitset;
+  boost::dynamic_bitset<> _isColumnAtLowerBoundBitset;
+  boost::dynamic_bitset<> _isColumnAtUpperBoundBitset;
 };
 
 #endif // GMISOLVER_SIMPLEXBASISDATA_H

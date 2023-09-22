@@ -12,13 +12,11 @@ template <typename T, typename SimplexTraitsT> class SimplexTableau;
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class RevisedDualSimplexPFIBounds {
 public:
-  using UnderlyingT = T;
-
   RevisedDualSimplexPFIBounds(
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
       const DualSimplexRowPivotRule dualSimplexRowPivotRule,
       const int32_t objValueLoggingFrequency,
-      const int32_t reinversionFrequency);
+      const int32_t reinversionFrequency, const bool validateSimplex);
 
   std::string type() const;
 
@@ -30,7 +28,10 @@ private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
   void tryLogObjValue(const int iterCount);
-  bool tryReinversion(const int iterCount);
+  bool tryReinversion(const int iterCount,
+                      const LPOptStatistics<T> &lpOptStatistics);
+  bool tryValidateIteration(const LPOptStatistics<T> &lpOptStatistics);
+  void tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics);
   bool checkIterationLimit(const int iterCount);
   std::optional<int> chooseRow();
   std::optional<int> chooseRowFirstEligible();
@@ -43,6 +44,7 @@ private:
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;
   const int32_t _objValueLoggingFrequency;
   const int32_t _reinversionFrequency;
+  const bool _validateSimplex;
 };
 
 #endif // GMISOLVER_REVISEDDUALSIMPLEXPFIBOUNDS_H

@@ -16,7 +16,7 @@ public:
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
       const int32_t objValueLoggingFrequency,
-      const int32_t reinversionFrequency);
+      const int32_t reinversionFrequency, const bool validateSimplex);
 
   std::string type() const;
 
@@ -32,8 +32,11 @@ private:
 
   LPOptStatistics<T> runImpl(const std::string &lpNameSuffix);
   void tryLogObjValue(const int iterCount);
-  bool tryReinversion(const int iterCount);
+  bool tryReinversion(const int iterCount,
+                      const LPOptStatistics<T> &lpOptStatistics);
   bool checkIterationLimit(const int iterCount);
+  bool tryValidateIteration(const LPOptStatistics<T> &lpOptStatistics);
+  void tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics);
   bool runOneIteration();
 
   std::optional<int> chooseEnteringColumn();
@@ -61,6 +64,7 @@ private:
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
   const int32_t _objValueLoggingFrequency;
   const int32_t _reinversionFrequency;
+  const bool _validateSimplex;
 };
 
 #endif // GMISOLVER_REVISEDPRIMALSIMPLEXPFIBOUNDS_H

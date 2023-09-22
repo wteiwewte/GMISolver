@@ -18,8 +18,11 @@ ABSL_FLAG(int32_t, reinversion_frequency, 60,
           "Basis matrix should be reinverted every nth iteration of simplex");
 ABSL_FLAG(bool, use_product_form_of_inverse, true,
           "Basis matrix inverse is represented via product form of inverse");
+ABSL_FLAG(bool, validate_simplex, false, "Validate simplex implementations");
 
-template <typename... Ts> struct TypeTuple { using types = std::tuple<Ts...>; };
+template <typename... Ts> struct TypeTuple {
+  using types = std::tuple<Ts...>;
+};
 
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T>
@@ -29,7 +32,8 @@ runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
   return RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
              simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
              absl::GetFlag(FLAGS_obj_value_logging_frequency),
-             absl::GetFlag(FLAGS_reinversion_frequency))
+             absl::GetFlag(FLAGS_reinversion_frequency),
+             absl::GetFlag(FLAGS_validate_simplex))
       .run("");
 }
 
@@ -48,7 +52,8 @@ runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
           simplexTableau,
           PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
           absl::GetFlag(FLAGS_obj_value_logging_frequency),
-          absl::GetFlag(FLAGS_reinversion_frequency));
+          absl::GetFlag(FLAGS_reinversion_frequency),
+          absl::GetFlag(FLAGS_validate_simplex));
   auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
     SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED",

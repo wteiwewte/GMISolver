@@ -19,7 +19,7 @@ public:
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
       const DualSimplexRowPivotRule dualSimplexRowPivotRule,
       const int32_t objValueLoggingFrequency,
-      const int32_t reinversionFrequency);
+      const int32_t reinversionFrequency, const bool validateSimplex);
 
   std::string type() const;
 
@@ -39,6 +39,7 @@ private:
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;
   const int32_t _objValueLoggingFrequency;
   const int32_t _reinversionFrequency;
+  const bool _validateSimplex;
 };
 
 #endif // GMISOLVER_DUALSIMPLEXGOMORYWITHPRIMALCUTS_H

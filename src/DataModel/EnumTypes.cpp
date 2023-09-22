@@ -127,6 +127,8 @@ lpOptimizationResultToStr(const LPOptimizationResult lpOptimizationResult) {
     return "REACHED_ITERATION_LIMIT";
   case LPOptimizationResult::COULD_NOT_LOAD:
     return "COULD_NOT_LOAD";
+  case LPOptimizationResult::FAILED_VALIDATION:
+    return "FAILED_VALIDATION";
   case LPOptimizationResult::UNKNOWN:
     return "UNKNOWN";
   }

@@ -1,6 +1,7 @@
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 
 #include "src/Algorithms/SimplexTableau.h"
+#include "src/Algorithms/SimplexValidator.h"
 #include "src/DataModel/LinearProgram.h"
 #include "src/Util/LPOptStatistics.h"
 #include "src/Util/SpdlogHeader.h"
@@ -21,11 +22,13 @@ template <typename T, typename SimplexTraitsT>
 RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
-    const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency)
+    const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency,
+    const bool validateSimplex)
     : _simplexTableau(simplexTableau),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
-      _reinversionFrequency(reinversionFrequency) {
+      _reinversionFrequency(reinversionFrequency),
+      _validateSimplex(validateSimplex) {
   _simplexTableau.calculateRHS();
   _simplexTableau.calculateCurrentObjectiveValue();
   _simplexTableau.calculateSolution();
@@ -90,7 +93,11 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
 
     ++iterCount;
     tryLogObjValue(iterCount);
-    if (!tryReinversion(iterCount))
+
+    if (!tryValidateIteration(lpOptStatistics))
+      break;
+
+    if (!tryReinversion(iterCount, lpOptStatistics))
       break;
 
     if (!checkIterationLimit(iterCount))
@@ -98,7 +105,12 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
 
     SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   }
-  SPDLOG_INFO("{} ENDED, ITERATION COUNT {}", type(), iterCount);
+  SPDLOG_INFO("{} ENDED, LP OPT RESULT {}, ITERATION COUNT {}", type(),
+              lpOptimizationResultToStr(_simplexTableau._result), iterCount);
+
+  if (_simplexTableau.getLPOptResult() ==
+      LPOptimizationResult::BOUNDED_AND_FEASIBLE)
+    tryValidateOptimalSolutions(lpOptStatistics);
 
   lpOptStatistics._optResult = _simplexTableau.getLPOptResult();
   lpOptStatistics._optimalValue = _simplexTableau.getCurrentObjectiveValue();
@@ -119,15 +131,43 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(
 
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
-    const int iterCount) {
+    const int iterCount, const LPOptStatistics<T> &lpOptStatistics) {
   if (_reinversionFrequency && (iterCount % _reinversionFrequency == 0)) {
     if (!_simplexTableau.reinversion()) {
       SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
       _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
       return false;
     }
+    if (!tryValidateIteration(lpOptStatistics))
+      return false;
   }
   return true;
+}
+template <typename T, typename SimplexTraitsT>
+bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
+    const LPOptStatistics<T> &lpOptStatistics) {
+  if (!_validateSimplex)
+    return true;
+
+  if (!SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
+           .validatePrimalIteration()) {
+    _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
+    return false;
+  }
+
+  return true;
+}
+
+template <typename T, typename SimplexTraitsT>
+void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
+    tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics) {
+  if (!_validateSimplex)
+    return;
+
+  if (!SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
+           .validateOptimality(true)) {
+    _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
+  }
 }
 
 template <typename T, typename SimplexTraitsT>

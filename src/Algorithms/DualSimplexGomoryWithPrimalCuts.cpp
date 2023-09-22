@@ -11,12 +11,13 @@ DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::
         const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
         const DualSimplexRowPivotRule dualSimplexRowPivotRule,
         const int32_t objValueLoggingFrequency,
-        const int32_t reinversionFrequency)
+        const int32_t reinversionFrequency, const bool validateSimplex)
     : _simplexTableau(simplexTableau),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
-      _reinversionFrequency(reinversionFrequency) {}
+      _reinversionFrequency(reinversionFrequency),
+      _validateSimplex(validateSimplex) {}
 
 template <typename T, typename SimplexTraitsT>
 std::string DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::type() const {
@@ -53,7 +54,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>
 DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::dualSimplex() const {
   return RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
       _simplexTableau, _dualSimplexRowPivotRule, _objValueLoggingFrequency,
-      _reinversionFrequency);
+      _reinversionFrequency, _validateSimplex);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -61,7 +62,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
 DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::primalSimplex() const {
   return RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>(
       _simplexTableau, _primalSimplexColumnPivotRule, _objValueLoggingFrequency,
-      _reinversionFrequency);
+      _reinversionFrequency, _validateSimplex);
 }
 
 template <typename T, typename SimplexTraitsT>

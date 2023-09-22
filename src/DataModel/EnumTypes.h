@@ -45,6 +45,7 @@ enum class LPOptimizationResult : int8_t {
   FAILED_REINVERSION,
   REACHED_ITERATION_LIMIT,
   COULD_NOT_LOAD,
+  FAILED_VALIDATION,
   UNKNOWN
 };
 

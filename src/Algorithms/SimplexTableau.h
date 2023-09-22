@@ -15,6 +15,7 @@ template <typename T, typename SimplexTraitsT>
 class RevisedPrimalSimplexPFIBounds;
 template <typename T, typename SimplexTraitsT>
 class RevisedDualSimplexPFIBounds;
+template <typename T, typename SimplexTraitsT> class SimplexValidator;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class SimplexTableau {
@@ -51,6 +52,7 @@ private:
   friend class DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>;
   friend class RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>;
   friend class RevisedDualSimplexPFIBounds<T, SimplexTraitsT>;
+  friend class SimplexValidator<T, SimplexTraitsT>;
 
   using ElementaryMatrixT = typename SimplexTraitsT::ElementaryMatrixT;
   using VectorT = typename SimplexTraitsT::VectorT;

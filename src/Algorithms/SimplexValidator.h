@@ -113,6 +113,14 @@ private:
                  NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE;
   }
 
+  bool validateBasis() const
+  {
+    for (int colIdx = 0; colIdx < _simplexTableau._variableInfos.size(); ++colIdx)
+    {
+
+    }
+  }
+
   const SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   const LPOptStatistics<T> &_simplexLpOptStats;
 };

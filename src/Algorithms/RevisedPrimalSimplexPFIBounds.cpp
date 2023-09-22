@@ -3,7 +3,6 @@
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Algorithms/SimplexValidator.h"
 #include "src/DataModel/LinearProgram.h"
-#include "src/Util/LPOptStatistics.h"
 #include "src/Util/SpdlogHeader.h"
 
 namespace {

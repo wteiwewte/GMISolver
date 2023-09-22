@@ -1,18 +1,33 @@
 include(../get_cpm.cmake)
-CPMAddPackage(
-        NAME googletest
-        GITHUB_REPOSITORY google/googletest
-        GIT_TAG release-1.12.1
-        VERSION 1.12.1
-        OPTIONS "INSTALL_GTEST OFF" "gtest_force_shared_crt"
-)
-CPMAddPackage("gh:cpm-cmake/testpack-fibonacci@2.0")
+cpmaddpackage(
+        NAME
+        googletest
+        GITHUB_REPOSITORY
+        google/googletest
+        GIT_TAG
+        release-1.12.1
+        VERSION
+        1.12.1
+        OPTIONS
+        "INSTALL_GTEST OFF"
+        "gtest_force_shared_crt")
 
-add_executable(AllTests DualSimplexTest.cpp
-        PrimalSimplexTest.cpp
-        CommonDefs.cpp
-        CommonDefs.h)
+add_library(CommonDefs CommonDefs.cpp CommonDefs.h)
+target_link_libraries(CommonDefs EnumTypes absl::flags)
+
+add_executable(UnitTests DualSimplexTest.cpp PrimalSimplexTest.cpp)
 include_directories(../src/)
-target_link_libraries(AllTests fibonacci gtest gtest_main gmock absl::flags spdlog::spdlog Algorithms Util ${GUROBI_CXX_LIBRARY} ${GUROBI_LIBRARY})
+target_link_libraries(
+        UnitTests
+        gtest
+        gtest_main
+        gmock
+        CommonDefs
+        RevisedDualSimplexPFIBounds
+        RevisedPrimalSimplexPFIBounds
+        SimplexTableau
+        GurobiOptimizer
+        LPOptStatistics
+        MpsReader)
 enable_testing()
-add_test(NAME AllTests COMMAND AllTests)
+add_test(NAME UnitTests COMMAND UnitTests)

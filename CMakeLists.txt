@@ -17,19 +17,20 @@ CPMAddPackage("gh:abseil/abseil-cpp#20220623.1")
 
 set(BASEPATH "${CMAKE_SOURCE_DIR}")
 include_directories("${BASEPATH}")
-include_directories("${GUROBI_INCLUDE_DIRS}")
-add_subdirectory(src)
+add_subdirectory(src/Algorithms)
+add_subdirectory(src/DataModel)
+add_subdirectory(src/Util)
 add_subdirectory(tests)
 
 add_executable(GMISolver main.cpp)
 target_link_libraries(GMISolver
-        Algorithms
-        DataModel
-        Util
-        fmt::fmt-header-only
-        spdlog::spdlog
+        DualSimplexGomoryWithPrimalCuts
+        RevisedDualSimplexPFIBounds
+        RevisedPrimalSimplexPFIBounds
+        SimplexTableau
+        GurobiOptimizer
+        LPOptStatisticsPrinter
+        MpsReader
+        SpdlogHeader
         absl::flags
         absl::flags_parse)
-target_link_libraries(GMISolver optimized ${GUROBI_CXX_LIBRARY}
-        debug ${GUROBI_CXX_DEBUG_LIBRARY})
-target_link_libraries(GMISolver ${GUROBI_LIBRARY})

@@ -11,9 +11,9 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 find_package(GUROBI REQUIRED)
 include(get_cpm.cmake)
 
-CPMAddPackage("gh:gabime/spdlog@1.10.0")
-CPMAddPackage("gh:fmtlib/fmt#9.1.0")
-CPMAddPackage("gh:abseil/abseil-cpp#20220623.1")
+cpmaddpackage("gh:gabime/spdlog@1.10.0")
+cpmaddpackage("gh:fmtlib/fmt#9.1.0")
+cpmaddpackage("gh:abseil/abseil-cpp#20220623.1")
 
 set(BASEPATH "${CMAKE_SOURCE_DIR}")
 include_directories("${BASEPATH}")
@@ -23,14 +23,15 @@ add_subdirectory(src/Util)
 add_subdirectory(tests)
 
 add_executable(GMISolver main.cpp)
-target_link_libraries(GMISolver
-        DualSimplexGomoryWithPrimalCuts
-        RevisedDualSimplexPFIBounds
-        RevisedPrimalSimplexPFIBounds
-        SimplexTableau
-        GurobiOptimizer
-        LPOptStatisticsPrinter
-        MpsReader
-        SpdlogHeader
-        absl::flags
-        absl::flags_parse)
+target_link_libraries(
+  GMISolver
+  DualSimplexGomoryWithPrimalCuts
+  RevisedDualSimplexPFIBounds
+  RevisedPrimalSimplexPFIBounds
+  SimplexTableau
+  GurobiOptimizer
+  LPOptStatisticsPrinter
+  MpsReader
+  SpdlogHeader
+  absl::flags
+  absl::flags_parse)

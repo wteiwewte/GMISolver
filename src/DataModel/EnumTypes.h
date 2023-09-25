@@ -72,6 +72,11 @@ enum class SimplexType : int8_t {
   DUAL,
 };
 
+enum class LexicographicReoptType : int8_t {
+  MIN = 0,
+  MAX,
+};
+
 enum class ValidateSimplex : int8_t { YES = 0, NO, UNKNOWN };
 bool AbslParseFlag(absl::string_view text, ValidateSimplex *validateSimplex,
                    std::string *error);

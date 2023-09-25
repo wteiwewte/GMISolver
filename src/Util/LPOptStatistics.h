@@ -38,4 +38,9 @@ convert(const LPOptStatistics<double> &doubleLpOptStatistics) {
 template <typename T>
 using LPOptStatisticsVec = std::vector<LPOptStatistics<T>>;
 
+template <typename T> struct LexReoptStatistics {
+  std::vector<LPOptStatistics<T>> _lexLPReoptStatsVec;
+  T _objectiveValueAfterLexReopt;
+};
+
 #endif // GMISOLVER_LPOPTSTATISTICS_H

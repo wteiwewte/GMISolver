@@ -72,7 +72,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseTwo() {
 
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
-    const std::string &lpNameSuffix) {
+    const std::string &lpNameSuffix, const bool printSummary) {
   [[maybe_unused]] int iterCount = 1;
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   LPOptStatistics<T> lpOptStatistics{
@@ -108,8 +108,9 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
       LPOptimizationResult::BOUNDED_AND_FEASIBLE)
     tryValidateOptimalSolutions(lpOptStatistics);
 
-  SPDLOG_INFO("{} ENDED, LP OPT RESULT {}, ITERATION COUNT {}", type(),
-              lpOptimizationResultToStr(_simplexTableau._result), iterCount);
+  if (printSummary)
+    SPDLOG_INFO("{} ENDED, LP OPT RESULT {}, ITERATION COUNT {}", type(),
+                lpOptimizationResultToStr(_simplexTableau._result), iterCount);
 
   lpOptStatistics._optResult = _simplexTableau.getLPOptResult();
   lpOptStatistics._optimalValue = _simplexTableau.getCurrentObjectiveValue();
@@ -548,34 +549,48 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::removeRows(
   removeElements(_simplexTableau._basisMatrixInverse, shouldRowBeRemoved);
 }
 template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
-    lexicographicReoptimization(const bool minimize,
-                                const std::string &lexOptId,
-                                LPOptStatisticsVec<T> &lpOptStatisticsVec) {
+LexReoptStatistics<T>
+RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::lexicographicReoptimization(
+    const LexicographicReoptType lexicographicReoptType,
+    const std::string &lexOptId) {
+  LexReoptStatistics<T> lexReoptStats;
   int curVarIdxToBeOptimized = 0;
   int varsFixedCount = 0;
+  int optimizedVarCount = 0;
   while (curVarIdxToBeOptimized < _simplexTableau._variableInfos.size() &&
          varsFixedCount < _simplexTableau._variableInfos.size()) {
     fixNonBasicVariables(varsFixedCount);
     if (!_simplexTableau._variableInfos[curVarIdxToBeOptimized]._isFixed) {
       _simplexTableau.setObjective(
-          singleVarObjective(curVarIdxToBeOptimized, minimize));
-      auto lpStatisticsFromSingleVarOpt =
-          runImpl(fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized,
-                              (minimize ? "MIN" : "MAX")));
-      lpOptStatisticsVec.push_back(std::move(lpStatisticsFromSingleVarOpt));
+          singleVarObjective(curVarIdxToBeOptimized, lexicographicReoptType));
+      auto lpStatisticsFromSingleVarOpt = runImpl(
+          fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized,
+                      (lexicographicReoptType == LexicographicReoptType::MIN
+                           ? "MIN"
+                           : "MAX")),
+          false);
+      lexReoptStats._lexLPReoptStatsVec.push_back(
+          std::move(lpStatisticsFromSingleVarOpt));
+      ++optimizedVarCount;
     }
     ++curVarIdxToBeOptimized;
   }
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
+  lexReoptStats._objectiveValueAfterLexReopt = _simplexTableau._objectiveValue;
   unfixAllVariables();
+
+  SPDLOG_INFO("LEXICOGRAPHIC REOPTIMIZATION RAN {} VARIABLE-SUBPROGRAMS",
+              optimizedVarCount);
+
+  return lexReoptStats;
 }
 template <typename T, typename SimplexTraitsT>
 std::vector<T>
 RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::singleVarObjective(
-    const int varIdx, const bool minimize) {
+    const int varIdx, const LexicographicReoptType lexicographicReoptType) {
   std::vector<T> result(_simplexTableau._variableInfos.size());
-  result[varIdx] = minimize ? 1.0 : -1.0;
+  result[varIdx] =
+      lexicographicReoptType == LexicographicReoptType::MIN ? 1.0 : -1.0;
   return result;
 }
 template <typename T, typename SimplexTraitsT>

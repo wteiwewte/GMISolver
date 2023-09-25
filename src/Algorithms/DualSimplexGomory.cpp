@@ -1,18 +1,16 @@
-#include "src/Algorithms/DualSimplexGomoryWithPrimalCuts.h"
+#include "src/Algorithms/DualSimplexGomory.h"
 
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
 
 template <typename T, typename SimplexTraitsT>
-DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::
-    DualSimplexGomoryWithPrimalCuts(
-        SimplexTableau<T, SimplexTraitsT> &simplexTableau,
-        const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
-        const DualSimplexRowPivotRule dualSimplexRowPivotRule,
-        const int32_t objValueLoggingFrequency,
-        const int32_t reinversionFrequency,
-        const ValidateSimplex validateSimplex)
+DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
+    SimplexTableau<T, SimplexTraitsT> &simplexTableau,
+    const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
+    const DualSimplexRowPivotRule dualSimplexRowPivotRule,
+    const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency,
+    const ValidateSimplex validateSimplex)
     : _simplexTableau(simplexTableau),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
@@ -21,7 +19,7 @@ DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::
       _validateSimplex(validateSimplex) {}
 
 template <typename T, typename SimplexTraitsT>
-std::string DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::type() const {
+std::string DualSimplexGomory<T, SimplexTraitsT>::type() const {
   return "DUAL SIMPLEX GOMORY WITH PRIMAL CUTS (" +
          std::string(SimplexTraitsT::useSparseRepresentationValue ? "SPARSE"
                                                                   : "NORMAL") +
@@ -29,30 +27,34 @@ std::string DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-void DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::run(
-    LPOptStatisticsVec<T> &lpOptStatisticsVec) {
+IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run() {
+  IPOptStatistics<T> ipOptStatistics;
   int relaxationCount = 1;
   const auto relaxationId = [&relaxationCount] {
     return fmt::format("{}TH_RELAX", relaxationCount);
   };
 
-  auto lpStatisticsFromDualSimplex = dualSimplex().run(relaxationId());
-  lpOptStatisticsVec.push_back(std::move(lpStatisticsFromDualSimplex));
+  auto &currentRelaxationStats =
+      ipOptStatistics._lpRelaxationStats.emplace_back();
+  currentRelaxationStats._relaxationOptStats =
+      dualSimplex().run(relaxationId());
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
 
-  primalSimplex().lexicographicReoptimization(false, relaxationId(),
-                                              lpOptStatisticsVec);
+  currentRelaxationStats._lexicographicReoptStats =
+      primalSimplex().lexicographicReoptimization(LexicographicReoptType::MAX,
+                                                  relaxationId());
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
 
   //  while (true)
   //  {
   //
   //  }
+  return ipOptStatistics;
 }
 
 template <typename T, typename SimplexTraitsT>
 RevisedDualSimplexPFIBounds<T, SimplexTraitsT>
-DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::dualSimplex() const {
+DualSimplexGomory<T, SimplexTraitsT>::dualSimplex() const {
   return RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
       _simplexTableau, _dualSimplexRowPivotRule, _objValueLoggingFrequency,
       _reinversionFrequency, _validateSimplex);
@@ -60,19 +62,18 @@ DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::dualSimplex() const {
 
 template <typename T, typename SimplexTraitsT>
 RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
-DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>::primalSimplex() const {
+DualSimplexGomory<T, SimplexTraitsT>::primalSimplex() const {
   return RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>(
       _simplexTableau, _primalSimplexColumnPivotRule, _objValueLoggingFrequency,
       _reinversionFrequency, _validateSimplex);
 }
 
 template <typename T, typename SimplexTraitsT>
-void DualSimplexGomoryWithPrimalCuts<
-    T, SimplexTraitsT>::addCutsForFractionalVars() const {
+void DualSimplexGomory<T, SimplexTraitsT>::addCutsForFractionalVars() const {
   return;
 }
 
-template class DualSimplexGomoryWithPrimalCuts<
+template class DualSimplexGomory<
     double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
-template class DualSimplexGomoryWithPrimalCuts<
+template class DualSimplexGomory<
     double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;

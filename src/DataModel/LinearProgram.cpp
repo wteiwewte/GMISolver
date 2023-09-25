@@ -45,5 +45,12 @@ bool LinearProgram<T>::checkIfAllBoundsAreSpeficied() const {
                      [](const std::optional<T> &up) { return up.has_value(); });
 }
 
+template <typename T> bool LinearProgram<T>::isPureIP() const {
+  return std::all_of(_variableInfos.begin(), _variableInfos.end(),
+                     [](const VariableInfo &varInfo) {
+                       return varInfo._type == VariableType::INTEGER;
+                     });
+}
+
 template class LinearProgram<double>;
 template class LinearProgram<long double>;

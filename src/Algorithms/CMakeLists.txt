@@ -21,8 +21,8 @@ target_link_libraries(
   SimplexValidator
   SpdlogHeader)
 
-add_library(DualSimplexGomoryWithPrimalCuts DualSimplexGomoryWithPrimalCuts.h
-                                            DualSimplexGomoryWithPrimalCuts.cpp)
+add_library(DualSimplexGomoryWithPrimalCuts DualSimplexGomory.h
+                                            DualSimplexGomory.cpp)
 target_link_libraries(
   DualSimplexGomoryWithPrimalCuts
   CommonTypes

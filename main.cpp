@@ -1,4 +1,4 @@
-#include "src/Algorithms/DualSimplexGomoryWithPrimalCuts.h"
+#include "src/Algorithms/DualSimplexGomory.h"
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
@@ -92,15 +92,22 @@ void runDualSimplexGomoryWithPrimalCuts(
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::DUAL,
       absl::GetFlag(FLAGS_use_product_form_of_inverse));
-  DualSimplexGomoryWithPrimalCuts<T, SimplexTraitsT>
-      dualSimplexGomoryWithPrimalCuts(
-          simplexTableau,
-          PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
-          DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
-          absl::GetFlag(FLAGS_obj_value_logging_frequency),
-          absl::GetFlag(FLAGS_reinversion_frequency),
-          absl::GetFlag(FLAGS_validate_simplex));
-  dualSimplexGomoryWithPrimalCuts.run(lpOptStatisticsVec);
+  DualSimplexGomory<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(
+      simplexTableau,
+      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+      DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_reinversion_frequency),
+      absl::GetFlag(FLAGS_validate_simplex));
+  const auto ipOptStats = dualSimplexGomoryWithPrimalCuts.run();
+  for (const auto &lpRelaxStats : ipOptStats._lpRelaxationStats) {
+    lpOptStatisticsVec.push_back(lpRelaxStats._relaxationOptStats);
+    const auto &lexLPReoptStatsVec =
+        lpRelaxStats._lexicographicReoptStats._lexLPReoptStatsVec;
+    lpOptStatisticsVec.insert(lpOptStatisticsVec.end(),
+                              lexLPReoptStatsVec.begin(),
+                              lexLPReoptStatsVec.end());
+  }
 }
 
 template <typename T> bool isLPTooBig(const LinearProgram<T> &linearProgram) {

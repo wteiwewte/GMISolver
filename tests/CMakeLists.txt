@@ -15,7 +15,8 @@ cpmaddpackage(
 add_library(CommonDefs CommonDefs.cpp CommonDefs.h)
 target_link_libraries(CommonDefs EnumTypes absl::flags)
 
-add_executable(UnitTests DualSimplexTest.cpp PrimalSimplexTest.cpp)
+add_executable(UnitTests DualSimplexTest.cpp PrimalSimplexTest.cpp
+                         DualSimplexGomoryTest.cpp)
 include_directories(../src/)
 target_link_libraries(
   UnitTests
@@ -23,6 +24,7 @@ target_link_libraries(
   gtest_main
   gmock
   CommonDefs
+  DualSimplexGomoryWithPrimalCuts
   RevisedDualSimplexPFIBounds
   RevisedPrimalSimplexPFIBounds
   SimplexTableau

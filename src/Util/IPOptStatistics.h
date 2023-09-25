@@ -7,9 +7,14 @@
 #include <string>
 #include <vector>
 
+template <typename T> struct LPRelaxationStatistics {
+  LPOptStatistics<T> _relaxationOptStats;
+  LexReoptStatistics<T> _lexicographicReoptStats;
+};
+
 template <typename T> struct IPOptStatistics {
   T _integerOptimum{};
-  std::vector<LPStatistics<T>> _lpRelaxationsStats;
+  std::vector<LPRelaxationStatistics<T>> _lpRelaxationStats;
 };
 
 template <typename T>

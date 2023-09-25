@@ -30,6 +30,7 @@ public:
   const std::string &getName() const { return _name; }
 
   bool checkIfAllBoundsAreSpeficied() const;
+  bool isPureIP() const;
 
 private:
   friend struct MpsReader<T>;

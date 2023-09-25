@@ -1,8 +1,8 @@
-#ifndef GMISOLVER_DUALSIMPLEXGOMORYWITHPRIMALCUTS_H
-#define GMISOLVER_DUALSIMPLEXGOMORYWITHPRIMALCUTS_H
+#ifndef GMISOLVER_DUALSIMPLEXGOMORY_H
+#define GMISOLVER_DUALSIMPLEXGOMORY_H
 
 #include "src/DataModel/CommonTypes.h"
-#include "src/Util/LPOptStatistics.h"
+#include "src/Util/IPOptStatistics.h"
 #include "src/Util/SimplexTraits.h"
 
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
@@ -12,9 +12,9 @@ template <typename T, typename SimplexTraitsT>
 class RevisedPrimalSimplexPFIBounds;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
-class DualSimplexGomoryWithPrimalCuts {
+class DualSimplexGomory {
 public:
-  DualSimplexGomoryWithPrimalCuts(
+  DualSimplexGomory(
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
       const DualSimplexRowPivotRule dualSimplexRowPivotRule,
@@ -24,7 +24,7 @@ public:
 
   std::string type() const;
 
-  void run(LPOptStatisticsVec<T> &lpOptStatisticsVec);
+  IPOptStatistics<T> run();
 
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
@@ -43,4 +43,4 @@ private:
   const ValidateSimplex _validateSimplex;
 };
 
-#endif // GMISOLVER_DUALSIMPLEXGOMORYWITHPRIMALCUTS_H
+#endif // GMISOLVER_DUALSIMPLEXGOMORY_H

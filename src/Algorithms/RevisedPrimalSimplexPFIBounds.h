@@ -23,15 +23,16 @@ public:
 
   LPOptStatistics<T> runPhaseOne();
   LPOptStatistics<T> runPhaseTwo();
-  void lexicographicReoptimization(const bool minimize,
-                                   const std::string &lexOptId,
-                                   LPOptStatisticsVec<T> &lpOptStatisticsVec);
+  LexReoptStatistics<T> lexicographicReoptimization(
+      const LexicographicReoptType lexicographicReoptType,
+      const std::string &lexOptId);
 
 private:
   using VectorT = typename SimplexTraitsT::VectorT;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  LPOptStatistics<T> runImpl(const std::string &lpNameSuffix);
+  LPOptStatistics<T> runImpl(const std::string &lpNameSuffix,
+                             const bool printSummary = true);
   void tryLogObjValue(const int iterCount);
   bool tryReinversion(const int iterCount,
                       const LPOptStatistics<T> &lpOptStatistics);
@@ -57,7 +58,9 @@ private:
   void removeArtificialVariablesFromProgram();
   void removeRows(const std::vector<bool> &shouldRowBeRemoved);
 
-  std::vector<T> singleVarObjective(const int varIdx, const bool minimize);
+  std::vector<T>
+  singleVarObjective(const int varIdx,
+                     const LexicographicReoptType lexicographicReoptType);
   void fixNonBasicVariables(int &varsFixedCount);
   void unfixAllVariables();
 

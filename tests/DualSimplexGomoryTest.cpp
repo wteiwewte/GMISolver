@@ -10,8 +10,9 @@
 #include <gtest/gtest.h>
 
 template <typename T, typename SimplexTraitsT>
-IPOptStatistics<T>
-runDualSimplexGomoryWithPrimalCuts(const LinearProgram<T> &linearProgram) {
+IPOptStatistics<T> runDualSimplexGomoryWithPrimalCuts(
+    const LinearProgram<T> &linearProgram,
+    const LexicographicReoptType lexicographicReoptType) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::DUAL,
       absl::GetFlag(FLAGS_use_product_form_of_inverse));
@@ -22,7 +23,7 @@ runDualSimplexGomoryWithPrimalCuts(const LinearProgram<T> &linearProgram) {
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_reinversion_frequency),
       absl::GetFlag(FLAGS_validate_simplex));
-  return dualSimplexGomoryWithPrimalCuts.run();
+  return dualSimplexGomoryWithPrimalCuts.run(lexicographicReoptType);
 }
 
 template <typename T> class DualSimplexGomoryTest : public ::testing::Test {
@@ -90,33 +91,37 @@ TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
 
       ++processedModelsCount;
 
-      IPOptStatistics<FloatingPointT> ipOptStatistics =
-          runDualSimplexGomoryWithPrimalCuts<FloatingPointT, SimplexTraitsT>(
-              *linearProgram);
-      const auto gurobiLPOptStats =
-          GurobiOptimizer("", lpModelFileEntry.path())
-              .optimize(LPOptimizationType::LINEAR_RELAXATION);
-      const auto &firstRelaxationOptStats =
-          ipOptStatistics._lpRelaxationStats.front();
-      const auto &firstRelaxationLPOptStats =
-          firstRelaxationOptStats._relaxationOptStats;
-      ASSERT_EQ(gurobiLPOptStats._optResult,
-                firstRelaxationLPOptStats._optResult);
-      if (firstRelaxationLPOptStats._optResult ==
-          LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
-        SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
-        SPDLOG_INFO("SIMPLEX OPT AFTER INITIAL OPT {}",
-                    firstRelaxationLPOptStats._optimalValue);
-        EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                    firstRelaxationLPOptStats._optimalValue, 0.00001);
+      for (const auto lexicographicReoptType :
+           {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
+        IPOptStatistics<FloatingPointT> ipOptStatistics =
+            runDualSimplexGomoryWithPrimalCuts<FloatingPointT, SimplexTraitsT>(
+                *linearProgram, lexicographicReoptType);
+        const auto gurobiLPOptStats =
+            GurobiOptimizer("", lpModelFileEntry.path())
+                .optimize(LPOptimizationType::LINEAR_RELAXATION);
+        const auto &firstRelaxationOptStats =
+            ipOptStatistics._lpRelaxationStats.front();
+        const auto &firstRelaxationLPOptStats =
+            firstRelaxationOptStats._relaxationOptStats;
+        ASSERT_EQ(gurobiLPOptStats._optResult,
+                  firstRelaxationLPOptStats._optResult);
+        if (firstRelaxationLPOptStats._optResult ==
+            LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+          SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
+          SPDLOG_INFO("SIMPLEX OPT AFTER INITIAL OPT {}",
+                      firstRelaxationLPOptStats._optimalValue);
+          EXPECT_NEAR(gurobiLPOptStats._optimalValue,
+                      firstRelaxationLPOptStats._optimalValue, 0.00001);
 
-        const auto &optimalValueAfterFirstLexReopt =
-            firstRelaxationOptStats._lexicographicReoptStats
-                ._objectiveValueAfterLexReopt;
-        SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC REOPTS {}",
-                    optimalValueAfterFirstLexReopt);
-        EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                    optimalValueAfterFirstLexReopt, 0.00001);
+          const auto &optimalValueAfterFirstLexReopt =
+              firstRelaxationOptStats._lexicographicReoptStats
+                  ._objectiveValueAfterLexReopt;
+          SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC {} REOPTS {}",
+                      lexicographicReoptTypeToStr(lexicographicReoptType),
+                      optimalValueAfterFirstLexReopt);
+          EXPECT_NEAR(gurobiLPOptStats._optimalValue,
+                      optimalValueAfterFirstLexReopt, 0.00001);
+        }
       }
     }
   }

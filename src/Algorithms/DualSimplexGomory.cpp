@@ -27,7 +27,8 @@ std::string DualSimplexGomory<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run() {
+IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
+    const LexicographicReoptType lexicographicReoptType) {
   IPOptStatistics<T> ipOptStatistics;
   int relaxationCount = 1;
   const auto relaxationId = [&relaxationCount] {
@@ -41,7 +42,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run() {
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
 
   currentRelaxationStats._lexicographicReoptStats =
-      primalSimplex().lexicographicReoptimization(LexicographicReoptType::MAX,
+      primalSimplex().lexicographicReoptimization(lexicographicReoptType,
                                                   relaxationId());
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
 

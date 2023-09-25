@@ -37,7 +37,7 @@ add_subdirectory(tests)
 add_executable(GMISolver main.cpp)
 target_link_libraries(
   GMISolver
-  DualSimplexGomoryWithPrimalCuts
+  DualSimplexGomory
   RevisedDualSimplexPFIBounds
   RevisedPrimalSimplexPFIBounds
   SimplexTableau

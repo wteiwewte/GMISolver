@@ -24,7 +24,7 @@ target_link_libraries(
   gtest_main
   gmock
   CommonDefs
-  DualSimplexGomoryWithPrimalCuts
+  DualSimplexGomory
   RevisedDualSimplexPFIBounds
   RevisedPrimalSimplexPFIBounds
   SimplexTableau

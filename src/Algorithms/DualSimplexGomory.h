@@ -24,7 +24,7 @@ public:
 
   std::string type() const;
 
-  IPOptStatistics<T> run();
+  IPOptStatistics<T> run(const LexicographicReoptType lexicographicReoptType);
 
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;

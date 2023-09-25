@@ -93,5 +93,7 @@ std::string dualSimplexRowPivotRuleToStr(
     const DualSimplexRowPivotRule dualSimplexRowPivotRule);
 std::string
 lpOptimizationResultToStr(const LPOptimizationResult lpOptimizationResult);
+std::string lexicographicReoptTypeToStr(
+    const LexicographicReoptType lexicographicReoptType);
 
 #endif // GMISOLVER_ENUMTYPES_H

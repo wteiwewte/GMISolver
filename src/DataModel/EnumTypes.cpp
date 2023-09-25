@@ -136,6 +136,18 @@ lpOptimizationResultToStr(const LPOptimizationResult lpOptimizationResult) {
   return "";
 }
 
+std::string lexicographicReoptTypeToStr(
+    const LexicographicReoptType lexicographicReoptType) {
+  switch (lexicographicReoptType) {
+  case LexicographicReoptType::MIN:
+    return "MIN";
+  case LexicographicReoptType::MAX:
+    return "MAX";
+  }
+
+  return "";
+}
+
 bool AbslParseFlag(absl::string_view text, ValidateSimplex *validateSimplex,
                    std::string *error) {
   if (text == "yes") {

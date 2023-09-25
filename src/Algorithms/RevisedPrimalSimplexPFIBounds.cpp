@@ -579,7 +579,8 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::lexicographicReoptimization(
   lexReoptStats._objectiveValueAfterLexReopt = _simplexTableau._objectiveValue;
   unfixAllVariables();
 
-  SPDLOG_INFO("LEXICOGRAPHIC REOPTIMIZATION RAN {} VARIABLE-SUBPROGRAMS",
+  SPDLOG_INFO("LEXICOGRAPHIC {} REOPTIMIZATION RAN {} VARIABLE-SUBPROGRAMS",
+              lexicographicReoptTypeToStr(lexicographicReoptType),
               optimizedVarCount);
 
   return lexReoptStats;

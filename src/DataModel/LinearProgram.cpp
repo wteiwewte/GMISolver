@@ -52,5 +52,30 @@ template <typename T> bool LinearProgram<T>::isPureIP() const {
                      });
 }
 
+template <typename T>
+bool LinearProgram<T>::allCoefficientsAreIntegers() const {
+  const auto isInteger = [](const auto val) {
+    double integerPart;
+    return std::modf(val, &integerPart) == 0.0;
+  };
+
+  return std::all_of(_objective.begin(), _objective.end(), isInteger) &&
+         std::all_of(_rightHandSides.begin(), _rightHandSides.end(),
+                     isInteger) &&
+         std::all_of(_constraintMatrix.begin(), _constraintMatrix.end(),
+                     [&](const auto &coeffRow) {
+                       return std::all_of(coeffRow.begin(), coeffRow.end(),
+                                          isInteger);
+                     });
+}
+
+template <typename T>
+bool LinearProgram<T>::allVariablesAreNonnegative() const {
+  return std::all_of(_variableLowerBounds.begin(), _variableLowerBounds.end(),
+                     [](const auto lowerBound) {
+                       return lowerBound.has_value() && *lowerBound >= 0.0;
+                     });
+}
+
 template class LinearProgram<double>;
 template class LinearProgram<long double>;

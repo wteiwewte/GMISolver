@@ -45,6 +45,7 @@ TYPED_TEST_P(DualSimplexTest, runDualSimplexAndCompareWithGurobi) {
   using TypeTupleT = TypeParam;
   using FloatingPointT = std::tuple_element_t<0, typename TypeTupleT::types>;
   using SimplexTraitsT = std::tuple_element_t<1, typename TypeTupleT::types>;
+  using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
   int processedModelsCount = 0;
   int tooBigModelsCount = 0;
@@ -94,7 +95,7 @@ TYPED_TEST_P(DualSimplexTest, runDualSimplexAndCompareWithGurobi) {
         SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
         SPDLOG_INFO("SIMPLEX OPT {}", dualSimplexLpOptStats._optimalValue);
         EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                    dualSimplexLpOptStats._optimalValue, 0.00001);
+                    dualSimplexLpOptStats._optimalValue, NumericalTraitsT::OPTIMALITY_TOLERANCE);
       }
     }
   }

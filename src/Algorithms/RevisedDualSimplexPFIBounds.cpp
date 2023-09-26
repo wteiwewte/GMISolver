@@ -14,11 +14,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::RevisedDualSimplexPFIBounds(
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _reinversionFrequency(reinversionFrequency),
-      _validateSimplex(validateSimplex) {
-  _simplexTableau.calculateRHS();
-  _simplexTableau.calculateCurrentObjectiveValue();
-  _simplexTableau.calculateSolution();
-}
+      _validateSimplex(validateSimplex) {}
 
 template <typename T, typename SimplexTraitsT>
 std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::type() const {
@@ -137,7 +133,7 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::
 template <typename T, typename SimplexTraitsT>
 bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
     const int iterCount) {
-  constexpr size_t HARD_ITERATION_LIMIT = 100000;
+  constexpr size_t HARD_ITERATION_LIMIT = 200000;
   if (iterCount > HARD_ITERATION_LIMIT) {
     _simplexTableau._result = LPOptimizationResult::REACHED_ITERATION_LIMIT;
     return false;

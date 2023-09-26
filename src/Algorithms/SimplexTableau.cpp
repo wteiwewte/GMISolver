@@ -17,7 +17,6 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
       _constraintMatrix(linearProgram._constraintMatrix),
       _rightHandSides(linearProgram._rightHandSides),
       _initialRightHandSides(linearProgram._rightHandSides),
-      _initialObjectiveRow(linearProgram._objective),
       _useProductFormOfInverse(useProductFormOfInverse),
       _result(LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
   SPDLOG_INFO("Converting LP to standard form");
@@ -34,6 +33,10 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
   addArtificialVariables();
   initMatrixRepresentations();
   init(simplexType);
+
+  calculateRHS();
+  calculateCurrentObjectiveValue();
+  calculateSolution();
   SPDLOG_TRACE("Simplex tableau with artificial variables");
   SPDLOG_TRACE(toString());
   SPDLOG_TRACE(toStringLpSolveFormat());
@@ -45,7 +48,7 @@ void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables() {
   const int newVariableCount = variableCountAtTheStart + _rowInfos.size();
 
   const auto newArtificialLabel = [&](const auto varIdx) {
-    return "A" + std::to_string(varIdx);
+    return "A" + std::to_string(varIdx + 1);
   };
 
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
@@ -122,8 +125,6 @@ void SimplexTableau<T, SimplexTraitsT>::init(const SimplexType simplexType) {
 
   if (simplexType == SimplexType::DUAL) {
     initBoundsForDualSimplex();
-    calculateCurrentObjectiveValue();
-    calculateSolution();
   }
 }
 
@@ -229,7 +230,7 @@ void SimplexTableau<T, SimplexTraitsT>::calculateDualExplicit() {
 
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateDualPFI() {
-  _y.resize(_basisMatrixInverse.size());
+  _y.resize(_rowInfos.size());
   for (int k = 0; k < _rowInfos.size(); ++k)
     _y[k] = _objectiveRow[basicColumnIdx(k)];
 
@@ -238,7 +239,7 @@ void SimplexTableau<T, SimplexTraitsT>::calculateDualPFI() {
 
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateDualPFISparse() {
-  _y.resize(_basisMatrixInverse.size());
+  _y.resize(_rowInfos.size());
   for (int k = 0; k < _rowInfos.size(); ++k)
     _y[k] = _objectiveRow[basicColumnIdx(k)];
 
@@ -345,13 +346,12 @@ void SimplexTableau<T, SimplexTraitsT>::convertToStandardForm() {
   int newVariableIdx = variableCountAtTheStart;
 
   const auto newSlackLabel = [&]() {
-    const std::string firstPattern = "S" + std::to_string(newVariableIdx);
+    const std::string firstPattern = "S" + std::to_string(newVariableIdx + 1);
     return (_variableLabelSet.find(firstPattern) == _variableLabelSet.end())
                ? firstPattern
                : firstPattern + Constants::SLACK_SUFFIX;
   };
 
-  _initialObjectiveRow.resize(newVariableCount);
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     _constraintMatrix[rowIdx].resize(newVariableCount);
     if (_rowInfos[rowIdx].isEqualityRow())

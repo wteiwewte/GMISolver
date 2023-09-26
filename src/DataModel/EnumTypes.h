@@ -36,7 +36,8 @@ enum class BoundType : int8_t {
   BINARY_VARIABLE,
   FREE_VARIABLE,
   LOWER_BOUND_MINUS_INF,
-  UPPER_BOUND_INTEGER
+  UPPER_BOUND_INTEGER,
+  LOWER_BOUND_INTEGER
 };
 
 enum class LPOptimizationResult : int8_t {
@@ -75,6 +76,11 @@ enum class SimplexType : int8_t {
 enum class LexicographicReoptType : int8_t {
   MIN = 0,
   MAX,
+};
+
+enum class GomoryCutChoosingRule : int8_t {
+  FIRST = 0,
+  ALL,
 };
 
 enum class ValidateSimplex : int8_t { YES = 0, NO, UNKNOWN };

@@ -15,6 +15,7 @@ template <typename T> struct NumericalTraits {
   constexpr static T DUAL_FEASIBILITY_TOLERANCE = 1e-6;
   constexpr static T OBJECTIVE_MONOTONICITY_TOLERANCE = 1e-6;
   constexpr static T INTEGRALITY_TOLERANCE = 1e-5;
+  constexpr static T OPTIMALITY_TOLERANCE = 1e-5;
 
   constexpr static T ABSOLUTE_EPSILON = 1e-9;
   constexpr static T PIVOT_ABSOLUTE_EPSILON = 1e-6;

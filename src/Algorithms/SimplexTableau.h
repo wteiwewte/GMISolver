@@ -151,7 +151,6 @@ private:
 
   std::vector<T> _rightHandSides;
   std::vector<T> _initialRightHandSides;
-  std::vector<T> _initialObjectiveRow;
   std::vector<T> _objectiveRow;
 
   bool _useProductFormOfInverse;

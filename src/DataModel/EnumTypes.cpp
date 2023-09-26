@@ -46,6 +46,8 @@ std::optional<BoundType> stringToBoundType(const std::string &string) {
     return BoundType::LOWER_BOUND_MINUS_INF;
   else if (string == "UI")
     return BoundType::UPPER_BOUND_INTEGER;
+  else if (string == "LI")
+    return BoundType::LOWER_BOUND_INTEGER;
 
   return std::nullopt;
 }
@@ -65,6 +67,8 @@ std::set<size_t> allowedLinesCount(const BoundType boundType) {
   case BoundType::LOWER_BOUND_MINUS_INF:
     return {3};
   case BoundType::UPPER_BOUND_INTEGER:
+    return {4};
+  case BoundType::LOWER_BOUND_INTEGER:
     return {4};
   }
 }

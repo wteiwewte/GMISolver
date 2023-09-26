@@ -31,6 +31,8 @@ public:
 
   bool checkIfAllBoundsAreSpeficied() const;
   bool isPureIP() const;
+  bool allCoefficientsAreIntegers() const;
+  bool allVariablesAreNonnegative() const;
 
 private:
   friend struct MpsReader<T>;

@@ -27,11 +27,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _reinversionFrequency(reinversionFrequency),
-      _validateSimplex(validateSimplex) {
-  _simplexTableau.calculateRHS();
-  _simplexTableau.calculateCurrentObjectiveValue();
-  _simplexTableau.calculateSolution();
-}
+      _validateSimplex(validateSimplex) {}
 
 template <typename T, typename SimplexTraitsT>
 std::string RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::type() const {
@@ -456,6 +452,7 @@ void RevisedPrimalSimplexPFIBounds<
 
   _simplexTableau._variableInfos.resize(*firstArtificialIdx);
   _simplexTableau._reducedCosts.resize(*firstArtificialIdx);
+  // FIXME clean lower/upper bounds, variable label set?
   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx)
     _simplexTableau._constraintMatrix[rowIdx].resize(*firstArtificialIdx);
 

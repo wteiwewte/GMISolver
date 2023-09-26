@@ -24,16 +24,29 @@ public:
 
   std::string type() const;
 
-  IPOptStatistics<T> run(const LexicographicReoptType lexicographicReoptType);
+  IPOptStatistics<T> run(const LexicographicReoptType lexicographicReoptType,
+                         const LPOptimizationType lpOptimizationType,
+                         const GomoryCutChoosingRule gomoryCutChoosingRule);
 
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
+  LPRelaxationStatistics<T>
+  runImpl(const int relaxationNo,
+          const LexicographicReoptType lexicographicReoptType);
+
   RevisedDualSimplexPFIBounds<T, SimplexTraitsT> dualSimplex() const;
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> primalSimplex() const;
 
-  void addCutsForFractionalVars() const;
-  //  bool
+  void checkIfNonBasicVarsAreIntegral() const;
+  std::vector<int> collectFractionalBasisRowIndices(const GomoryCutChoosingRule gomoryCutChoosingRule) const;
+  bool isVarValueIntegral(const int varIdx) const;
+
+  void addCutRows(const int relaxationNo,
+                  const std::vector<int> &fractionalBasisVarsRowIndices) const;
+  void
+  addSlackVars(const int relaxationNo,
+               const std::vector<int> &fractionalBasisVarsRowIndices) const;
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;

@@ -55,6 +55,7 @@ TYPED_TEST_P(PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobi) {
   using TypeTupleT = TypeParam;
   using FloatingPointT = std::tuple_element_t<0, typename TypeTupleT::types>;
   using SimplexTraitsT = std::tuple_element_t<1, typename TypeTupleT::types>;
+  using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
   for (const auto &lpModelSetDirectory :
        std::filesystem::directory_iterator(PRIMAL_SIMPLEX_TEST_DIR_PATH)) {
@@ -93,7 +94,7 @@ TYPED_TEST_P(PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobi) {
         SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
         SPDLOG_INFO("SIMPLEX OPT {}", phaseTwoLpOptStats._optimalValue);
         EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                    phaseTwoLpOptStats._optimalValue, 0.00001);
+                    phaseTwoLpOptStats._optimalValue, NumericalTraitsT::OPTIMALITY_TOLERANCE);
       }
     }
   }

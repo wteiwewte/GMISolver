@@ -365,6 +365,12 @@ MpsReader<T>::read(const std::string &filePath) {
         linearProgram._variableInfos[variableIdx]._type = VariableType::INTEGER;
         break;
       }
+      case BoundType::LOWER_BOUND_INTEGER: {
+        linearProgram._variableLowerBounds[variableIdx] =
+            convert(coefficientValueStr);
+        linearProgram._variableInfos[variableIdx]._type = VariableType::INTEGER;
+        break;
+      }
       case BoundType::BINARY_VARIABLE: {
         linearProgram._variableLowerBounds[variableIdx] = 0.0;
         linearProgram._variableUpperBounds[variableIdx] = 1.0;

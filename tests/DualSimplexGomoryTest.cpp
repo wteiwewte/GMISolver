@@ -46,7 +46,7 @@ protected:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
   void SetUp() override {
-    absl::SetFlag(&FLAGS_validate_simplex, ValidateSimplex::NO);
+    absl::SetFlag(&FLAGS_validate_simplex, ValidateSimplex::YES);
     absl::SetFlag(&FLAGS_use_product_form_of_inverse, true);
   }
 
@@ -192,6 +192,16 @@ protected:
         ipOptStatistics._lpRelaxationStats.back();
     compareWithGurobi(lexicographicReoptType, lastRelaxationOptStats,
                       gurobiLPOptStats);
+    checkIfSolutionIsInteger(ipOptStatistics);
+  }
+
+  void checkIfSolutionIsInteger(
+      const IPOptStatistics<FloatingPointT> &ipOptStatistics) {
+    const auto &optSolution = ipOptStatistics._optimalSolution;
+    EXPECT_TRUE(
+        std::all_of(optSolution.begin(), optSolution.end(), [](const auto &x) {
+          return NumericalTraitsT ::isInteger(x);
+        }));
   }
 
   void compareWithGurobi(

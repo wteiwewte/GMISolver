@@ -67,9 +67,11 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
         runImpl(relaxationNo, lexicographicReoptType);
   }
 
-  ipOptStatistics._integerOptimum =
+  ipOptStatistics._optimalValue =
       ipOptStatistics._lpRelaxationStats.back()
           ._lexicographicReoptStats._objectiveValueAfterLexReopt;
+  ipOptStatistics._optimalSolution = _simplexTableau._x;
+
   return ipOptStatistics;
 }
 
@@ -119,7 +121,8 @@ void DualSimplexGomory<T, SimplexTraitsT>::checkIfNonBasicVarsAreIntegral()
     if (varInfo._isArtificial || varInfo._isSlack || varInfo._isFixed)
       continue;
 
-    if (varInfo._type == VariableType::INTEGER && !isVarValueIntegral(varIdx)) {
+    if (varInfo._type == VariableType::INTEGER &&
+        !NumericalTraitsT::isInteger(_simplexTableau._x[varIdx])) {
       if (!_simplexTableau._simplexBasisData
                ._isBasicColumnIndexBitset[varIdx]) {
         SPDLOG_WARN("NON-BASIC VAR IDX {} IS REQUIRED TO BE INTEGER BUT ITS "
@@ -145,7 +148,7 @@ DualSimplexGomory<T, SimplexTraitsT>::collectFractionalBasisRowIndices(
       continue;
 
     if (varInfo._type == VariableType::INTEGER &&
-        !isVarValueIntegral(basicVarIdx)) {
+        !NumericalTraitsT::isInteger(_simplexTableau._x[basicVarIdx])) {
       fractionalBasisVarsRowIndices.push_back(rowIdx);
 
       if (gomoryCutChoosingRule == GomoryCutChoosingRule::FIRST)
@@ -153,14 +156,6 @@ DualSimplexGomory<T, SimplexTraitsT>::collectFractionalBasisRowIndices(
     }
   }
   return fractionalBasisVarsRowIndices;
-}
-
-template <typename T, typename SimplexTraitsT>
-bool DualSimplexGomory<T, SimplexTraitsT>::isVarValueIntegral(
-    const int varIdx) const {
-  return std::abs(_simplexTableau._x[varIdx] -
-                  std::floor(_simplexTableau._x[varIdx] + 0.5)) <=
-         NumericalTraitsT::INTEGRALITY_TOLERANCE;
 }
 
 template <typename T, typename SimplexTraitsT>

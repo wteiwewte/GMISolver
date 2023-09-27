@@ -13,7 +13,8 @@ template <typename T> struct LPRelaxationStatistics {
 };
 
 template <typename T> struct IPOptStatistics {
-  T _integerOptimum{};
+  T _optimalValue{};
+  std::vector<T> _optimalSolution;
   std::vector<LPRelaxationStatistics<T>> _lpRelaxationStats;
 };
 

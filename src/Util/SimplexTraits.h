@@ -109,6 +109,10 @@ template <typename T> struct NumericalTraits {
   };
 
   static bool isZero(const T &x) { return std::fabs(x) < ABSOLUTE_TOLERANCE; }
+  static bool isInteger(const T &x) {
+    return std::abs(x - std::floor(x + 0.5)) <= INTEGRALITY_TOLERANCE;
+    ;
+  }
 };
 
 template <typename T,

@@ -100,7 +100,8 @@ void runDualSimplexGomoryWithPrimalCuts(
       absl::GetFlag(FLAGS_reinversion_frequency),
       absl::GetFlag(FLAGS_validate_simplex));
   const auto ipOptStats = dualSimplexGomoryWithPrimalCuts.run(
-      LexicographicReoptType::MAX, LPOptimizationType::LINEAR_RELAXATION, GomoryCutChoosingRule::FIRST);
+      LexicographicReoptType::MAX, LPOptimizationType::LINEAR_RELAXATION,
+      GomoryCutChoosingRule::FIRST);
   for (const auto &lpRelaxStats : ipOptStats._lpRelaxationStats) {
     lpOptStatisticsVec.push_back(lpRelaxStats._relaxationOptStats);
     const auto &lexLPReoptStatsVec =

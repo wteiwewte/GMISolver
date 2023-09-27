@@ -5,11 +5,11 @@
 #include "src/Util/LPOptStatistics.h"
 #include "src/Util/MpsReader.h"
 #include "tests/CommonDefs.h"
+#include "tests/LPTestBase.h"
 
 #include <filesystem>
 
 #include <gtest/gtest.h>
-#include <spdlog/spdlog.h>
 
 template <typename T> struct PrimalSimplexOutput {
   LPOptStatistics<T> _phaseOneLpOptStats;
@@ -40,7 +40,8 @@ runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
           ._phaseTwoLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseTwo()};
 }
 
-template <typename T> class PrimalSimplexTest : public ::testing::Test {
+template <typename T>
+class PrimalSimplexTest : public LPTestBase<T>, public ::testing::Test {
 protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex, ValidateSimplex::YES);
@@ -49,56 +50,36 @@ protected:
 
 TYPED_TEST_SUITE_P(PrimalSimplexTest);
 TYPED_TEST_P(PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobi) {
+  using FloatingPointT = std::tuple_element_t<0, typename TypeParam::types>;
+  using SimplexTraitsT = std::tuple_element_t<1, typename TypeParam::types>;
   constexpr auto PRIMAL_SIMPLEX_TEST_DIR_PATH =
       "../../tests/primal_simplex_working_instances";
   constexpr size_t PRIMAL_SIMPLEX_BASIS_SIZE_LIMIT = 200;
-  using TypeTupleT = TypeParam;
-  using FloatingPointT = std::tuple_element_t<0, typename TypeTupleT::types>;
-  using SimplexTraitsT = std::tuple_element_t<1, typename TypeTupleT::types>;
-  using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
-
-  for (const auto &lpModelSetDirectory :
-       std::filesystem::directory_iterator(PRIMAL_SIMPLEX_TEST_DIR_PATH)) {
-    if (!lpModelSetDirectory.is_directory())
-      continue;
-
-    SPDLOG_INFO("MODEL SET DIRECTORY {}",
-                std::string{lpModelSetDirectory.path().filename()});
-    for (const auto &lpModelFileEntry :
-         std::filesystem::directory_iterator(lpModelSetDirectory)) {
-      SPDLOG_INFO("MODEL {}", std::string{lpModelFileEntry.path().filename()});
-      auto linearProgram =
-          MpsReader<FloatingPointT>::read(lpModelFileEntry.path());
-      ASSERT_TRUE(linearProgram.has_value());
-
-      if (linearProgram->getRowInfos().size() > PRIMAL_SIMPLEX_BASIS_SIZE_LIMIT)
-        continue;
-
-      const auto primalSimplexOutput =
-          runPrimalSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
-              *linearProgram);
-      const auto gurobiLPOptStats =
-          GurobiOptimizer("", lpModelFileEntry.path())
-              .optimize(LPOptimizationType::LINEAR_RELAXATION);
-      if (primalSimplexOutput._phaseOneLpOptStats._optResult ==
-          LPOptimizationResult::INFEASIBLE) {
-        const std::set<LPOptimizationResult> infeasibleResults{
-            LPOptimizationResult::INFEASIBLE,
-            LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED};
-        ASSERT_TRUE(infeasibleResults.contains(gurobiLPOptStats._optResult));
-      } else {
-        ASSERT_TRUE(primalSimplexOutput._phaseTwoLpOptStats.has_value());
-        const auto &phaseTwoLpOptStats =
-            *primalSimplexOutput._phaseTwoLpOptStats;
-        ASSERT_EQ(gurobiLPOptStats._optResult, phaseTwoLpOptStats._optResult);
-        SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
-        SPDLOG_INFO("SIMPLEX OPT {}", phaseTwoLpOptStats._optimalValue);
-        EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                    phaseTwoLpOptStats._optimalValue,
-                    NumericalTraitsT::OPTIMALITY_TOLERANCE);
-      }
-    }
-  }
+  const LPOptimizationType lpOptimizationType{
+      LPOptimizationType::LINEAR_RELAXATION};
+  this->solveAndCompareInstancesFromSets(
+      PRIMAL_SIMPLEX_TEST_DIR_PATH, PRIMAL_SIMPLEX_BASIS_SIZE_LIMIT,
+      lpOptimizationType,
+      [&](const auto &linearProgram,
+          const std::filesystem::path &modelFileMpsPath) {
+        const auto primalSimplexOutput =
+            runPrimalSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
+                linearProgram);
+        const auto gurobiLPOptStats =
+            GurobiOptimizer("", modelFileMpsPath).optimize(lpOptimizationType);
+        if (primalSimplexOutput._phaseOneLpOptStats._optResult ==
+            LPOptimizationResult::INFEASIBLE) {
+          const std::set<LPOptimizationResult> infeasibleResults{
+              LPOptimizationResult::INFEASIBLE,
+              LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED};
+          ASSERT_TRUE(infeasibleResults.contains(gurobiLPOptStats._optResult));
+        } else {
+          ASSERT_TRUE(primalSimplexOutput._phaseTwoLpOptStats.has_value());
+          this->compareWithGurobi(*primalSimplexOutput._phaseTwoLpOptStats,
+                                  gurobiLPOptStats);
+        }
+      },
+      false);
 }
 
 REGISTER_TYPED_TEST_SUITE_P(PrimalSimplexTest,

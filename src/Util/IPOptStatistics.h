@@ -1,5 +1,5 @@
-#ifndef GMISOLVER_LPOPTSTATISTICS_H
-#define GMISOLVER_LPSTATISTICS_H
+#ifndef GMISOLVER_IPOPTSTATISTICS_H
+#define GMISOLVER_IPOPTSTATISTICS_H
 
 #include "src/Util/LPOptStatistics.h"
 
@@ -21,4 +21,4 @@ template <typename T> struct IPOptStatistics {
 template <typename T>
 using IPStatisticsMap = std::map<std::string, IPOptStatistics<T>>;
 
-#endif // GMISOLVER_LPOPTSTATISTICS_H
+#endif // GMISOLVER_IPOPTSTATISTICS_H

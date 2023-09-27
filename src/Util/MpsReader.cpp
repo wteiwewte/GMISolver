@@ -459,8 +459,15 @@ template <typename T>
 bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
   for (int varIdx = 0; varIdx < linearProgram._variableInfos.size(); ++varIdx)
     if (!linearProgram._variableLowerBounds[varIdx].has_value() &&
-        !linearProgram._variableUpperBounds[varIdx].has_value())
+        !linearProgram._variableUpperBounds[varIdx].has_value()) {
       linearProgram._variableLowerBounds[varIdx] = 0.0;
+
+      //      if (linearProgram._variableInfos[varIdx]._type ==
+      //      VariableType::INTEGER)
+      //      {
+      //        linearProgram._variableUpperBounds[varIdx] = 1.0;
+      //      }
+    }
 
   SPDLOG_INFO("PROGRAM NAME {}, VARIABLE COUNT {}, ROW COUNT {}, LOWER BOUNDS "
               "{}, UPPER BOUNDS {}",

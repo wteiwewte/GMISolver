@@ -41,6 +41,7 @@ using LPOptStatisticsVec = std::vector<LPOptStatistics<T>>;
 template <typename T> struct LexReoptStatistics {
   std::vector<LPOptStatistics<T>> _lexLPReoptStatsVec;
   T _objectiveValueAfterLexReopt;
+  LPOptimizationResult _optResult;
 };
 
 #endif // GMISOLVER_LPOPTSTATISTICS_H

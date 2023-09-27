@@ -191,7 +191,7 @@ template <typename T> struct LPTestBase {
       const auto &optimalValueAfterFirstLexReopt =
           lpRelaxationStatistics._lexicographicReoptStats
               ._objectiveValueAfterLexReopt;
-      SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC {} REOPTS {}",
+      SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC {} REOPT {}",
                   lexicographicReoptTypeToStr(lexicographicReoptType),
                   optimalValueAfterFirstLexReopt);
       EXPECT_NEAR(gurobiLPOptStats._optimalValue,
@@ -209,6 +209,22 @@ template <typename T> struct LPTestBase {
       SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
       SPDLOG_INFO("SIMPLEX OPT AFTER OPT {}", lpOptStatistics._optimalValue);
       EXPECT_NEAR(gurobiLPOptStats._optimalValue, lpOptStatistics._optimalValue,
+                  NumericalTraitsT::OPTIMALITY_TOLERANCE);
+    }
+  }
+  void compareWithGurobi(
+      const LexicographicReoptType lexicographicReoptType,
+      const LexReoptStatistics<FloatingPointT> &lexReoptStatistics,
+      const LPOptStatistics<FloatingPointT> &gurobiLPOptStats) {
+    ASSERT_EQ(gurobiLPOptStats._optResult, lexReoptStatistics._optResult);
+    if (lexReoptStatistics._optResult ==
+        LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+      SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
+      SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC {} REOPT {}",
+                  lexicographicReoptTypeToStr(lexicographicReoptType),
+                  lexReoptStatistics._objectiveValueAfterLexReopt);
+      EXPECT_NEAR(gurobiLPOptStats._optimalValue,
+                  lexReoptStatistics._objectiveValueAfterLexReopt,
                   NumericalTraitsT::OPTIMALITY_TOLERANCE);
     }
   }

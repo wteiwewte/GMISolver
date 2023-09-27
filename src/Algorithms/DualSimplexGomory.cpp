@@ -1,7 +1,7 @@
 #include "src/Algorithms/DualSimplexGomory.h"
 
+#include "src/Algorithms/LexicographicOptimizer.h"
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
-#include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
 
 template <typename T, typename SimplexTraitsT>
@@ -89,8 +89,7 @@ LPRelaxationStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::runImpl(
   //  SPDLOG_INFO(_simplexTableau.toStringSolution());
 
   relaxationStats._lexicographicReoptStats =
-      primalSimplex().lexicographicReoptimization(lexicographicReoptType,
-                                                  relaxationId());
+      lexicographicOptimizer().run(lexicographicReoptType, relaxationId());
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
   //  SPDLOG_INFO(_simplexTableau.toStringSolution());
   return relaxationStats;
@@ -105,9 +104,9 @@ DualSimplexGomory<T, SimplexTraitsT>::dualSimplex() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
-DualSimplexGomory<T, SimplexTraitsT>::primalSimplex() const {
-  return RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>(
+LexicographicOptimizer<T, SimplexTraitsT>
+DualSimplexGomory<T, SimplexTraitsT>::lexicographicOptimizer() const {
+  return LexicographicOptimizer<T, SimplexTraitsT>(
       _simplexTableau, _primalSimplexColumnPivotRule, _objValueLoggingFrequency,
       _reinversionFrequency, _validateSimplex);
 }

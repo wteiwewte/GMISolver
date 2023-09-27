@@ -23,16 +23,13 @@ public:
 
   LPOptStatistics<T> runPhaseOne();
   LPOptStatistics<T> runPhaseTwo();
-  LexReoptStatistics<T> lexicographicReoptimization(
-      const LexicographicReoptType lexicographicReoptType,
-      const std::string &lexOptId);
+  LPOptStatistics<T> runImpl(const std::string &lpNameSuffix,
+                             const bool printSummary = true);
 
 private:
   using VectorT = typename SimplexTraitsT::VectorT;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  LPOptStatistics<T> runImpl(const std::string &lpNameSuffix,
-                             const bool printSummary = true);
   void tryLogObjValue(const int iterCount);
   bool tryReinversion(const int iterCount,
                       const LPOptStatistics<T> &lpOptStatistics);
@@ -57,12 +54,6 @@ private:
   void removeArtificialVariablesFromBasis();
   void removeArtificialVariablesFromProgram();
   void removeRows(const std::vector<bool> &shouldRowBeRemoved);
-
-  std::vector<T>
-  singleVarObjective(const int varIdx,
-                     const LexicographicReoptType lexicographicReoptType);
-  void fixNonBasicVariables(int &varsFixedCount);
-  void unfixAllVariables();
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;

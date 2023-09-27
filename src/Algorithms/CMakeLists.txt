@@ -21,15 +21,21 @@ target_link_libraries(
   SimplexValidator
   SpdlogHeader)
 
+add_library(LexicographicOptimizer LexicographicOptimizer.cpp
+                                   LexicographicOptimizer.h)
+target_link_libraries(
+  LexicographicOptimizer CommonTypes LPOptStatistics SimplexTraits
+  SimplexTableau RevisedPrimalSimplexPFIBounds)
+
 add_library(DualSimplexGomory DualSimplexGomory.h DualSimplexGomory.cpp)
 target_link_libraries(
   DualSimplexGomory
   CommonTypes
+  LexicographicOptimizer
   LPOptStatistics
   SimplexTraits
   SimplexTableau
-  RevisedDualSimplexPFIBounds
-  RevisedPrimalSimplexPFIBounds)
+  RevisedDualSimplexPFIBounds)
 
 add_library(SimplexValidator SimplexValidator.cpp SimplexValidator.h)
 target_link_libraries(SimplexValidator SimplexTableau LPOptStatistics)

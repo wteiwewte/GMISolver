@@ -10,6 +10,7 @@
 #include <set>
 
 template <typename T, typename SimplexTraitsT> class DualSimplexGomory;
+template <typename T, typename SimplexTraitsT> class LexicographicOptimizer;
 template <typename T, typename SimplexTraitsT>
 class RevisedPrimalSimplexPFIBounds;
 template <typename T, typename SimplexTraitsT>
@@ -49,6 +50,7 @@ public:
 
 private:
   friend class DualSimplexGomory<T, SimplexTraitsT>;
+  friend class LexicographicOptimizer<T, SimplexTraitsT>;
   friend class RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>;
   friend class RevisedDualSimplexPFIBounds<T, SimplexTraitsT>;
   friend class SimplexValidator<T, SimplexTraitsT>;

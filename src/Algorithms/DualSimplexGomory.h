@@ -6,6 +6,7 @@
 #include "src/Util/SimplexTraits.h"
 
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
+template <typename T, typename SimplexTraitsT> class LexicographicOptimizer;
 template <typename T, typename SimplexTraitsT>
 class RevisedDualSimplexPFIBounds;
 template <typename T, typename SimplexTraitsT>
@@ -36,7 +37,7 @@ private:
           const LexicographicReoptType lexicographicReoptType);
 
   RevisedDualSimplexPFIBounds<T, SimplexTraitsT> dualSimplex() const;
-  RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> primalSimplex() const;
+  LexicographicOptimizer<T, SimplexTraitsT> lexicographicOptimizer() const;
 
   void checkIfNonBasicVarsAreIntegral() const;
   std::vector<int> collectFractionalBasisRowIndices(

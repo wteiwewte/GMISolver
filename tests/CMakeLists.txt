@@ -19,8 +19,9 @@ add_library(LPTestBase INTERFACE LPTestBase.h)
 target_link_libraries(LPTestBase INTERFACE EnumTypes LPOptStatistics
                                            IPOptStatistics SimplexTableau gtest)
 
-add_executable(UnitTests DualSimplexTest.cpp PrimalSimplexTest.cpp
-                         DualSimplexGomoryTest.cpp)
+add_executable(
+  UnitTests DualSimplexTest.cpp PrimalSimplexTest.cpp DualSimplexGomoryTest.cpp
+            LexicographicOptimizerTest.cpp)
 include_directories(../src/)
 target_link_libraries(
   UnitTests

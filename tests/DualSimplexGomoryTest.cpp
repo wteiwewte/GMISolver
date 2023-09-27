@@ -25,9 +25,8 @@ IPOptStatistics<T> runDualSimplexGomoryWithPrimalCuts(
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_reinversion_frequency),
       absl::GetFlag(FLAGS_validate_simplex));
-  return dualSimplexGomoryWithPrimalCuts.run(lexicographicReoptType,
-                                             lpOptimizationType,
-                                             gomoryCutChoosingRule);
+  return dualSimplexGomoryWithPrimalCuts.run(
+      lexicographicReoptType, lpOptimizationType, gomoryCutChoosingRule);
 }
 
 struct InstanceSetStats {
@@ -127,7 +126,8 @@ protected:
             IPOptStatistics<FloatingPointT> ipOptStatistics =
                 runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
                                                    SimplexTraitsT>(
-                    *linearProgram, lexicographicReoptType, lpOptimizationType, GomoryCutChoosingRule::FIRST);
+                    *linearProgram, lexicographicReoptType, lpOptimizationType,
+                    GomoryCutChoosingRule::FIRST);
             const auto gurobiLPOptStats =
                 GurobiOptimizer("", lpModelFileEntry.path())
                     .optimize(lpOptimizationType);
@@ -206,7 +206,8 @@ protected:
       SPDLOG_INFO("SIMPLEX OPT AFTER INITIAL OPT {}",
                   relaxationOptStats._optimalValue);
       EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                  relaxationOptStats._optimalValue, NumericalTraitsT::OPTIMALITY_TOLERANCE);
+                  relaxationOptStats._optimalValue,
+                  NumericalTraitsT::OPTIMALITY_TOLERANCE);
 
       const auto &optimalValueAfterFirstLexReopt =
           lpRelaxationStatistics._lexicographicReoptStats
@@ -215,7 +216,8 @@ protected:
                   lexicographicReoptTypeToStr(lexicographicReoptType),
                   optimalValueAfterFirstLexReopt);
       EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                  optimalValueAfterFirstLexReopt, NumericalTraitsT::OPTIMALITY_TOLERANCE);
+                  optimalValueAfterFirstLexReopt,
+                  NumericalTraitsT::OPTIMALITY_TOLERANCE);
     }
   }
 };

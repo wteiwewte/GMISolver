@@ -451,8 +451,12 @@ void RevisedPrimalSimplexPFIBounds<
     return;
 
   _simplexTableau._variableInfos.resize(*firstArtificialIdx);
+  _simplexTableau._variableLowerBounds.resize(*firstArtificialIdx);
+  _simplexTableau._variableUpperBounds.resize(*firstArtificialIdx);
+  _simplexTableau._simplexBasisData.resizeVarCount(*firstArtificialIdx);
   _simplexTableau._reducedCosts.resize(*firstArtificialIdx);
-  // FIXME clean lower/upper bounds, variable label set?
+  _simplexTableau._x.resize(*firstArtificialIdx);
+
   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx)
     _simplexTableau._constraintMatrix[rowIdx].resize(*firstArtificialIdx);
 

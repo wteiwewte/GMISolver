@@ -14,18 +14,19 @@ public:
         _simplexLpOptStats(simplexLpOptStats) {}
 
   bool validatePrimalIteration() const {
-    return validateBasis() && validatePrimalFeasibility() &&
+    return validateTableau() && validateBasis() &&
+           validatePrimalFeasibility() &&
            validateObjectiveMonotonicity(SimplexType::PRIMAL);
   }
 
   bool validateDualIteration() const {
-    return validateBasis() && validateDualFeasibility() &&
+    return validateTableau() && validateBasis() && validateDualFeasibility() &&
            validateObjectiveMonotonicity(SimplexType::DUAL);
   }
 
   bool validateOptimality(const SimplexType simplexType) const {
-    return validateBasis() && validatePrimalFeasibility() &&
-           validateDualFeasibility() &&
+    return validateTableau() && validateBasis() &&
+           validatePrimalFeasibility() && validateDualFeasibility() &&
            validateObjectiveMonotonicity(simplexType);
   }
 
@@ -170,6 +171,177 @@ private:
 
     if (uniqueBasicColumnIndices.size() != _simplexTableau._rowInfos.size())
       return false;
+
+    return true;
+  }
+
+  bool validateTableau() const {
+    return validateSingleVarBounds() && validateMatrixRepresentations() &&
+           validateRHS() && validateObjectiveRelatedThings() &&
+           validateSolutionSize() && validateBasisIntegrity();
+  }
+
+  bool validateSingleVarBounds() const {
+    const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
+    if (_simplexTableau._variableLowerBounds.size() != expectedNumberOfVars ||
+        _simplexTableau._variableUpperBounds.size() != expectedNumberOfVars)
+      return false;
+
+    return std::all_of(
+        _simplexTableau._variableLowerBounds.begin(),
+        _simplexTableau._variableLowerBounds.end(),
+        [](const std::optional<T> &lb) { return lb.has_value(); });
+  }
+
+  bool validateMatrixRepresentations() const {
+    const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
+    const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
+
+    if (_simplexTableau._constraintMatrix.size() != expectedNumberOfRows)
+      return false;
+
+    for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
+      if (_simplexTableau._constraintMatrix[rowIdx].size() !=
+          expectedNumberOfVars)
+        return false;
+    }
+
+    return validateMatrixReprNormal() && validateMatrixReprSparse();
+  }
+
+  bool validateMatrixReprNormal() const {
+    const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
+    const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
+
+    if (_simplexTableau._constraintMatrixNormalForm._rows.size() !=
+        expectedNumberOfRows)
+      return false;
+
+    for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
+      if (_simplexTableau._constraintMatrixNormalForm._rows[rowIdx].size() !=
+          expectedNumberOfVars)
+        return false;
+    }
+
+    if (_simplexTableau._constraintMatrixNormalForm._columns.size() !=
+        expectedNumberOfVars)
+      return false;
+
+    for (int colIdx = 0; colIdx < expectedNumberOfVars; ++colIdx) {
+      if (_simplexTableau._constraintMatrixNormalForm._columns[colIdx].size() !=
+          expectedNumberOfRows)
+        return false;
+    }
+
+    return true;
+  }
+
+  bool validateMatrixReprSparse() const {
+    const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
+    const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
+
+    if (_simplexTableau._constraintMatrixSparseForm._rows.size() !=
+        expectedNumberOfRows)
+      return false;
+
+    for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
+      if (_simplexTableau._constraintMatrixSparseForm._rows[rowIdx]
+              ._normalVec.size() != expectedNumberOfVars)
+        return false;
+    }
+
+    if (_simplexTableau._constraintMatrixSparseForm._columns.size() !=
+        expectedNumberOfVars)
+      return false;
+
+    for (int colIdx = 0; colIdx < expectedNumberOfVars; ++colIdx) {
+      if (_simplexTableau._constraintMatrixSparseForm._columns[colIdx]
+              ._normalVec.size() != expectedNumberOfRows)
+        return false;
+    }
+
+    return true;
+  }
+
+  bool validateRHS() const {
+    const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
+    return _simplexTableau._rightHandSides.size() == expectedNumberOfRows &&
+           _simplexTableau._initialRightHandSides.size() ==
+               expectedNumberOfRows;
+  }
+
+  bool validateObjectiveRelatedThings() const {
+    const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
+    return _simplexTableau._objectiveRow.size() == expectedNumberOfVars &&
+           _simplexTableau._reducedCosts.size() == expectedNumberOfVars;
+  }
+
+  bool validateSolutionSize() const {
+    const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
+    return _simplexTableau._x.size() == expectedNumberOfVars;
+  }
+
+  bool validateBasisIntegrity() const {
+    return validateBasisDataSizes() && validateBasisReprSizes();
+  }
+
+  bool validateBasisDataSizes() const {
+    const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
+    const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
+    const auto &simplexBasisData = _simplexTableau._simplexBasisData;
+
+    return simplexBasisData._rowToBasisColumnIdxMap.size() ==
+               expectedNumberOfRows &&
+           simplexBasisData._isBasicColumnIndexBitset.size() ==
+               expectedNumberOfVars &&
+           simplexBasisData._isColumnAtLowerBoundBitset.size() ==
+               expectedNumberOfVars &&
+           simplexBasisData._isColumnAtUpperBoundBitset.size() ==
+               expectedNumberOfVars;
+  }
+
+  bool validateBasisReprSizes() const {
+    if constexpr (SimplexTraitsT::useSparseRepresentationValue) {
+      if (!_simplexTableau._useProductFormOfInverse)
+        return false;
+
+      return validatePFISparse();
+    }
+
+    return _simplexTableau._useProductFormOfInverse
+               ? validatePFINormal()
+               : validateBasisMatrixInverse();
+  }
+
+  bool validatePFINormal() const {
+    const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
+    return std::all_of(_simplexTableau._pfiEtms.begin(),
+                       _simplexTableau._pfiEtms.end(),
+                       [&](const ElementaryMatrix<T> &etm) {
+                         return etm._vec.size() == expectedNumberOfRows;
+                       });
+  }
+
+  bool validatePFISparse() const {
+    const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
+    return std::all_of(_simplexTableau._sparsePfiEtms.begin(),
+                       _simplexTableau._sparsePfiEtms.end(),
+                       [&](const SparseElementaryMatrix<T> &etm) {
+                         return etm._sparseVec._normalVec.size() ==
+                                expectedNumberOfRows;
+                       });
+  }
+
+  bool validateBasisMatrixInverse() const {
+    const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
+    if (_simplexTableau._basisMatrixInverse.size() != expectedNumberOfRows)
+      return false;
+
+    for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
+      if (_simplexTableau._basisMatrixInverse[rowIdx].size() !=
+          expectedNumberOfRows)
+        return false;
+    }
 
     return true;
   }

@@ -40,6 +40,12 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
   SPDLOG_TRACE("Simplex tableau with artificial variables");
   SPDLOG_TRACE(toString());
   SPDLOG_TRACE(toStringLpSolveFormat());
+
+  if constexpr (SimplexTraitsT::useSparseRepresentationValue) {
+    if (!_useProductFormOfInverse) {
+      SPDLOG_ERROR("SPARSE REPRESENTATION AVAILABLE ONLY FOR PFI");
+    }
+  }
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -101,7 +107,7 @@ SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
   result._isBasicColumnIndexBitset.resize(_variableInfos.size());
   result._isColumnAtLowerBoundBitset.resize(_variableInfos.size(), true);
   result._isColumnAtUpperBoundBitset.resize(_variableInfos.size(), false);
-  result._rowToBasisColumnIdxMap.resize(_variableInfos.size());
+  result._rowToBasisColumnIdxMap.resize(_rowInfos.size());
 
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     const auto basicColumnIdx = *firstArtificialIdx + rowIdx;

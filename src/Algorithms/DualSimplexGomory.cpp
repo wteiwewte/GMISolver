@@ -43,11 +43,12 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
   while (true) {
     ++relaxationNo;
-//    if (relaxationNo > 5)
-//      break;
+    //    if (relaxationNo > 5)
+    //      break;
     SPDLOG_INFO("{}TH GOMORY ROUND", relaxationNo);
     checkIfNonBasicVarsAreIntegral();
-    const auto fractionalBasisRows = collectFractionalBasisRowIndices(gomoryCutChoosingRule);
+    const auto fractionalBasisRows =
+        collectFractionalBasisRowIndices(gomoryCutChoosingRule);
     SPDLOG_INFO("FOUND {} FRACTIONAL VARIABLES", fractionalBasisRows.size());
     if (fractionalBasisRows.empty())
       break;
@@ -83,13 +84,13 @@ LPRelaxationStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::runImpl(
   LPRelaxationStatistics<T> relaxationStats;
   relaxationStats._relaxationOptStats = dualSimplex().run(relaxationId());
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-//  SPDLOG_INFO(_simplexTableau.toStringSolution());
+  //  SPDLOG_INFO(_simplexTableau.toStringSolution());
 
   relaxationStats._lexicographicReoptStats =
       primalSimplex().lexicographicReoptimization(lexicographicReoptType,
                                                   relaxationId());
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-//  SPDLOG_INFO(_simplexTableau.toStringSolution());
+  //  SPDLOG_INFO(_simplexTableau.toStringSolution());
   return relaxationStats;
 }
 
@@ -131,7 +132,8 @@ void DualSimplexGomory<T, SimplexTraitsT>::checkIfNonBasicVarsAreIntegral()
 
 template <typename T, typename SimplexTraitsT>
 std::vector<int>
-DualSimplexGomory<T, SimplexTraitsT>::collectFractionalBasisRowIndices(const GomoryCutChoosingRule gomoryCutChoosingRule) const {
+DualSimplexGomory<T, SimplexTraitsT>::collectFractionalBasisRowIndices(
+    const GomoryCutChoosingRule gomoryCutChoosingRule) const {
   std::vector<int> fractionalBasisVarsRowIndices;
   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
     const auto basicVarIdx = _simplexTableau.basicColumnIdx(rowIdx);
@@ -237,12 +239,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
   _simplexTableau._variableInfos.reserve(newVarCount);
   _simplexTableau._variableLowerBounds.reserve(newVarCount);
   _simplexTableau._variableUpperBounds.reserve(newVarCount);
-  _simplexTableau._simplexBasisData._isBasicColumnIndexBitset.resize(
-      newVarCount);
-  _simplexTableau._simplexBasisData._isColumnAtLowerBoundBitset.resize(
-      newVarCount);
-  _simplexTableau._simplexBasisData._isColumnAtUpperBoundBitset.resize(
-      newVarCount);
+  _simplexTableau._simplexBasisData.resizeVarCount(newVarCount);
 
   int newVarIdx = 0;
   const auto newSlackLabel = [&]() {

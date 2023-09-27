@@ -39,7 +39,8 @@ private:
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> primalSimplex() const;
 
   void checkIfNonBasicVarsAreIntegral() const;
-  std::vector<int> collectFractionalBasisRowIndices(const GomoryCutChoosingRule gomoryCutChoosingRule) const;
+  std::vector<int> collectFractionalBasisRowIndices(
+      const GomoryCutChoosingRule gomoryCutChoosingRule) const;
   bool isVarValueIntegral(const int varIdx) const;
 
   void addCutRows(const int relaxationNo,

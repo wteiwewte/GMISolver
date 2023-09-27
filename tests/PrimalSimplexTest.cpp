@@ -94,7 +94,8 @@ TYPED_TEST_P(PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobi) {
         SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
         SPDLOG_INFO("SIMPLEX OPT {}", phaseTwoLpOptStats._optimalValue);
         EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                    phaseTwoLpOptStats._optimalValue, NumericalTraitsT::OPTIMALITY_TOLERANCE);
+                    phaseTwoLpOptStats._optimalValue,
+                    NumericalTraitsT::OPTIMALITY_TOLERANCE);
       }
     }
   }

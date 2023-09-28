@@ -109,8 +109,11 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
   if (_validateSimplex == ValidateSimplex::NO)
     return true;
 
-  if (!SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-           .validateDualIteration()) {
+  const auto validationResult =
+      SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
+          .validateDualIteration();
+  if (!validationResult) {
+    SPDLOG_ERROR("ITERATION VALIDATION FAILED - {}", validationResult.error());
     _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
     return false;
   }
@@ -124,8 +127,11 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::
   if (_validateSimplex == ValidateSimplex::NO)
     return;
 
-  if (!SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-           .validateOptimality(SimplexType::DUAL)) {
+  const auto validationResult =
+      SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
+          .validateOptimality(SimplexType::DUAL);
+  if (!validationResult) {
+    SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}", validationResult.error());
     _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
   }
 }

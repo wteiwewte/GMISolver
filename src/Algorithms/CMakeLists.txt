@@ -38,7 +38,7 @@ target_link_libraries(
   RevisedDualSimplexPFIBounds)
 
 add_library(SimplexValidator SimplexValidator.cpp SimplexValidator.h)
-target_link_libraries(SimplexValidator SimplexTableau LPOptStatistics)
+target_link_libraries(SimplexValidator SimplexTableau LPOptStatistics expected)
 
 add_library(SimplexTableau SimplexTableau.cpp SimplexTableau.h)
 target_link_libraries(SimplexTableau CommonTypes LinearProgram MatrixTypes

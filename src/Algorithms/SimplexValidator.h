@@ -6,6 +6,10 @@
 
 #include <unordered_set>
 
+#include <tl/expected.hpp>
+
+using ExpectedT = tl::expected<void, std::string>;
+
 template <typename T, typename SimplexTraitsT> class SimplexValidator {
 public:
   SimplexValidator(const SimplexTableau<T, SimplexTraitsT> &_simplexTableau,
@@ -13,31 +17,39 @@ public:
       : _simplexTableau(_simplexTableau),
         _simplexLpOptStats(simplexLpOptStats) {}
 
-  bool validatePrimalIteration() const {
-    return validateTableau() && validateBasis() &&
-           validatePrimalFeasibility() &&
-           validateObjectiveMonotonicity(SimplexType::PRIMAL);
+  ExpectedT validatePrimalIteration() const {
+    return validateTableau()
+        .and_then([&] { return validateBasis(); })
+        .and_then([&] { return validatePrimalFeasibility(); })
+        .and_then(
+            [&] { return validateObjectiveMonotonicity(SimplexType::PRIMAL); });
   }
 
-  bool validateDualIteration() const {
-    return validateTableau() && validateBasis() && validateDualFeasibility() &&
-           validateObjectiveMonotonicity(SimplexType::DUAL);
+  ExpectedT validateDualIteration() const {
+    return validateTableau()
+        .and_then([&] { return validateBasis(); })
+        .and_then([&] { return validateDualFeasibility(); })
+        .and_then(
+            [&] { return validateObjectiveMonotonicity(SimplexType::DUAL); });
   }
 
-  bool validateOptimality(const SimplexType simplexType) const {
-    return validateTableau() && validateBasis() &&
-           validatePrimalFeasibility() && validateDualFeasibility() &&
-           validateObjectiveMonotonicity(simplexType);
+  ExpectedT validateOptimality(const SimplexType simplexType) const {
+    return validateTableau()
+        .and_then([&] { return validateBasis(); })
+        .and_then([&] { return validatePrimalFeasibility(); })
+        .and_then([&] { return validateDualFeasibility(); })
+        .and_then([&] { return validateObjectiveMonotonicity(simplexType); });
   }
 
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  bool validatePrimalFeasibility() const {
-    return validateConstraints() && validateVariableBounds();
+  ExpectedT validatePrimalFeasibility() const {
+    return validateConstraints().and_then(
+        [&] { return validateVariableBounds(); });
   }
 
-  bool validateConstraints() const {
+  ExpectedT validateConstraints() const {
     for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
       typename SimplexTraitsT::CurrentAdder adder;
       for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
@@ -49,32 +61,40 @@ private:
       const auto rhs = _simplexTableau._initialRightHandSides[rowIdx];
       if (!NumericalTraitsT::equal(
               lhs, rhs, NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)) {
-        return false;
+        return tl::unexpected{
+            fmt::format("{}-th constraint not satisfied, diff {}", rowIdx,
+                        std::abs(lhs - rhs))};
       }
     }
-    return true;
+    return {};
   }
 
-  bool validateVariableBounds() const {
+  ExpectedT validateVariableBounds() const {
     for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
          ++varIdx) {
       if (_simplexTableau._variableLowerBounds[varIdx].has_value() &&
           (_simplexTableau._x[varIdx] <
            *_simplexTableau._variableLowerBounds[varIdx] -
                NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)) {
-        return false;
+        return tl::unexpected{fmt::format(
+            "Lower bound for var {} not satisfied, diff {}", varIdx,
+            std::abs(_simplexTableau._x[varIdx] -
+                     *_simplexTableau._variableLowerBounds[varIdx]))};
       }
       if (_simplexTableau._variableUpperBounds[varIdx].has_value() &&
           (_simplexTableau._x[varIdx] >
            *_simplexTableau._variableUpperBounds[varIdx] +
                NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)) {
-        return false;
+        return tl::unexpected{fmt::format(
+            "Upper bound for var {} not satisfied, diff {}", varIdx,
+            std::abs(_simplexTableau._x[varIdx] -
+                     *_simplexTableau._variableUpperBounds[varIdx]))};
       }
     }
-    return true;
+    return {};
   }
 
-  bool validateDualFeasibility() const {
+  ExpectedT validateDualFeasibility() const {
     for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
          ++varIdx) {
       if (_simplexTableau._variableInfos[varIdx]._isFixed)
@@ -84,78 +104,106 @@ private:
               ._isColumnAtLowerBoundBitset[varIdx] &&
           (_simplexTableau._reducedCosts[varIdx] <
            -NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE)) {
-        return false;
+        return tl::unexpected{
+            fmt::format("Dual feasibility not satisfied for var {} at lower "
+                        "bound, reduced cost {}",
+                        varIdx, _simplexTableau._reducedCosts[varIdx])};
       }
 
       if (_simplexTableau._simplexBasisData
               ._isColumnAtUpperBoundBitset[varIdx] &&
           (_simplexTableau._reducedCosts[varIdx] >
            NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE)) {
-        return false;
+        return tl::unexpected{
+            fmt::format("Dual feasibility not satisfied for var {} at upper "
+                        "bound, reduced cost {}",
+                        varIdx, _simplexTableau._reducedCosts[varIdx])};
       }
     }
 
-    return true;
+    return {};
   }
 
-  bool validateObjectiveMonotonicity(const SimplexType simplexType) const {
+  ExpectedT validateObjectiveMonotonicity(const SimplexType simplexType) const {
     const auto &consecutiveObjValues =
         _simplexLpOptStats._consecutiveObjectiveValues;
     if (consecutiveObjValues.size() <= 1)
-      return true;
+      return {};
 
     const auto lastObjectiveValue =
         consecutiveObjValues[consecutiveObjValues.size() - 1];
     const auto beforeLastObjectiveValue =
         consecutiveObjValues[consecutiveObjValues.size() - 2];
-    if (simplexType == SimplexType::PRIMAL)
-      return lastObjectiveValue <
-             beforeLastObjectiveValue +
-                 NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE;
-    else
-      return lastObjectiveValue >
-             beforeLastObjectiveValue -
-                 NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE;
+    if (simplexType == SimplexType::PRIMAL) {
+      if (lastObjectiveValue <
+          beforeLastObjectiveValue +
+              NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE)
+        return {};
+      else
+        return tl::unexpected{fmt::format(
+            "Primal objective monotonicity not satisfied last obj value {} "
+            "before last obj value {}, diff {}",
+            lastObjectiveValue, beforeLastObjectiveValue,
+            std::abs(lastObjectiveValue - beforeLastObjectiveValue))};
+    } else {
+      if (lastObjectiveValue >
+          beforeLastObjectiveValue -
+              NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE)
+        return {};
+      else
+        return tl::unexpected{fmt::format(
+            "Dual objective monotonicity not satisfied last obj value {} "
+            "before last obj value {}, diff {}",
+            lastObjectiveValue, beforeLastObjectiveValue,
+            std::abs(lastObjectiveValue - beforeLastObjectiveValue))};
+    }
   }
 
-  bool validateBasis() const {
-    return validateCorrectBasisDistribution() && validateBoundExistence() &&
-           validateRowToColumnMapping();
+  ExpectedT validateBasis() const {
+    return validateCorrectBasisDistribution()
+        .and_then([&] { return validateBoundExistence(); })
+        .and_then([&] { return validateRowToColumnMapping(); });
   }
 
-  bool validateCorrectBasisDistribution() const {
+  ExpectedT validateCorrectBasisDistribution() const {
     const auto &simplexBasisData = _simplexTableau._simplexBasisData;
     if ((simplexBasisData._isBasicColumnIndexBitset &
          simplexBasisData._isColumnAtLowerBoundBitset &
          simplexBasisData._isColumnAtUpperBoundBitset)
             .any()) {
-      return false;
+      return tl::unexpected{fmt::format(
+          "Some variables are assigned to multiple states in basis")};
     }
     if (!(simplexBasisData._isBasicColumnIndexBitset |
           simplexBasisData._isColumnAtLowerBoundBitset |
           simplexBasisData._isColumnAtUpperBoundBitset)
              .all()) {
-      return false;
+      return tl::unexpected{
+          fmt::format("Some variables aren't assigned to any state in basis")};
     }
-    return true;
+    return {};
   }
 
-  bool validateBoundExistence() const {
+  ExpectedT validateBoundExistence() const {
     const auto &simplexBasisData = _simplexTableau._simplexBasisData;
     for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
          ++varIdx) {
       if (simplexBasisData._isColumnAtLowerBoundBitset[varIdx] &&
           !_simplexTableau._variableLowerBounds[varIdx].has_value())
-        return false;
+        return tl::unexpected{fmt::format(
+            "Var {} is assigned lower bound state but has no lower bound",
+            varIdx)};
 
       if (simplexBasisData._isColumnAtUpperBoundBitset[varIdx] &&
           !_simplexTableau._variableUpperBounds[varIdx].has_value())
-        return false;
+        return tl::unexpected{fmt::format(
+            "Var {} is assigned upper bound state but has no upper bound",
+            varIdx)};
     }
-    return true;
+    return {};
   }
 
-  bool validateRowToColumnMapping() const {
+  ExpectedT validateRowToColumnMapping() const {
     const auto &simplexBasisData = _simplexTableau._simplexBasisData;
     std::unordered_set<int> uniqueBasicColumnIndices;
     for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
@@ -163,147 +211,202 @@ private:
           simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
       if (basicColumnIdx < 0 ||
           basicColumnIdx >= _simplexTableau._variableInfos.size())
-        return false;
+        return tl::unexpected{
+            fmt::format("Basic column idx {} for row idx {} is not valid",
+                        basicColumnIdx, rowIdx)};
+
+      if (!simplexBasisData._isBasicColumnIndexBitset[basicColumnIdx])
+        return tl::unexpected{
+            fmt::format("Basic column idx {} has incorrect state in basis",
+                        basicColumnIdx)};
 
       uniqueBasicColumnIndices.insert(
           simplexBasisData._rowToBasisColumnIdxMap[rowIdx]);
     }
 
     if (uniqueBasicColumnIndices.size() != _simplexTableau._rowInfos.size())
-      return false;
+      return tl::unexpected{
+          fmt::format("Basis row->column mapping is not unique")};
 
-    return true;
+    return {};
   }
 
-  bool validateTableau() const {
-    return validateSingleVarBounds() && validateMatrixRepresentations() &&
-           validateRHS() && validateObjectiveRelatedThings() &&
-           validateSolutionSize() && validateBasisIntegrity();
+  ExpectedT validateTableau() const {
+    return validateSingleVarBounds()
+        .and_then([&] { return validateMatrixRepresentations(); })
+        .and_then([&] { return validateRHS(); })
+        .and_then([&] { return validateObjectiveRelatedThings(); })
+        .and_then([&] { return validateSolutionSize(); })
+        .and_then([&] { return validateBasisIntegrity(); });
   }
 
-  bool validateSingleVarBounds() const {
+  ExpectedT validateSingleVarBounds() const {
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
     if (_simplexTableau._variableLowerBounds.size() != expectedNumberOfVars ||
         _simplexTableau._variableUpperBounds.size() != expectedNumberOfVars)
-      return false;
+      return tl::unexpected{fmt::format(
+          "Number of lower/upper bounds doesn't match number of variables")};
 
-    return std::all_of(
-        _simplexTableau._variableLowerBounds.begin(),
-        _simplexTableau._variableLowerBounds.end(),
-        [](const std::optional<T> &lb) { return lb.has_value(); });
+    if (!std::all_of(_simplexTableau._variableLowerBounds.begin(),
+                     _simplexTableau._variableLowerBounds.end(),
+                     [](const std::optional<T> &lb) { return lb.has_value(); }))
+      return tl::unexpected{
+          fmt::format("Some of variables don't have lower bound specified")};
+
+    return {};
   }
 
-  bool validateMatrixRepresentations() const {
+  ExpectedT validateMatrixRepresentations() const {
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
 
     if (_simplexTableau._constraintMatrix.size() != expectedNumberOfRows)
-      return false;
+      return tl::unexpected{
+          fmt::format("Number of constraints doesn't match number of rows")};
 
     for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
       if (_simplexTableau._constraintMatrix[rowIdx].size() !=
           expectedNumberOfVars)
-        return false;
+        return tl::unexpected{
+            fmt::format("Number of constraint row {} coefficients doesn't "
+                        "match number of variables",
+                        rowIdx)};
     }
 
-    return validateMatrixReprNormal() && validateMatrixReprSparse();
+    return validateMatrixReprNormal().and_then(
+        [&] { return validateMatrixReprSparse(); });
   }
 
-  bool validateMatrixReprNormal() const {
+  ExpectedT validateMatrixReprNormal() const {
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
 
     if (_simplexTableau._constraintMatrixNormalForm._rows.size() !=
         expectedNumberOfRows)
-      return false;
+      return tl::unexpected{fmt::format(
+          "[Normal form] Number of constraints doesn't match number of rows")};
 
     for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
       if (_simplexTableau._constraintMatrixNormalForm._rows[rowIdx].size() !=
           expectedNumberOfVars)
-        return false;
+        return tl::unexpected{
+            fmt::format("[Normal form] Number of constraint row {} "
+                        "coefficients doesn't match number of variables",
+                        rowIdx)};
     }
 
     if (_simplexTableau._constraintMatrixNormalForm._columns.size() !=
         expectedNumberOfVars)
-      return false;
+      return tl::unexpected{
+          fmt::format("[Normal form] Number of constraints columns doesn't "
+                      "match number of variables")};
 
     for (int colIdx = 0; colIdx < expectedNumberOfVars; ++colIdx) {
       if (_simplexTableau._constraintMatrixNormalForm._columns[colIdx].size() !=
           expectedNumberOfRows)
-        return false;
+        return tl::unexpected{
+            fmt::format("[Normal form] Number of constraint column {} "
+                        "coefficients doesn't match number of variables",
+                        colIdx)};
     }
 
-    return true;
+    return {};
   }
 
-  bool validateMatrixReprSparse() const {
+  ExpectedT validateMatrixReprSparse() const {
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
 
     if (_simplexTableau._constraintMatrixSparseForm._rows.size() !=
         expectedNumberOfRows)
-      return false;
+      return tl::unexpected{fmt::format(
+          "[Sparse form] Number of constraints doesn't match number of rows")};
 
     for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
       if (_simplexTableau._constraintMatrixSparseForm._rows[rowIdx]
               ._normalVec.size() != expectedNumberOfVars)
-        return false;
+        return tl::unexpected{
+            fmt::format("[Sparse form] Number of constraint row {} "
+                        "coefficients doesn't match number of variables",
+                        rowIdx)};
     }
 
     if (_simplexTableau._constraintMatrixSparseForm._columns.size() !=
         expectedNumberOfVars)
-      return false;
+      return tl::unexpected{
+          fmt::format("[Sparse form] Number of constraints columns doesn't "
+                      "match number of variables")};
 
     for (int colIdx = 0; colIdx < expectedNumberOfVars; ++colIdx) {
       if (_simplexTableau._constraintMatrixSparseForm._columns[colIdx]
               ._normalVec.size() != expectedNumberOfRows)
-        return false;
+        return tl::unexpected{
+            fmt::format("[Sparse form] Number of constraint column {} "
+                        "coefficients doesn't match number of variables",
+                        colIdx)};
     }
 
-    return true;
+    return {};
   }
 
-  bool validateRHS() const {
+  ExpectedT validateRHS() const {
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
-    return _simplexTableau._rightHandSides.size() == expectedNumberOfRows &&
-           _simplexTableau._initialRightHandSides.size() ==
-               expectedNumberOfRows;
+    if (_simplexTableau._rightHandSides.size() == expectedNumberOfRows &&
+        _simplexTableau._initialRightHandSides.size() == expectedNumberOfRows)
+      return {};
+
+    return tl::unexpected{
+        fmt::format("RHS or initial RHS sizes don't match number of rows")};
   }
 
-  bool validateObjectiveRelatedThings() const {
+  ExpectedT validateObjectiveRelatedThings() const {
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
-    return _simplexTableau._objectiveRow.size() == expectedNumberOfVars &&
-           _simplexTableau._reducedCosts.size() == expectedNumberOfVars;
+    if (_simplexTableau._objectiveRow.size() == expectedNumberOfVars &&
+        _simplexTableau._reducedCosts.size() == expectedNumberOfVars)
+      return {};
+
+    return tl::unexpected{fmt::format("Objective row or reduced costs sizes "
+                                      "don't match number of variables")};
   }
 
-  bool validateSolutionSize() const {
+  ExpectedT validateSolutionSize() const {
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
-    return _simplexTableau._x.size() == expectedNumberOfVars;
+    if (_simplexTableau._x.size() == expectedNumberOfVars)
+      return {};
+
+    return tl::unexpected{
+        fmt::format("Solution vector size doesn't match number of variables")};
   }
 
-  bool validateBasisIntegrity() const {
-    return validateBasisDataSizes() && validateBasisReprSizes();
+  ExpectedT validateBasisIntegrity() const {
+    return validateBasisDataSizes().and_then(
+        [&] { return validateBasisReprSizes(); });
   }
 
-  bool validateBasisDataSizes() const {
+  ExpectedT validateBasisDataSizes() const {
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
     const auto &simplexBasisData = _simplexTableau._simplexBasisData;
 
-    return simplexBasisData._rowToBasisColumnIdxMap.size() ==
-               expectedNumberOfRows &&
-           simplexBasisData._isBasicColumnIndexBitset.size() ==
-               expectedNumberOfVars &&
-           simplexBasisData._isColumnAtLowerBoundBitset.size() ==
-               expectedNumberOfVars &&
-           simplexBasisData._isColumnAtUpperBoundBitset.size() ==
-               expectedNumberOfVars;
+    if (simplexBasisData._rowToBasisColumnIdxMap.size() ==
+            expectedNumberOfRows &&
+        simplexBasisData._isBasicColumnIndexBitset.size() ==
+            expectedNumberOfVars &&
+        simplexBasisData._isColumnAtLowerBoundBitset.size() ==
+            expectedNumberOfVars &&
+        simplexBasisData._isColumnAtUpperBoundBitset.size() ==
+            expectedNumberOfVars)
+      return {};
+
+    return tl::unexpected{fmt::format(
+        "Basis state vector sizes don't match number of rows/variables")};
   }
 
-  bool validateBasisReprSizes() const {
+  ExpectedT validateBasisReprSizes() const {
     if constexpr (SimplexTraitsT::useSparseRepresentationValue) {
       if (!_simplexTableau._useProductFormOfInverse)
-        return false;
+        return tl::unexpected{
+            fmt::format("Sparse representation is valid only for PFI mode")};
 
       return validatePFISparse();
     }
@@ -313,37 +416,48 @@ private:
                : validateBasisMatrixInverse();
   }
 
-  bool validatePFINormal() const {
+  ExpectedT validatePFINormal() const {
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
-    return std::all_of(_simplexTableau._pfiEtms.begin(),
-                       _simplexTableau._pfiEtms.end(),
-                       [&](const ElementaryMatrix<T> &etm) {
-                         return etm._vec.size() == expectedNumberOfRows;
-                       });
+    if (std::all_of(_simplexTableau._pfiEtms.begin(),
+                    _simplexTableau._pfiEtms.end(),
+                    [&](const ElementaryMatrix<T> &etm) {
+                      return etm._vec.size() == expectedNumberOfRows;
+                    }))
+      return {};
+
+    return tl::unexpected{fmt::format(
+        "[Normal form] Some of PFI etms sizes don't match number of rows")};
   }
 
-  bool validatePFISparse() const {
+  ExpectedT validatePFISparse() const {
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
-    return std::all_of(_simplexTableau._sparsePfiEtms.begin(),
-                       _simplexTableau._sparsePfiEtms.end(),
-                       [&](const SparseElementaryMatrix<T> &etm) {
-                         return etm._sparseVec._normalVec.size() ==
-                                expectedNumberOfRows;
-                       });
+    if (std::all_of(_simplexTableau._sparsePfiEtms.begin(),
+                    _simplexTableau._sparsePfiEtms.end(),
+                    [&](const SparseElementaryMatrix<T> &etm) {
+                      return etm._sparseVec._normalVec.size() ==
+                             expectedNumberOfRows;
+                    }))
+      return {};
+
+    return tl::unexpected{fmt::format(
+        "[Sparse form] Some of PFI etms sizes don't match number of rows")};
   }
 
-  bool validateBasisMatrixInverse() const {
+  ExpectedT validateBasisMatrixInverse() const {
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
     if (_simplexTableau._basisMatrixInverse.size() != expectedNumberOfRows)
-      return false;
+      return tl::unexpected{fmt::format(
+          "Basis matrix inverse size doesn't match number of rows")};
 
     for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
       if (_simplexTableau._basisMatrixInverse[rowIdx].size() !=
           expectedNumberOfRows)
-        return false;
+        return tl::unexpected{fmt::format(
+            "Basis matrix inverse row {} size doesn't match number of rows",
+            rowIdx)};
     }
 
-    return true;
+    return {};
   }
 
   const SimplexTableau<T, SimplexTraitsT> &_simplexTableau;

@@ -17,6 +17,7 @@ include(get_cpm.cmake)
 cpmaddpackage("gh:gabime/spdlog@1.10.0")
 cpmaddpackage("gh:fmtlib/fmt#9.1.0")
 cpmaddpackage("gh:abseil/abseil-cpp#20220623.1")
+cpmaddpackage("gh:TartanLlama/expected@1.1.0")
 cpmaddpackage(
   NAME
   Boost

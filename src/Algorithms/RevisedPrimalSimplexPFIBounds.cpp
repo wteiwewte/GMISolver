@@ -145,8 +145,11 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
   if (_validateSimplex == ValidateSimplex::NO)
     return true;
 
-  if (!SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-           .validatePrimalIteration()) {
+  const auto validationResult =
+      SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
+          .validatePrimalIteration();
+  if (!validationResult) {
+    SPDLOG_ERROR("ITERATION VALIDATION FAILED - {}", validationResult.error());
     _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
     return false;
   }
@@ -160,8 +163,11 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
   if (_validateSimplex == ValidateSimplex::NO)
     return;
 
-  if (!SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-           .validateOptimality(SimplexType::PRIMAL)) {
+  const auto validationResult =
+      SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
+          .validateOptimality(SimplexType::PRIMAL);
+  if (!validationResult) {
+    SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}", validationResult.error());
     _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
   }
 }
@@ -235,13 +241,14 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
     if (!_simplexTableau.isColumnAllowedToEnterBasis(columnIdx))
       continue;
 
-    if (NumericalTraitsT::less(_simplexTableau._reducedCosts[columnIdx], 0.0) &&
+    if (_simplexTableau._reducedCosts[columnIdx] <
+            -NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE &&
         _simplexTableau._simplexBasisData
             ._isColumnAtLowerBoundBitset[columnIdx])
       return columnIdx;
 
-    if (NumericalTraitsT::greater(_simplexTableau._reducedCosts[columnIdx],
-                                  0.0) &&
+    if (_simplexTableau._reducedCosts[columnIdx] >
+            NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE &&
         _simplexTableau._simplexBasisData
             ._isColumnAtUpperBoundBitset[columnIdx])
       return columnIdx;
@@ -258,11 +265,12 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
   const auto tryUpdateBest = [&](const int colIdx) {
     if ((_simplexTableau._simplexBasisData
              ._isColumnAtLowerBoundBitset[colIdx] &&
-         NumericalTraitsT::less(_simplexTableau._reducedCosts[colIdx], 0.0)) ||
+         _simplexTableau._reducedCosts[colIdx] <
+             -NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE) ||
         (_simplexTableau._simplexBasisData
              ._isColumnAtUpperBoundBitset[colIdx] &&
-         NumericalTraitsT::greater(_simplexTableau._reducedCosts[colIdx],
-                                   0.0))) {
+         _simplexTableau._reducedCosts[colIdx] >
+             NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE)) {
       const auto currentAbsReducedCost =
           std::fabs(_simplexTableau._reducedCosts[colIdx]);
       if (!biggestAbsReducedCost.has_value() ||
@@ -491,12 +499,8 @@ void RevisedPrimalSimplexPFIBounds<
     }
 
     if (!nonZeroEntryColumnIndex.has_value()) {
-      //      SPDLOG_INFO("ZERO ROW IDX {} - {}", rowIdx,
-      //                  fmt::join(pivotRow._normalVec, ", "));
       shouldRowBeRemoved[rowIdx] = true;
     } else {
-      SPDLOG_INFO("ROW IDX {}, PIVOT RHS {}", rowIdx,
-                  _simplexTableau._rightHandSides[rowIdx]);
       _simplexTableau.pivotImplicitBoundsGeneric(
           rowIdx, *nonZeroEntryColumnIndex,
           _simplexTableau.computeTableauColumnGeneric(*nonZeroEntryColumnIndex),

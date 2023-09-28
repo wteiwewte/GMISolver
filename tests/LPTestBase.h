@@ -32,6 +32,12 @@ template <typename T> struct LPTestBase {
                           const bool isRelaxationOptType,
                           const bool allBoundsMustBeSpecified,
                           InstanceSetStats &instanceSetStats) const {
+    //    if (modelName == "noswot.mps")
+    //    {
+    //      return false;
+    //    }
+    ++instanceSetStats._totalModelsCount;
+
     if (linearProgram.getRowInfos().size() > basisSizeLimit ||
         linearProgram.getVariableInfos().size() > 2 * basisSizeLimit) {
       ++instanceSetStats._tooBigModelsCount;
@@ -92,7 +98,6 @@ template <typename T> struct LPTestBase {
                   std::string{lpModelSetDirectory.path().filename()});
       for (const auto &lpModelFileEntry :
            std::filesystem::directory_iterator(lpModelSetDirectory)) {
-        ++instanceSetStats._totalModelsCount;
         const std::string modelName = lpModelFileEntry.path().filename();
         SPDLOG_INFO("MODEL {}", modelName);
         auto linearProgram =

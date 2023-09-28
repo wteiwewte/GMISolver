@@ -83,10 +83,17 @@ enum class GomoryCutChoosingRule : int8_t {
   ALL,
 };
 
-enum class ValidateSimplex : int8_t { YES = 0, NO, UNKNOWN };
-bool AbslParseFlag(absl::string_view text, ValidateSimplex *validateSimplex,
+enum class ValidateSimplexOption : int8_t {
+  DONT_VALIDATE = 0,
+  VALIDATE_AND_STOP_ON_ERROR,
+  VALIDATE_AND_DONT_STOP_ON_ERROR,
+  UNKNOWN
+};
+
+bool AbslParseFlag(absl::string_view text,
+                   ValidateSimplexOption *validateSimplexOption,
                    std::string *error);
-std::string AbslUnparseFlag(ValidateSimplex validateSimplex);
+std::string AbslUnparseFlag(ValidateSimplexOption validateSimplexOption);
 
 std::optional<SectionType> stringToSectionType(const std::string &string);
 std::optional<RowType> stringToRowType(const std::string &string);

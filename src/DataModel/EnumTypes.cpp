@@ -152,14 +152,20 @@ std::string lexicographicReoptTypeToStr(
   return "";
 }
 
-bool AbslParseFlag(absl::string_view text, ValidateSimplex *validateSimplex,
+bool AbslParseFlag(absl::string_view text,
+                   ValidateSimplexOption *validateSimplexOption,
                    std::string *error) {
-  if (text == "yes") {
-    *validateSimplex = ValidateSimplex::YES;
+  if (text == "dont_validate") {
+    *validateSimplexOption = ValidateSimplexOption::DONT_VALIDATE;
     return true;
   }
-  if (text == "no") {
-    *validateSimplex = ValidateSimplex::NO;
+  if (text == "validate_and_stop_on_error") {
+    *validateSimplexOption = ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR;
+    return true;
+  }
+  if (text == "validate_and_dont_stop_on_error") {
+    *validateSimplexOption =
+        ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR;
     return true;
   }
   *error = "unknown value for enumeration";
@@ -170,12 +176,14 @@ bool AbslParseFlag(absl::string_view text, ValidateSimplex *validateSimplex,
 // Must be in same namespace as OutputMode.
 
 // Returns a textual flag value corresponding to the OutputMode `mode`.
-std::string AbslUnparseFlag(ValidateSimplex validateSimplex) {
-  switch (validateSimplex) {
-  case ValidateSimplex::YES:
-    return "yes";
-  case ValidateSimplex::NO:
-    return "no";
+std::string AbslUnparseFlag(ValidateSimplexOption validateSimplexOption) {
+  switch (validateSimplexOption) {
+  case ValidateSimplexOption::DONT_VALIDATE:
+    return "dont_validate";
+  case ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR:
+    return "validate_and_stop_on_error";
+  case ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR:
+    return "validate_and_dont_stop_on_error";
   default:
     return "unknown";
   }

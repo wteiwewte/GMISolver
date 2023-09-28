@@ -21,7 +21,7 @@ runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
              simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
              absl::GetFlag(FLAGS_obj_value_logging_frequency),
              absl::GetFlag(FLAGS_reinversion_frequency),
-             absl::GetFlag(FLAGS_validate_simplex))
+             absl::GetFlag(FLAGS_validate_simplex_option))
       .run("");
 }
 
@@ -29,7 +29,8 @@ template <typename T>
 class DualSimplexTest : public LPTestBase<T>, public ::testing::Test {
 protected:
   void SetUp() override {
-    absl::SetFlag(&FLAGS_validate_simplex, ValidateSimplex::YES);
+    absl::SetFlag(&FLAGS_validate_simplex_option,
+                  ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
     absl::SetFlag(&FLAGS_use_product_form_of_inverse, true);
   }
 };

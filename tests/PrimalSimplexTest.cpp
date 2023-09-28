@@ -28,7 +28,7 @@ runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
           PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
           absl::GetFlag(FLAGS_obj_value_logging_frequency),
           absl::GetFlag(FLAGS_reinversion_frequency),
-          absl::GetFlag(FLAGS_validate_simplex));
+          absl::GetFlag(FLAGS_validate_simplex_option));
   auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
     SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED",
@@ -44,7 +44,8 @@ template <typename T>
 class PrimalSimplexTest : public LPTestBase<T>, public ::testing::Test {
 protected:
   void SetUp() override {
-    absl::SetFlag(&FLAGS_validate_simplex, ValidateSimplex::YES);
+    absl::SetFlag(&FLAGS_validate_simplex_option,
+                  ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
     absl::SetFlag(&FLAGS_reinversion_frequency, 60);
   }
 };

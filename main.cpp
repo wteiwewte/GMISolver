@@ -34,7 +34,8 @@ ABSL_FLAG(int32_t, reinversion_frequency, 300,
           "Basis matrix should be reinverted every nth iteration of simplex");
 ABSL_FLAG(bool, use_product_form_of_inverse, true,
           "Basis matrix inverse is represented via product form of inverse");
-ABSL_FLAG(ValidateSimplex, validate_simplex, ValidateSimplex::NO,
+ABSL_FLAG(ValidateSimplexOption, validate_simplex_option,
+          ValidateSimplexOption::DONT_VALIDATE,
           "Validate simplex implementations");
 ABSL_FLAG(bool, run_gomory, false, "Run gomory scheme");
 
@@ -55,7 +56,7 @@ void runPrimalSimplexWithImplicitBounds(
           PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
           absl::GetFlag(FLAGS_obj_value_logging_frequency),
           absl::GetFlag(FLAGS_reinversion_frequency),
-          absl::GetFlag(FLAGS_validate_simplex));
+          absl::GetFlag(FLAGS_validate_simplex_option));
   auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
   lpOptStatisticsVec.push_back(phaseOneLpOptStats);
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
@@ -80,7 +81,7 @@ void runDualSimplexWithImplicitBounds(
           simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
           absl::GetFlag(FLAGS_obj_value_logging_frequency),
           absl::GetFlag(FLAGS_reinversion_frequency),
-          absl::GetFlag(FLAGS_validate_simplex))
+          absl::GetFlag(FLAGS_validate_simplex_option))
           .run(""));
   SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
 }
@@ -98,7 +99,7 @@ void runDualSimplexGomoryWithPrimalCuts(
       DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_reinversion_frequency),
-      absl::GetFlag(FLAGS_validate_simplex));
+      absl::GetFlag(FLAGS_validate_simplex_option));
   const auto ipOptStats = dualSimplexGomoryWithPrimalCuts.run(
       LexicographicReoptType::MAX, LPOptimizationType::LINEAR_RELAXATION,
       GomoryCutChoosingRule::FIRST);

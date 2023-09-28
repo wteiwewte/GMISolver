@@ -9,19 +9,19 @@ LexicographicOptimizer<T, SimplexTraitsT>::LexicographicOptimizer(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
     const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency,
-    const ValidateSimplex validateSimplex)
+    const ValidateSimplexOption validateSimplexOption)
     : _simplexTableau(simplexTableau),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _reinversionFrequency(reinversionFrequency),
-      _validateSimplex(validateSimplex) {}
+      _validateSimplexOption(validateSimplexOption) {}
 
 template <typename T, typename SimplexTraitsT>
 RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
 LexicographicOptimizer<T, SimplexTraitsT>::primalSimplex() const {
   return RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>(
       _simplexTableau, _primalSimplexColumnPivotRule, _objValueLoggingFrequency,
-      _reinversionFrequency, _validateSimplex);
+      _reinversionFrequency, _validateSimplexOption);
 }
 
 template <typename T, typename SimplexTraitsT>

@@ -10,13 +10,13 @@ DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
     const DualSimplexRowPivotRule dualSimplexRowPivotRule,
     const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency,
-    const ValidateSimplex validateSimplex)
+    const ValidateSimplexOption validateSimplexOption)
     : _simplexTableau(simplexTableau),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _reinversionFrequency(reinversionFrequency),
-      _validateSimplex(validateSimplex) {}
+      _validateSimplexOption(validateSimplexOption) {}
 
 template <typename T, typename SimplexTraitsT>
 std::string DualSimplexGomory<T, SimplexTraitsT>::type() const {
@@ -100,7 +100,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>
 DualSimplexGomory<T, SimplexTraitsT>::dualSimplex() const {
   return RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
       _simplexTableau, _dualSimplexRowPivotRule, _objValueLoggingFrequency,
-      _reinversionFrequency, _validateSimplex);
+      _reinversionFrequency, _validateSimplexOption);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -108,7 +108,7 @@ LexicographicOptimizer<T, SimplexTraitsT>
 DualSimplexGomory<T, SimplexTraitsT>::lexicographicOptimizer() const {
   return LexicographicOptimizer<T, SimplexTraitsT>(
       _simplexTableau, _primalSimplexColumnPivotRule, _objValueLoggingFrequency,
-      _reinversionFrequency, _validateSimplex);
+      _reinversionFrequency, _validateSimplexOption);
 }
 
 template <typename T, typename SimplexTraitsT>

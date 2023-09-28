@@ -22,12 +22,12 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
     const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency,
-    const ValidateSimplex validateSimplex)
+    const ValidateSimplexOption validateSimplexOption)
     : _simplexTableau(simplexTableau),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _reinversionFrequency(reinversionFrequency),
-      _validateSimplex(validateSimplex) {}
+      _validateSimplexOption(validateSimplexOption) {}
 
 template <typename T, typename SimplexTraitsT>
 std::string RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::type() const {
@@ -142,7 +142,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
     const LPOptStatistics<T> &lpOptStatistics) {
-  if (_validateSimplex == ValidateSimplex::NO)
+  if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return true;
 
   const auto validationResult =
@@ -150,8 +150,12 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
           .validatePrimalIteration();
   if (!validationResult) {
     SPDLOG_ERROR("ITERATION VALIDATION FAILED - {}", validationResult.error());
-    _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
-    return false;
+
+    if (_validateSimplexOption ==
+        ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR) {
+      _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
+      return false;
+    }
   }
 
   return true;
@@ -160,7 +164,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
     tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics) {
-  if (_validateSimplex == ValidateSimplex::NO)
+  if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return;
 
   const auto validationResult =
@@ -168,7 +172,10 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
           .validateOptimality(SimplexType::PRIMAL);
   if (!validationResult) {
     SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}", validationResult.error());
-    _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
+    if (_validateSimplexOption ==
+        ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR) {
+      _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;
+    }
   }
 }
 

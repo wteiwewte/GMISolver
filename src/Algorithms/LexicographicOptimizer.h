@@ -17,7 +17,7 @@ public:
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
       const int32_t objValueLoggingFrequency,
       const int32_t reinversionFrequency,
-      const ValidateSimplex validateSimplex);
+      const ValidateSimplexOption validateSimplexOption);
 
   std::string type() const;
 
@@ -40,7 +40,7 @@ private:
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
   const int32_t _objValueLoggingFrequency;
   const int32_t _reinversionFrequency;
-  const ValidateSimplex _validateSimplex;
+  const ValidateSimplexOption _validateSimplexOption;
 };
 
 #endif // GMISOLVER_LEXICOGRAPHICOPTIMIZER_H

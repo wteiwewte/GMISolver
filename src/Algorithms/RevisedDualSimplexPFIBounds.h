@@ -31,7 +31,8 @@ private:
   void tryLogObjValue(const int iterCount);
   bool tryReinversion(const int iterCount,
                       const LPOptStatistics<T> &lpOptStatistics);
-  bool tryValidateIteration(const LPOptStatistics<T> &lpOptStatistics);
+  bool tryValidateIteration(const int iterCount,
+                            const LPOptStatistics<T> &lpOptStatistics);
   void tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics);
   bool checkIterationLimit(const int iterCount);
   std::optional<int> chooseRow();

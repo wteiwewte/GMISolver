@@ -89,7 +89,7 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
     ++iterCount;
     tryLogObjValue(iterCount);
 
-    if (!tryValidateIteration(lpOptStatistics))
+    if (!tryValidateIteration(iterCount, lpOptStatistics))
       break;
 
     if (!tryReinversion(iterCount, lpOptStatistics))
@@ -134,14 +134,14 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
       _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
       return false;
     }
-    if (!tryValidateIteration(lpOptStatistics))
+    if (!tryValidateIteration(iterCount, lpOptStatistics))
       return false;
   }
   return true;
 }
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
-    const LPOptStatistics<T> &lpOptStatistics) {
+    const int iterCount, const LPOptStatistics<T> &lpOptStatistics) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return true;
 
@@ -149,7 +149,8 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
           .validatePrimalIteration();
   if (!validationResult) {
-    SPDLOG_ERROR("ITERATION VALIDATION FAILED - {}", validationResult.error());
+    SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
+                 validationResult.error());
 
     if (_validateSimplexOption ==
         ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR) {

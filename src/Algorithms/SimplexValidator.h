@@ -141,7 +141,7 @@ private:
         return {};
       else
         return tl::unexpected{fmt::format(
-            "Primal objective monotonicity not satisfied last obj value {} "
+            "Primal obj monotonicity not satisfied - last obj value {} "
             "before last obj value {}, diff {}",
             lastObjectiveValue, beforeLastObjectiveValue,
             std::abs(lastObjectiveValue - beforeLastObjectiveValue))};
@@ -152,7 +152,7 @@ private:
         return {};
       else
         return tl::unexpected{fmt::format(
-            "Dual objective monotonicity not satisfied last obj value {} "
+            "Dual obj monotonicity not satisfied - last obj value {} "
             "before last obj value {}, diff {}",
             lastObjectiveValue, beforeLastObjectiveValue,
             std::abs(lastObjectiveValue - beforeLastObjectiveValue))};

@@ -51,7 +51,7 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
     ++iterCount;
     tryLogObjValue(iterCount);
 
-    if (!tryValidateIteration(lpOptStatistics))
+    if (!tryValidateIteration(iterCount, lpOptStatistics))
       break;
 
     if (!tryReinversion(iterCount, lpOptStatistics))
@@ -97,7 +97,7 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
       return false;
     }
 
-    if (!tryValidateIteration(lpOptStatistics))
+    if (!tryValidateIteration(iterCount, lpOptStatistics))
       return false;
   }
   return true;
@@ -105,7 +105,7 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
 
 template <typename T, typename SimplexTraitsT>
 bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
-    const LPOptStatistics<T> &lpOptStatistics) {
+    const int iterCount, const LPOptStatistics<T> &lpOptStatistics) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return true;
 
@@ -113,7 +113,8 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
           .validateDualIteration();
   if (!validationResult) {
-    SPDLOG_ERROR("ITERATION VALIDATION FAILED - {}", validationResult.error());
+    SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
+                 validationResult.error());
 
     if (_validateSimplexOption ==
         ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR) {
@@ -146,7 +147,7 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::
 template <typename T, typename SimplexTraitsT>
 bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
     const int iterCount) {
-  constexpr size_t HARD_ITERATION_LIMIT = 200000;
+  constexpr size_t HARD_ITERATION_LIMIT = 500000;
   if (iterCount > HARD_ITERATION_LIMIT) {
     _simplexTableau._result = LPOptimizationResult::REACHED_ITERATION_LIMIT;
     return false;
@@ -167,9 +168,10 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
   const auto pivotRow = _simplexTableau.computeTableauRowGeneric(*pivotRowIdx);
   const auto basicColumnIdx =
       _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[*pivotRowIdx];
-  const bool isPivotRowUnderLowerBound = NumericalTraitsT::less(
-      _simplexTableau._rightHandSides[*pivotRowIdx],
-      *_simplexTableau._variableLowerBounds[basicColumnIdx]);
+  const bool isPivotRowUnderLowerBound =
+      _simplexTableau._rightHandSides[*pivotRowIdx] <
+      *_simplexTableau._variableLowerBounds[basicColumnIdx] -
+          NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE;
   const auto enteringColumnIdx = chooseEnteringColumnIdx(
       *pivotRowIdx, pivotRow, isPivotRowUnderLowerBound);
   if (!enteringColumnIdx.has_value()) {
@@ -205,15 +207,15 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowFirstEligible() {
     const auto lowerBound =
         _simplexTableau._variableLowerBounds[basicColumnIdx];
     if (lowerBound.has_value() &&
-        NumericalTraitsT::less(_simplexTableau._rightHandSides[rowIdx],
-                               *lowerBound))
+        _simplexTableau._rightHandSides[rowIdx] <
+            *lowerBound - NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)
       return rowIdx;
 
     const auto upperBound =
         _simplexTableau._variableUpperBounds[basicColumnIdx];
     if (upperBound.has_value() &&
-        NumericalTraitsT::greater(_simplexTableau._rightHandSides[rowIdx],
-                                  *upperBound))
+        _simplexTableau._rightHandSides[rowIdx] >
+            *upperBound + NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)
       return rowIdx;
   }
   return std::nullopt;
@@ -238,16 +240,16 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowBiggestViolation() {
     const auto lowerBound =
         _simplexTableau._variableLowerBounds[basicColumnIdx];
     if (lowerBound.has_value() &&
-        NumericalTraitsT::less(_simplexTableau._rightHandSides[rowIdx],
-                               *lowerBound))
+        _simplexTableau._rightHandSides[rowIdx] <
+            *lowerBound - NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)
       tryUpdateBest(rowIdx,
                     *lowerBound - _simplexTableau._rightHandSides[rowIdx]);
 
     const auto upperBound =
         _simplexTableau._variableUpperBounds[basicColumnIdx];
     if (upperBound.has_value() &&
-        NumericalTraitsT::greater(_simplexTableau._rightHandSides[rowIdx],
-                                  *upperBound))
+        _simplexTableau._rightHandSides[rowIdx] >
+            *upperBound + NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)
       tryUpdateBest(rowIdx,
                     _simplexTableau._rightHandSides[rowIdx] - *upperBound);
   }

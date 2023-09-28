@@ -829,10 +829,10 @@ bool SimplexTableau<T, SimplexTraitsT>::reinversionPFI() {
   _pfiEtms.swap(newPfiEtms);
   calculateRHS();
   //  FIXME
-  //    calculateDual();
-  //    calculateReducedCostsBasedOnDual();
-  //    calculateSolution();
-  //    calculateCurrentObjectiveValue();
+  //      calculateDual();
+  //      calculateReducedCostsBasedOnDual();
+  //      calculateSolution();
+  //      calculateCurrentObjectiveValue();
   return true;
 }
 

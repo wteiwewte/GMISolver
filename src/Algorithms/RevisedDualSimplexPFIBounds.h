@@ -8,15 +8,16 @@
 #include <optional>
 
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
+template <typename T, typename SimplexTraitsT> class ReinversionManager;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class RevisedDualSimplexPFIBounds {
 public:
   RevisedDualSimplexPFIBounds(
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
+      ReinversionManager<T, SimplexTraitsT> &reinversionManager,
       const DualSimplexRowPivotRule dualSimplexRowPivotRule,
       const int32_t objValueLoggingFrequency,
-      const int32_t reinversionFrequency,
       const ValidateSimplexOption validateSimplexOption);
 
   std::string type() const;
@@ -43,9 +44,9 @@ private:
                           const bool isPivotRowUnderLowerBound);
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
+  ReinversionManager<T, SimplexTraitsT> &_reinversionManager;
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;
   const int32_t _objValueLoggingFrequency;
-  const int32_t _reinversionFrequency;
   const ValidateSimplexOption _validateSimplexOption;
 };
 

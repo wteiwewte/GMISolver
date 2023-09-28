@@ -1,5 +1,6 @@
-#include "Algorithms/DualSimplexGomory.h"
-#include "Algorithms/SimplexTableau.h"
+#include "src/Algorithms/DualSimplexGomory.h"
+#include "src/Algorithms/ReinversionManager.h"
+#include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
 #include "src/Util/LPOptStatistics.h"
 #include "src/Util/MpsReader.h"
@@ -19,12 +20,13 @@ IPOptStatistics<T> runDualSimplexGomoryWithPrimalCuts(
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::DUAL,
       absl::GetFlag(FLAGS_use_product_form_of_inverse));
+  ReinversionManager<T, SimplexTraitsT> reinversionManager(
+      simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   DualSimplexGomory<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(
-      simplexTableau,
+      simplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
       DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
-      absl::GetFlag(FLAGS_reinversion_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option));
   return dualSimplexGomoryWithPrimalCuts.run(
       lexicographicReoptType, lpOptimizationType, gomoryCutChoosingRule);
@@ -63,8 +65,9 @@ TYPED_TEST_P(DualSimplexGomoryTest,
                                                  SimplexTraitsT>(
                   linearProgram, lexicographicReoptType, lpOptimizationType,
                   GomoryCutChoosingRule::FIRST);
-          const auto gurobiLPOptStats = GurobiOptimizer("", modelFileMpsPath)
-                                            .optimize(lpOptimizationType);
+          const auto gurobiLPOptStats =
+              GurobiOptimizer("", modelFileMpsPath)
+                  .optimize<FloatingPointT>(lpOptimizationType);
           this->compare(lpOptimizationType, lexicographicReoptType,
                         ipOptStatistics, gurobiLPOptStats);
         }
@@ -92,8 +95,9 @@ TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
                                                  SimplexTraitsT>(
                   linearProgram, lexicographicReoptType, lpOptimizationType,
                   GomoryCutChoosingRule::FIRST);
-          const auto gurobiLPOptStats = GurobiOptimizer("", modelFileMpsPath)
-                                            .optimize(lpOptimizationType);
+          const auto gurobiLPOptStats =
+              GurobiOptimizer("", modelFileMpsPath)
+                  .optimize<FloatingPointT>(lpOptimizationType);
           this->compare(lpOptimizationType, lexicographicReoptType,
                         ipOptStatistics, gurobiLPOptStats);
         }

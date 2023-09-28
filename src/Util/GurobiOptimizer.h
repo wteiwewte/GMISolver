@@ -31,10 +31,10 @@ public:
     SPDLOG_INFO("Error during initialization");
   }
 
-  LPOptStatistics<double>
-  optimize(const LPOptimizationType lpOptimizationType) {
+  template <typename T>
+  LPOptStatistics<T> optimize(const LPOptimizationType lpOptimizationType) {
     adjustModelToOptType(lpOptimizationType);
-    LPOptStatistics<double> lpOptStatistics{
+    LPOptStatistics<T> lpOptStatistics{
         ._lpName = _grbModel.get(GRB_StringAttr_ModelName),
         ._simplexAlgorithmType = "GUROBI"};
     try {

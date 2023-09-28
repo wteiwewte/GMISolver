@@ -1,4 +1,5 @@
 #include "Algorithms/LexicographicOptimizer.h"
+#include "Algorithms/ReinversionManager.h"
 #include "Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
@@ -18,17 +19,18 @@ LexReoptStatistics<T> runDualSimplexWithLexReopt(
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::DUAL,
       absl::GetFlag(FLAGS_use_product_form_of_inverse));
+  ReinversionManager<T, SimplexTraitsT> reinversionManager(
+      simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
-      simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+      simplexTableau, reinversionManager,
+      DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
-      absl::GetFlag(FLAGS_reinversion_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option))
       .run("");
   return LexicographicOptimizer<T, SimplexTraitsT>(
-             simplexTableau,
+             simplexTableau, reinversionManager,
              PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
              absl::GetFlag(FLAGS_obj_value_logging_frequency),
-             absl::GetFlag(FLAGS_reinversion_frequency),
              absl::GetFlag(FLAGS_validate_simplex_option))
       .run(lexicographicReoptType, "", true);
 }
@@ -70,7 +72,7 @@ TYPED_TEST_P(LexicographicOptimizerTest,
           gurobiOptimizer.prepareLexicographicObjectives(
               lexicographicReoptType);
           const auto gurobiLPOptStats =
-              gurobiOptimizer.optimize(lpOptimizationType);
+              gurobiOptimizer.optimize<FloatingPointT>(lpOptimizationType);
 
           const auto gurobiSolution =
               gurobiOptimizer.getSolutionVector<FloatingPointT>();
@@ -89,8 +91,16 @@ TYPED_TEST_P(LexicographicOptimizerTest,
 REGISTER_TYPED_TEST_SUITE_P(LexicographicOptimizerTest,
                             runDualSimplexWithLexReoptAndCompareWithGurobi);
 
+// using LexicographicOptimizerTypes = ::testing::Types<
+//     TypeTuple<double, SimplexTraits<double,
+//     MatrixRepresentationType::NORMAL>>>;
 using LexicographicOptimizerTypes = ::testing::Types<
-    TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>>;
+    TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>,
+    TypeTuple<long double,
+              SimplexTraits<long double, MatrixRepresentationType::NORMAL>>>;
+//    TypeTuple<double, SimplexTraits<double,
+//    MatrixRepresentationType::SPARSE>>, TypeTuple<long double,
+//              SimplexTraits<long double, MatrixRepresentationType::SPARSE>>>;
 INSTANTIATE_TYPED_TEST_SUITE_P(LexicographicOptimizerTestSuite,
                                LexicographicOptimizerTest,
                                LexicographicOptimizerTypes);

@@ -1,21 +1,22 @@
 #include "src/Algorithms/DualSimplexGomory.h"
 
 #include "src/Algorithms/LexicographicOptimizer.h"
+#include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
 
 template <typename T, typename SimplexTraitsT>
 DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
+    ReinversionManager<T, SimplexTraitsT> &reinversionManager,
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
     const DualSimplexRowPivotRule dualSimplexRowPivotRule,
-    const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency,
+    const int32_t objValueLoggingFrequency,
     const ValidateSimplexOption validateSimplexOption)
-    : _simplexTableau(simplexTableau),
+    : _simplexTableau(simplexTableau), _reinversionManager(reinversionManager),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
-      _reinversionFrequency(reinversionFrequency),
       _validateSimplexOption(validateSimplexOption) {}
 
 template <typename T, typename SimplexTraitsT>
@@ -56,7 +57,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
     addCutRows(relaxationNo, fractionalBasisRows);
     addSlackVars(relaxationNo, fractionalBasisRows);
     _simplexTableau.initMatrixRepresentations();
-    if (!_simplexTableau.reinversion())
+    if (!_reinversionManager.reinverse())
       break;
 
     SPDLOG_INFO("AFTER REINVERSION");
@@ -99,16 +100,16 @@ template <typename T, typename SimplexTraitsT>
 RevisedDualSimplexPFIBounds<T, SimplexTraitsT>
 DualSimplexGomory<T, SimplexTraitsT>::dualSimplex() const {
   return RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
-      _simplexTableau, _dualSimplexRowPivotRule, _objValueLoggingFrequency,
-      _reinversionFrequency, _validateSimplexOption);
+      _simplexTableau, _reinversionManager, _dualSimplexRowPivotRule,
+      _objValueLoggingFrequency, _validateSimplexOption);
 }
 
 template <typename T, typename SimplexTraitsT>
 LexicographicOptimizer<T, SimplexTraitsT>
 DualSimplexGomory<T, SimplexTraitsT>::lexicographicOptimizer() const {
   return LexicographicOptimizer<T, SimplexTraitsT>(
-      _simplexTableau, _primalSimplexColumnPivotRule, _objValueLoggingFrequency,
-      _reinversionFrequency, _validateSimplexOption);
+      _simplexTableau, _reinversionManager, _primalSimplexColumnPivotRule,
+      _objValueLoggingFrequency, _validateSimplexOption);
 }
 
 template <typename T, typename SimplexTraitsT>

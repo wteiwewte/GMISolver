@@ -1,4 +1,5 @@
 #include "src/Algorithms/DualSimplexGomory.h"
+#include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
@@ -50,12 +51,13 @@ void runPrimalSimplexWithImplicitBounds(
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::PRIMAL,
       absl::GetFlag(FLAGS_use_product_form_of_inverse));
+  ReinversionManager<T, SimplexTraitsT> reinversionManager(
+      simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
       revisedPrimalSimplexPfiBounds(
-          simplexTableau,
+          simplexTableau, reinversionManager,
           PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
           absl::GetFlag(FLAGS_obj_value_logging_frequency),
-          absl::GetFlag(FLAGS_reinversion_frequency),
           absl::GetFlag(FLAGS_validate_simplex_option));
   auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
   lpOptStatisticsVec.push_back(phaseOneLpOptStats);
@@ -76,11 +78,13 @@ void runDualSimplexWithImplicitBounds(
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::DUAL,
       absl::GetFlag(FLAGS_use_product_form_of_inverse));
+  ReinversionManager<T, SimplexTraitsT> reinversionManager(
+      simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   lpOptStatisticsVec.push_back(
       RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
-          simplexTableau, DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+          simplexTableau, reinversionManager,
+          DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
           absl::GetFlag(FLAGS_obj_value_logging_frequency),
-          absl::GetFlag(FLAGS_reinversion_frequency),
           absl::GetFlag(FLAGS_validate_simplex_option))
           .run(""));
   SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
@@ -93,12 +97,13 @@ void runDualSimplexGomoryWithPrimalCuts(
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::DUAL,
       absl::GetFlag(FLAGS_use_product_form_of_inverse));
+  ReinversionManager<T, SimplexTraitsT> reinversionManager(
+      simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   DualSimplexGomory<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(
-      simplexTableau,
+      simplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
       DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
-      absl::GetFlag(FLAGS_reinversion_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option));
   const auto ipOptStats = dualSimplexGomoryWithPrimalCuts.run(
       LexicographicReoptType::MAX, LPOptimizationType::LINEAR_RELAXATION,

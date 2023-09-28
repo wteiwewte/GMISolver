@@ -6,6 +6,7 @@
 #include "src/Util/SimplexTraits.h"
 
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
+template <typename T, typename SimplexTraitsT> class ReinversionManager;
 template <typename T, typename SimplexTraitsT>
 class RevisedPrimalSimplexPFIBounds;
 
@@ -14,9 +15,9 @@ class LexicographicOptimizer {
 public:
   LexicographicOptimizer(
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
+      ReinversionManager<T, SimplexTraitsT> &reinversionManager,
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
       const int32_t objValueLoggingFrequency,
-      const int32_t reinversionFrequency,
       const ValidateSimplexOption validateSimplexOption);
 
   std::string type() const;
@@ -37,9 +38,9 @@ private:
   void unfixAllVariables();
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
+  ReinversionManager<T, SimplexTraitsT> &_reinversionManager;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
   const int32_t _objValueLoggingFrequency;
-  const int32_t _reinversionFrequency;
   const ValidateSimplexOption _validateSimplexOption;
 };
 

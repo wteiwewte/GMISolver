@@ -15,6 +15,7 @@ template <typename T, typename SimplexTraitsT>
 class RevisedPrimalSimplexPFIBounds;
 template <typename T, typename SimplexTraitsT>
 class RevisedDualSimplexPFIBounds;
+template <typename T, typename SimplexTraitsT> class ReinversionManager;
 template <typename T, typename SimplexTraitsT> class SimplexValidator;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
@@ -53,6 +54,7 @@ private:
   friend class LexicographicOptimizer<T, SimplexTraitsT>;
   friend class RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>;
   friend class RevisedDualSimplexPFIBounds<T, SimplexTraitsT>;
+  friend class ReinversionManager<T, SimplexTraitsT>;
   friend class SimplexValidator<T, SimplexTraitsT>;
 
   using ElementaryMatrixT = typename SimplexTraitsT::ElementaryMatrixT;
@@ -126,10 +128,6 @@ private:
   void calculateRHSPFISparse();
   void calculateRHSWithoutInverse();
   void updateBasisData(const PivotData<T> &pivotData);
-  bool reinversion();
-  bool reinversionExplicit();
-  bool reinversionPFI();
-  bool reinversionPFISparse();
   void setObjective(const std::vector<T> &newObjective);
   void multiplyByBasisMatrixLeftInverseUsingPFI(std::vector<T> &vec);
   void multiplyByBasisMatrixLeftInverseUsingPFISparse(SparseVector<T> &vec);

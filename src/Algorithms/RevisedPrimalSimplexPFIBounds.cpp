@@ -1,5 +1,6 @@
 #include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 
+#include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Algorithms/SimplexValidator.h"
 #include "src/DataModel/LinearProgram.h"
@@ -20,13 +21,13 @@ void removeElements(std::vector<T> &vec,
 template <typename T, typename SimplexTraitsT>
 RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
+    ReinversionManager<T, SimplexTraitsT> &reinversionManager,
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
-    const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency,
+    const int32_t objValueLoggingFrequency,
     const ValidateSimplexOption validateSimplexOption)
-    : _simplexTableau(simplexTableau),
+    : _simplexTableau(simplexTableau), _reinversionManager(reinversionManager),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
-      _reinversionFrequency(reinversionFrequency),
       _validateSimplexOption(validateSimplexOption) {}
 
 template <typename T, typename SimplexTraitsT>
@@ -56,7 +57,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
 
   removeArtificialVariablesFromBasis();
   removeArtificialVariablesFromProgram();
-  artLpOptStats._phaseOneSucceeded = _simplexTableau.reinversion();
+  artLpOptStats._phaseOneSucceeded = _reinversionManager.reinverse();
   return artLpOptStats;
 }
 template <typename T, typename SimplexTraitsT>
@@ -74,7 +75,7 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
   LPOptStatistics<T> lpOptStatistics{
       ._lpName = (_simplexTableau.getName() + '_' + lpNameSuffix),
       ._simplexAlgorithmType = type(),
-      ._reinversionFrequency = _reinversionFrequency};
+      ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   while (true) {
     const bool iterResult = runOneIteration();
     if (iterResult)
@@ -128,16 +129,13 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
     const int iterCount, const LPOptStatistics<T> &lpOptStatistics) {
-  if (_reinversionFrequency && (iterCount % _reinversionFrequency == 0)) {
-    if (!_simplexTableau.reinversion()) {
-      SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
-      _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
-      return false;
-    }
-    if (!tryValidateIteration(iterCount, lpOptStatistics))
-      return false;
+  if (!_reinversionManager.tryReinverse()) {
+    SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
+    _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
+    return false;
   }
-  return true;
+
+  return tryValidateIteration(iterCount, lpOptStatistics);
 }
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(

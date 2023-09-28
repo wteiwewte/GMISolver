@@ -4,6 +4,7 @@ target_link_libraries(
   RevisedDualSimplexPFIBounds
   CommonTypes
   LPOptStatistics
+  ReinversionManager
   SimplexTraits
   SimplexTableau
   SimplexValidator
@@ -16,6 +17,7 @@ target_link_libraries(
   CommonTypes
   LinearProgram
   LPOptStatistics
+  ReinversionManager
   SimplexTraits
   SimplexTableau
   SimplexValidator
@@ -33,9 +35,13 @@ target_link_libraries(
   CommonTypes
   LexicographicOptimizer
   LPOptStatistics
+  ReinversionManager
   SimplexTraits
   SimplexTableau
   RevisedDualSimplexPFIBounds)
+
+add_library(ReinversionManager ReinversionManager.cpp ReinversionManager.h)
+target_link_libraries(ReinversionManager SimplexTraits SimplexTableau)
 
 add_library(SimplexValidator SimplexValidator.cpp SimplexValidator.h)
 target_link_libraries(SimplexValidator SimplexTableau LPOptStatistics expected)

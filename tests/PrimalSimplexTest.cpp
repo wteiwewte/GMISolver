@@ -1,3 +1,4 @@
+#include "Algorithms/ReinversionManager.h"
 #include "Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "Algorithms/SimplexTableau.h"
@@ -22,12 +23,13 @@ runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::PRIMAL,
       absl::GetFlag(FLAGS_use_product_form_of_inverse));
+  ReinversionManager<T, SimplexTraitsT> reinversionManager(
+      simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
       revisedPrimalSimplexPfiBounds(
-          simplexTableau,
+          simplexTableau, reinversionManager,
           PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
           absl::GetFlag(FLAGS_obj_value_logging_frequency),
-          absl::GetFlag(FLAGS_reinversion_frequency),
           absl::GetFlag(FLAGS_validate_simplex_option));
   auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
@@ -70,7 +72,8 @@ TYPED_TEST_P(PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobi) {
             runPrimalSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
                 linearProgram);
         const auto gurobiLPOptStats =
-            GurobiOptimizer("", modelFileMpsPath).optimize(lpOptimizationType);
+            GurobiOptimizer("", modelFileMpsPath)
+                .optimize<FloatingPointT>(lpOptimizationType);
         if (primalSimplexOutput._phaseOneLpOptStats._optResult ==
             LPOptimizationResult::INFEASIBLE) {
           const std::set<LPOptimizationResult> infeasibleResults{
@@ -94,9 +97,9 @@ using PrimalSimplexTypes = ::testing::Types<
 // using PrimalSimplexTypes = ::testing::Types<
 //     TypeTuple<double, SimplexTraits<double,
 //     MatrixRepresentationType::NORMAL>>, TypeTuple<long double,
-//               SimplexTraits<long double, MatrixRepresentationType::SPARSE>>,
+//               SimplexTraits<long double, MatrixRepresentationType::NORMAL>>,
 //     TypeTuple<double, SimplexTraits<double,
-//     MatrixRepresentationType::NORMAL>>, TypeTuple<long double,
+//     MatrixRepresentationType::SPARSE>>, TypeTuple<long double,
 //               SimplexTraits<long double, MatrixRepresentationType::SPARSE>>>;
 INSTANTIATE_TYPED_TEST_SUITE_P(PrimalSimplexTestSuite, PrimalSimplexTest,
                                PrimalSimplexTypes);

@@ -1,5 +1,6 @@
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 
+#include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Algorithms/SimplexValidator.h"
 #include "src/Util/SpdlogHeader.h"
@@ -7,13 +8,13 @@
 template <typename T, typename SimplexTraitsT>
 RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::RevisedDualSimplexPFIBounds(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
+    ReinversionManager<T, SimplexTraitsT> &reinversionManager,
     const DualSimplexRowPivotRule dualSimplexRowPivotRule,
-    const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency,
+    const int32_t objValueLoggingFrequency,
     const ValidateSimplexOption validateSimplexOption)
-    : _simplexTableau(simplexTableau),
+    : _simplexTableau(simplexTableau), _reinversionManager(reinversionManager),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
-      _reinversionFrequency(reinversionFrequency),
       _validateSimplexOption(validateSimplexOption) {}
 
 template <typename T, typename SimplexTraitsT>
@@ -35,7 +36,7 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
   LPOptStatistics<T> lpOptStatistics{
       ._lpName = _simplexTableau.getName() + '_' + lpNameSuffix,
       ._simplexAlgorithmType = type(),
-      ._reinversionFrequency = _reinversionFrequency};
+      ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   [[maybe_unused]] int iterCount = 1;
   while (true) {
     const bool iterResult = runOneIteration();
@@ -90,17 +91,13 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(
 template <typename T, typename SimplexTraitsT>
 bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
     const int iterCount, const LPOptStatistics<T> &lpOptStatistics) {
-  if (_reinversionFrequency && (iterCount % _reinversionFrequency == 0)) {
-    if (!_simplexTableau.reinversion()) {
-      SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
-      _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
-      return false;
-    }
-
-    if (!tryValidateIteration(iterCount, lpOptStatistics))
-      return false;
+  if (!_reinversionManager.tryReinverse()) {
+    SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
+    _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
+    return false;
   }
-  return true;
+
+  return tryValidateIteration(iterCount, lpOptStatistics);
 }
 
 template <typename T, typename SimplexTraitsT>

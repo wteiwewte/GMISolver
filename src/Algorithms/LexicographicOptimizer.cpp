@@ -7,21 +7,21 @@
 template <typename T, typename SimplexTraitsT>
 LexicographicOptimizer<T, SimplexTraitsT>::LexicographicOptimizer(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
+    ReinversionManager<T, SimplexTraitsT> &reinversionManager,
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
-    const int32_t objValueLoggingFrequency, const int32_t reinversionFrequency,
+    const int32_t objValueLoggingFrequency,
     const ValidateSimplexOption validateSimplexOption)
-    : _simplexTableau(simplexTableau),
+    : _simplexTableau(simplexTableau), _reinversionManager(reinversionManager),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
-      _reinversionFrequency(reinversionFrequency),
       _validateSimplexOption(validateSimplexOption) {}
 
 template <typename T, typename SimplexTraitsT>
 RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
 LexicographicOptimizer<T, SimplexTraitsT>::primalSimplex() const {
   return RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>(
-      _simplexTableau, _primalSimplexColumnPivotRule, _objValueLoggingFrequency,
-      _reinversionFrequency, _validateSimplexOption);
+      _simplexTableau, _reinversionManager, _primalSimplexColumnPivotRule,
+      _objValueLoggingFrequency, _validateSimplexOption);
 }
 
 template <typename T, typename SimplexTraitsT>

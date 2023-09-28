@@ -25,7 +25,7 @@ public:
       : _grbEnvWrapper(logFileName),
         _grbModel(_grbEnvWrapper._grbEnv, modelFileMpsPath) {
   } catch (const GRBException &e) {
-    SPDLOG_INFO("Error code = {}", e.getErrorCode());
+    SPDLOG_INFO("Initialization phase - Error code = {}", e.getErrorCode());
     SPDLOG_INFO(e.getMessage());
   } catch (...) {
     SPDLOG_INFO("Error during initialization");
@@ -44,26 +44,57 @@ public:
           gurobiStatusToLPOptResult(_grbModel.get(GRB_IntAttr_Status));
       double iterCount = _grbModel.get(GRB_DoubleAttr_IterCount);
       double runTime = _grbModel.get(GRB_DoubleAttr_Runtime);
-      double optimalValue = _grbModel.get(GRB_DoubleAttr_ObjVal);
+      lpOptStatistics._optResult = gurobiLpOptResult;
+      lpOptStatistics._iterationCount = iterCount;
 
       SPDLOG_INFO("Gurobi performed {} iterations in {} seconds", iterCount,
                   runTime);
       SPDLOG_INFO("Model optimization status {}",
                   lpOptimizationResultToStr(gurobiLpOptResult));
-      SPDLOG_INFO("Model {} has optimal value {}",
-                  _grbModel.get(GRB_StringAttr_ModelName), optimalValue);
 
-      lpOptStatistics._optResult = gurobiLpOptResult;
-      lpOptStatistics._iterationCount = iterCount;
-      lpOptStatistics._optimalValue = optimalValue;
+      if (gurobiLpOptResult == LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+        double optimalValue = _grbModel.get(GRB_DoubleAttr_ObjVal);
+        SPDLOG_INFO("Model {} has optimal value {}",
+                    _grbModel.get(GRB_StringAttr_ModelName), optimalValue);
+        lpOptStatistics._optimalValue = optimalValue;
+      }
     } catch (const GRBException &e) {
-      SPDLOG_INFO("Error code = {}", e.getErrorCode());
+      SPDLOG_INFO("Optimization phase - Error code = {}", e.getErrorCode());
       SPDLOG_INFO(e.getMessage());
     } catch (...) {
       SPDLOG_INFO("Error during optimization");
     }
 
     return lpOptStatistics;
+  }
+
+  void prepareLexicographicObjectives(
+      const LexicographicReoptType lexicographicReoptType) {
+    _grbModel.set(GRB_IntAttr_NumObj, 1 + _grbModel.get(GRB_IntAttr_NumVars));
+    auto vars = _grbModel.getVars();
+    for (int varIdx = 0; varIdx < _grbModel.get(GRB_IntAttr_NumVars);
+         ++varIdx) {
+      const auto expr = 1 * (vars[varIdx]);
+      const int index = varIdx + 1;
+      const int priority = -1 - varIdx;
+      const double weight =
+          lexicographicReoptType == LexicographicReoptType::MIN ? 1 : -1;
+      _grbModel.setObjectiveN(expr, index, priority, weight);
+    }
+  }
+
+  template <typename T> std::vector<T> getSolutionVector() {
+    const auto varCount = _grbModel.get(GRB_IntAttr_NumVars);
+    std::vector<T> solution;
+    solution.reserve(varCount);
+    auto vars = _grbModel.getVars();
+    for (int varIdx = 0; varIdx < varCount; ++varIdx) {
+      // Ignore variables added for RANGES section
+      if (!vars[varIdx].get(GRB_StringAttr_VarName).starts_with("MPS_")) {
+        solution.emplace_back(vars[varIdx].get(GRB_DoubleAttr_X));
+      }
+    }
+    return solution;
   }
 
 private:

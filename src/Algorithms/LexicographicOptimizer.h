@@ -22,7 +22,8 @@ public:
   std::string type() const;
 
   LexReoptStatistics<T> run(const LexicographicReoptType lexicographicReoptType,
-                            const std::string &lexOptId);
+                            const std::string &lexOptId,
+                            const bool saveSolution = false);
 
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;

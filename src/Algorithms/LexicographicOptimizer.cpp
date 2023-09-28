@@ -27,7 +27,7 @@ LexicographicOptimizer<T, SimplexTraitsT>::primalSimplex() const {
 template <typename T, typename SimplexTraitsT>
 LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
     const LexicographicReoptType lexicographicReoptType,
-    const std::string &lexOptId) {
+    const std::string &lexOptId, const bool saveSolution) {
   LexReoptStatistics<T> lexReoptStats{._optResult = _simplexTableau._result};
   int curVarIdxToBeOptimized = 0;
   int varsFixedCount = 0;
@@ -52,6 +52,12 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
   }
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
   lexReoptStats._objectiveValueAfterLexReopt = _simplexTableau._objectiveValue;
+  if (saveSolution) {
+    lexReoptStats._solution = _simplexTableau._x;
+    lexReoptStats._solution.resize(
+        _simplexTableau._initialProgram.getVariableInfos().size());
+  }
+
   unfixAllVariables();
 
   SPDLOG_INFO("LEXICOGRAPHIC {} REOPTIMIZATION RAN {} VARIABLE-SUBPROGRAMS",

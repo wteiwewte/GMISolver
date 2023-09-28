@@ -40,6 +40,7 @@ using LPOptStatisticsVec = std::vector<LPOptStatistics<T>>;
 
 template <typename T> struct LexReoptStatistics {
   std::vector<LPOptStatistics<T>> _lexLPReoptStatsVec;
+  std::vector<T> _solution;
   T _objectiveValueAfterLexReopt;
   LPOptimizationResult _optResult;
 };

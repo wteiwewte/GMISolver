@@ -30,7 +30,7 @@ LexReoptStatistics<T> runDualSimplexWithLexReopt(
              absl::GetFlag(FLAGS_obj_value_logging_frequency),
              absl::GetFlag(FLAGS_reinversion_frequency),
              absl::GetFlag(FLAGS_validate_simplex))
-      .run(lexicographicReoptType, "");
+      .run(lexicographicReoptType, "", true);
 }
 
 template <typename T>
@@ -64,8 +64,21 @@ TYPED_TEST_P(LexicographicOptimizerTest,
           LexReoptStatistics<FloatingPointT> lexReoptStatistics =
               runDualSimplexWithLexReopt<FloatingPointT, SimplexTraitsT>(
                   linearProgram, lexicographicReoptType);
-          const auto gurobiLPOptStats = GurobiOptimizer("", modelFileMpsPath)
-                                            .optimize(lpOptimizationType);
+
+          GurobiOptimizer gurobiOptimizer("", modelFileMpsPath);
+          gurobiOptimizer.prepareLexicographicObjectives(
+              lexicographicReoptType);
+          const auto gurobiLPOptStats =
+              gurobiOptimizer.optimize(lpOptimizationType);
+
+          const auto gurobiSolution =
+              gurobiOptimizer.getSolutionVector<FloatingPointT>();
+          const auto &lexOptimizerSolution = lexReoptStatistics._solution;
+          ASSERT_EQ(gurobiSolution.size(), lexOptimizerSolution.size());
+          for (int varIdx = 0; varIdx < gurobiSolution.size(); ++varIdx) {
+            EXPECT_NEAR(gurobiSolution[varIdx], lexOptimizerSolution[varIdx],
+                        0.00001);
+          }
           this->compareWithGurobi(lexicographicReoptType, lexReoptStatistics,
                                   gurobiLPOptStats);
         }

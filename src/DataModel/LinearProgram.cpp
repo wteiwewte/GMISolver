@@ -38,15 +38,18 @@ template <typename T>
 bool LinearProgram<T>::checkIfAllBoundsAreSpeficied() const {
   return (_variableLowerBounds.size() == _variableInfos.size()) &&
          std::all_of(
-             _variableLowerBounds.begin(), _variableLowerBounds.end(),
+             _variableLowerBounds.begin() + 1, _variableLowerBounds.end(),
              [](const std::optional<T> &lb) { return lb.has_value(); }) &&
          (_variableUpperBounds.size() == _variableInfos.size()) &&
-         std::all_of(_variableUpperBounds.begin(), _variableUpperBounds.end(),
+         std::all_of(_variableUpperBounds.begin() + 1,
+                     _variableUpperBounds.end(),
                      [](const std::optional<T> &up) { return up.has_value(); });
 }
 
-template <typename T> bool LinearProgram<T>::isPureIP() const {
-  return std::all_of(_variableInfos.begin(), _variableInfos.end(),
+template <typename T>
+bool LinearProgram<T>::isPureIP(const bool checkObjVar) const {
+  auto startIter = _variableInfos.begin() + (checkObjVar ? 0 : 1);
+  return std::all_of(startIter, _variableInfos.end(),
                      [](const VariableInfo &varInfo) {
                        return varInfo._type == VariableType::INTEGER;
                      });
@@ -71,8 +74,8 @@ bool LinearProgram<T>::allCoefficientsAreIntegers() const {
 
 template <typename T>
 bool LinearProgram<T>::allVariablesAreNonnegative() const {
-  return std::all_of(_variableLowerBounds.begin(), _variableLowerBounds.end(),
-                     [](const auto lowerBound) {
+  return std::all_of(_variableLowerBounds.begin() + 1,
+                     _variableLowerBounds.end(), [](const auto lowerBound) {
                        return lowerBound.has_value() && *lowerBound >= 0.0;
                      });
 }

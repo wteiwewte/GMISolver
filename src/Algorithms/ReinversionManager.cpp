@@ -41,10 +41,10 @@ template <typename T, typename SimplexTraitsT>
 void ReinversionManager<T, SimplexTraitsT>::updateTableau() {
   // FIXME
   _simplexTableau.calculateRHS();
-  //  _simplexTableau.calculateDual();
-  //  _simplexTableau.calculateReducedCostsBasedOnDual();
-  //  _simplexTableau.calculateSolution();
-  //  _simplexTableau.calculateCurrentObjectiveValue();
+  _simplexTableau.calculateDual();
+  _simplexTableau.calculateReducedCostsBasedOnDual();
+  _simplexTableau.calculateSolution();
+  _simplexTableau.calculateCurrentObjectiveValue();
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -65,7 +65,8 @@ bool ReinversionManager<T, SimplexTraitsT>::reinverseBasisExplicit() {
   }
 
   std::vector<bool> isUnusedColumn(basisSize, true);
-  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
+  isUnusedColumn[0] = false;
+  for (int rowIdx = 1; rowIdx < basisSize; ++rowIdx) {
     const auto pivotColumnIdx =
         findPivotColumnMaxAbsValue(basisColumns, isUnusedColumn, rowIdx);
     if (!pivotColumnIdx.has_value()) {
@@ -104,10 +105,11 @@ bool ReinversionManager<T, SimplexTraitsT>::reinverseBasisPFI() {
             ._columns[_simplexTableau.basicColumnIdx(rowIdx)];
 
   std::vector<bool> isUnusedColumn(basisSize, true);
+  isUnusedColumn[0] = false;
   std::vector<ElementaryMatrix<T>> newPfiEtms;
   newPfiEtms.reserve(_simplexTableau._rowInfos.size());
 
-  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
+  for (int rowIdx = 1; rowIdx < basisSize; ++rowIdx) {
     const auto pivotColumnIdx =
         findPivotColumnMaxAbsValue(basisColumns, isUnusedColumn, rowIdx);
     if (!pivotColumnIdx.has_value()) {
@@ -147,10 +149,11 @@ bool ReinversionManager<T, SimplexTraitsT>::reinverseBasisPFISparse() {
             ._columns[_simplexTableau.basicColumnIdx(rowIdx)];
 
   std::vector<bool> isUnusedColumn(basisSize, true);
+  isUnusedColumn[0] = false;
   std::vector<SparseElementaryMatrix<T>> newSparsePfiEtms;
   newSparsePfiEtms.reserve(_simplexTableau._rowInfos.size());
 
-  for (int rowIdx = 0; rowIdx < basisSize; ++rowIdx) {
+  for (int rowIdx = 1; rowIdx < basisSize; ++rowIdx) {
     const auto pivotColumnIdx =
         findPivotColumnMaxAbsValue(basisColumns, isUnusedColumn, rowIdx);
     if (!pivotColumnIdx.has_value()) {

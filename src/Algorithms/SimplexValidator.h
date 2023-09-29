@@ -205,6 +205,13 @@ private:
 
   ExpectedT validateRowToColumnMapping() const {
     const auto &simplexBasisData = _simplexTableau._simplexBasisData;
+
+    if (simplexBasisData._rowToBasisColumnIdxMap[0] != 0 ||
+        !simplexBasisData._isBasicColumnIndexBitset[0])
+      return tl::unexpected{
+          fmt::format("Row 0 should be mapped always to column 0 - both are "
+                      "objective related")};
+
     std::unordered_set<int> uniqueBasicColumnIndices;
     for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
       const auto basicColumnIdx =
@@ -247,7 +254,7 @@ private:
       return tl::unexpected{fmt::format(
           "Number of lower/upper bounds doesn't match number of variables")};
 
-    if (!std::all_of(_simplexTableau._variableLowerBounds.begin(),
+    if (!std::all_of(_simplexTableau._variableLowerBounds.begin() + 1,
                      _simplexTableau._variableLowerBounds.end(),
                      [](const std::optional<T> &lb) { return lb.has_value(); }))
       return tl::unexpected{
@@ -374,8 +381,9 @@ private:
     if (_simplexTableau._x.size() == expectedNumberOfVars)
       return {};
 
-    return tl::unexpected{
-        fmt::format("Solution vector size doesn't match number of variables")};
+    return tl::unexpected{fmt::format(
+        "Solution vector size {} doesn't match number of variables {}",
+        _simplexTableau._x.size(), expectedNumberOfVars)};
   }
 
   ExpectedT validateBasisIntegrity() const {

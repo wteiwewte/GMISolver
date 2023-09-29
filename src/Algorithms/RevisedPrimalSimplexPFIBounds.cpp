@@ -359,6 +359,9 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::chooseRowIdx(
     const auto &upperBound =
         _simplexTableau._variableUpperBounds[basicColumnIdx];
 
+    if (!lowerBound.has_value() && !upperBound.has_value())
+      continue;
+
     if (_simplexTableau._simplexBasisData
             ._isColumnAtLowerBoundBitset[enteringColumnIdx]) {
       if (enteringColumn[rowIdx] > 0.0) {

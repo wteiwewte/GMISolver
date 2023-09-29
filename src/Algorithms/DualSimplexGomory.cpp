@@ -5,6 +5,8 @@
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
 
+#include <fmt/format.h>
+
 template <typename T, typename SimplexTraitsT>
 DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
@@ -44,13 +46,15 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
   while (true) {
     ++relaxationNo;
-    //    if (relaxationNo > 5)
-    //      break;
+    if (relaxationNo > 5)
+      break;
     SPDLOG_INFO("{}TH GOMORY ROUND", relaxationNo);
     checkIfNonBasicVarsAreIntegral();
     const auto fractionalBasisRows =
         collectFractionalBasisRowIndices(gomoryCutChoosingRule);
-    SPDLOG_INFO("FOUND {} FRACTIONAL VARIABLES", fractionalBasisRows.size());
+    SPDLOG_INFO("FOUND {} FRACTIONAL VARIABLES - ROW IDXS [{}]",
+                fractionalBasisRows.size(),
+                fmt::join(fractionalBasisRows, ", "));
     if (fractionalBasisRows.empty())
       break;
 

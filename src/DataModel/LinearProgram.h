@@ -30,7 +30,7 @@ public:
   const std::string &getName() const { return _name; }
 
   bool checkIfAllBoundsAreSpeficied() const;
-  bool isPureIP() const;
+  bool isPureIP(const bool checkObjVar = true) const;
   bool allCoefficientsAreIntegers() const;
   bool allVariablesAreNonnegative() const;
 

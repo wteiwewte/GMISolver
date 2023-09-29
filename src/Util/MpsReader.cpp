@@ -106,6 +106,17 @@ MpsReader<T>::read(const std::string &filePath) {
     return variableIdx;
   };
 
+  constexpr int OBJECTIVE_ROW_CONSTRAINT_IDX = 0;
+  if (!addNewRowInfo(std::string{"obj_row"}, RowType::EQUALITY))
+    return std::nullopt;
+  const auto objectiveVarIdx = tryAddNewVar(std::string{"obj_value"});
+  if (!objectiveVarIdx.has_value())
+    return std::nullopt;
+
+  linearProgram
+      ._constraintMatrix[OBJECTIVE_ROW_CONSTRAINT_IDX][*objectiveVarIdx] = 1;
+  linearProgram._variableInfos[*objectiveVarIdx]._isObjectiveVar = true;
+
   while (std::getline(fileStream, readLine)) {
     if (readLine.empty() || readLine[0] == '*')
       continue;
@@ -191,6 +202,9 @@ MpsReader<T>::read(const std::string &filePath) {
                                       const auto &coefficientValueStr) {
         if (rowLabelStr == linearProgram._objectiveInfo._label) {
           linearProgram._objective[*variableIdx] = convert(coefficientValueStr);
+          linearProgram
+              ._constraintMatrix[OBJECTIVE_ROW_CONSTRAINT_IDX][*variableIdx] =
+              -convert(coefficientValueStr);
           return true;
         }
 
@@ -448,8 +462,16 @@ MpsReader<T>::read(const std::string &filePath) {
     return std::nullopt;
   }
 
-  if (!finalizeBounds(linearProgram))
+  if (!finalizeBounds(linearProgram)) {
+    SPDLOG_WARN("Cannot finalize bounds");
     return std::nullopt;
+  }
+
+  if (linearProgram.isPureIP(false) &&
+      linearProgram.allCoefficientsAreIntegers()) {
+    linearProgram._variableInfos[*objectiveVarIdx]._type =
+        VariableType::INTEGER;
+  }
 
   // TODO - add more integrity checks
   return linearProgram;
@@ -457,7 +479,7 @@ MpsReader<T>::read(const std::string &filePath) {
 
 template <typename T>
 bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
-  for (int varIdx = 0; varIdx < linearProgram._variableInfos.size(); ++varIdx)
+  for (int varIdx = 1; varIdx < linearProgram._variableInfos.size(); ++varIdx) {
     if (!linearProgram._variableLowerBounds[varIdx].has_value() &&
         !linearProgram._variableUpperBounds[varIdx].has_value()) {
       linearProgram._variableLowerBounds[varIdx] = 0.0;
@@ -468,6 +490,7 @@ bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
       //        linearProgram._variableUpperBounds[varIdx] = 1.0;
       //      }
     }
+  }
 
   SPDLOG_INFO("PROGRAM NAME {}, VARIABLE COUNT {}, ROW COUNT {}, LOWER BOUNDS "
               "{}, UPPER BOUNDS {}",

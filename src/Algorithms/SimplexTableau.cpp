@@ -109,7 +109,12 @@ SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
   result._isColumnAtUpperBoundBitset.resize(_variableInfos.size(), false);
   result._rowToBasisColumnIdxMap.resize(_rowInfos.size());
 
-  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
+  // objective row -> objective var
+  result._rowToBasisColumnIdxMap[0] = 0;
+  result._isBasicColumnIndexBitset[0] = true;
+  result._isColumnAtLowerBoundBitset[0] = false;
+
+  for (int rowIdx = 1; rowIdx < _rowInfos.size(); ++rowIdx) {
     const auto basicColumnIdx = *firstArtificialIdx + rowIdx;
     result._rowToBasisColumnIdxMap[rowIdx] = basicColumnIdx;
     result._isBasicColumnIndexBitset[basicColumnIdx] = true;
@@ -327,7 +332,7 @@ void SimplexTableau<T, SimplexTraitsT>::updateBasisData(
 }
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::initBoundsForDualSimplex() {
-  for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
+  for (int varIdx = 1; varIdx < _variableInfos.size(); ++varIdx) {
     if (_reducedCosts[varIdx] < 0.0) {
       _simplexBasisData._isColumnAtLowerBoundBitset[varIdx] = false;
       _simplexBasisData._isColumnAtUpperBoundBitset[varIdx] = true;
@@ -390,9 +395,9 @@ void SimplexTableau<T, SimplexTraitsT>::convertToStandardForm() {
 
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::makeRightHandSidesNonNegative() {
-  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
+  for (int rowIdx = 1; rowIdx < _rowInfos.size(); ++rowIdx) {
     typename SimplexTraitsT::CurrentAdder adder;
-    for (int variableIdx = 0; variableIdx < _variableInfos.size();
+    for (int variableIdx = 1; variableIdx < _variableInfos.size();
          ++variableIdx)
       adder.addValue(_variableLowerBounds[variableIdx].value() *
                      _constraintMatrix[rowIdx][variableIdx]);
@@ -401,7 +406,7 @@ void SimplexTableau<T, SimplexTraitsT>::makeRightHandSidesNonNegative() {
         NumericalTraitsT::add(_rightHandSides[rowIdx], -adder.currentSum());
 
     if (diff < 0.0) {
-      for (int variableIdx = 0; variableIdx < _variableInfos.size();
+      for (int variableIdx = 1; variableIdx < _variableInfos.size();
            ++variableIdx)
         _constraintMatrix[rowIdx][variableIdx] =
             -_constraintMatrix[rowIdx][variableIdx];

@@ -32,7 +32,7 @@ template <typename T> struct LPTestBase {
                           const bool isRelaxationOptType,
                           const bool allBoundsMustBeSpecified,
                           InstanceSetStats &instanceSetStats) const {
-    //    if (modelName == "noswot.mps")
+    //    if (modelName != "ej_easier.mps")
     //    {
     //      return false;
     //    }

@@ -53,9 +53,10 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
   lexReoptStats._objectiveValueAfterLexReopt = _simplexTableau._objectiveValue;
   if (saveSolution) {
-    lexReoptStats._solution = _simplexTableau._x;
-    lexReoptStats._solution.resize(
-        _simplexTableau._initialProgram.getVariableInfos().size());
+    lexReoptStats._solution.assign(
+        _simplexTableau._x.begin() + 1,
+        _simplexTableau._x.begin() +
+            _simplexTableau._initialProgram.getVariableInfos().size());
   }
 
   unfixAllVariables();

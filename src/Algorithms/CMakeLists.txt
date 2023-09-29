@@ -20,6 +20,7 @@ target_link_libraries(
   ReinversionManager
   SimplexTraits
   SimplexTableau
+  SimplexTableauResizer
   SimplexValidator
   SpdlogHeader)
 
@@ -39,6 +40,11 @@ target_link_libraries(
   SimplexTraits
   SimplexTableau
   RevisedDualSimplexPFIBounds)
+
+add_library(SimplexTableauResizer SimplexTableauResizer.cpp
+                                  SimplexTableauResizer.h)
+target_link_libraries(SimplexTableauResizer ReinversionManager SimplexTraits
+                      SimplexTableau)
 
 add_library(ReinversionManager ReinversionManager.cpp ReinversionManager.h)
 target_link_libraries(ReinversionManager SimplexTraits SimplexTableau)

@@ -16,6 +16,7 @@ class RevisedPrimalSimplexPFIBounds;
 template <typename T, typename SimplexTraitsT>
 class RevisedDualSimplexPFIBounds;
 template <typename T, typename SimplexTraitsT> class ReinversionManager;
+template <typename T, typename SimplexTraitsT> class SimplexTableauResizer;
 template <typename T, typename SimplexTraitsT> class SimplexValidator;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
@@ -55,6 +56,7 @@ private:
   friend class RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>;
   friend class RevisedDualSimplexPFIBounds<T, SimplexTraitsT>;
   friend class ReinversionManager<T, SimplexTraitsT>;
+  friend class SimplexTableauResizer<T, SimplexTraitsT>;
   friend class SimplexValidator<T, SimplexTraitsT>;
 
   using ElementaryMatrixT = typename SimplexTraitsT::ElementaryMatrixT;

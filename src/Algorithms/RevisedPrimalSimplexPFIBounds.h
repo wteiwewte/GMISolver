@@ -53,10 +53,6 @@ private:
                                     const int enteringColumnIdx,
                                     const VectorT &enteringColumn);
 
-  void removeArtificialVariablesFromBasis();
-  void removeArtificialVariablesFromProgram();
-  void removeRows(const std::vector<bool> &shouldRowBeRemoved);
-
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;
 

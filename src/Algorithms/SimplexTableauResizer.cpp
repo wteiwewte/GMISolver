@@ -1,5 +1,6 @@
 #include "src/Algorithms/SimplexTableauResizer.h"
 
+#include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/SimplexTableau.h"
 
 namespace {
@@ -12,6 +13,18 @@ void removeElements(std::vector<T> &vec,
                            }),
             std::end(vec));
 }
+
+void removeElements(boost::dynamic_bitset<> &bitset,
+                    const std::vector<bool> &shouldBeRemoved) {
+  auto copyBitset = bitset;
+  int currentNewIndex = 0;
+  for (int i = 0; i < bitset.size(); ++i) {
+    if (!shouldBeRemoved[i])
+      copyBitset[currentNewIndex++] = bitset[i];
+  }
+  copyBitset.resize(currentNewIndex);
+  bitset = copyBitset;
+}
 } // namespace
 
 template <typename T, typename SimplexTraitsT>
@@ -22,34 +35,27 @@ SimplexTableauResizer<T, SimplexTraitsT>::SimplexTableauResizer(
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableauResizer<
+bool SimplexTableauResizer<
     T, SimplexTraitsT>::removeArtificialVariablesFromProgram() {
-  std::optional<int> firstArtificialIdx;
-  for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j)
-    if (_simplexTableau._variableInfos[j]._isArtificial) {
-      firstArtificialIdx = j;
-      break;
-    }
+  const std::vector<bool> shouldRowBeRemoved =
+      moveArtificialVariablesOutOfBasis();
+  removeRows(shouldRowBeRemoved);
 
-  if (!firstArtificialIdx.has_value())
-    return;
+  std::vector<bool> shouldVarBeRemoved(_simplexTableau._variableInfos.size(),
+                                       false);
+  for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j) {
+    if (_simplexTableau._variableInfos[j]._isArtificial)
+      shouldVarBeRemoved[j] = true;
+  }
 
-  _simplexTableau._variableInfos.resize(*firstArtificialIdx);
-  _simplexTableau._variableLowerBounds.resize(*firstArtificialIdx);
-  _simplexTableau._variableUpperBounds.resize(*firstArtificialIdx);
-  _simplexTableau._simplexBasisData.resizeVarCount(*firstArtificialIdx);
-  _simplexTableau._reducedCosts.resize(*firstArtificialIdx);
-  _simplexTableau._x.resize(*firstArtificialIdx);
-
-  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx)
-    _simplexTableau._constraintMatrix[rowIdx].resize(*firstArtificialIdx);
-
+  removeVariables(shouldVarBeRemoved);
   _simplexTableau.initMatrixRepresentations();
+  return _reinversionManager.reinverse();
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableauResizer<
-    T, SimplexTraitsT>::removeArtificialVariablesFromBasis() {
+std::vector<bool>
+SimplexTableauResizer<T, SimplexTraitsT>::moveArtificialVariablesOutOfBasis() {
   std::vector<bool> shouldRowBeRemoved(_simplexTableau._rowInfos.size(), false);
 
   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
@@ -84,7 +90,7 @@ void SimplexTableauResizer<
     }
   }
 
-  removeRows(shouldRowBeRemoved);
+  return shouldRowBeRemoved;
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -95,39 +101,39 @@ void SimplexTableauResizer<T, SimplexTraitsT>::removeRows(
   if (rowsToBeRemoved == 0)
     return;
 
-  SPDLOG_INFO("REDUNDANT {} CONSTRAINTS IN LP FORMULATION", rowsToBeRemoved);
-
-  auto &[rowToBasisColumnIdxMap, isBasicColumnIndexBitset,
-         isColumnAtLowerBoundBitset, _2] = _simplexTableau._simplexBasisData;
-
-  std::vector<int> oldRowIdxToNewRowIdx(shouldRowBeRemoved.size());
-  int curNewRowIdx = 0;
-
-  for (int rowIdx = 0; rowIdx < shouldRowBeRemoved.size(); ++rowIdx)
-    if (shouldRowBeRemoved[rowIdx]) {
-      const auto basicColumnIdx = rowToBasisColumnIdxMap[rowIdx];
-      isBasicColumnIndexBitset[basicColumnIdx] = false;
-      isColumnAtLowerBoundBitset[basicColumnIdx] = true;
-    } else
-      oldRowIdxToNewRowIdx[rowIdx] = curNewRowIdx++;
-
-  std::vector<int> newRowToBasisColumnIdxMap(curNewRowIdx);
-  for (int rowIdx = 0; rowIdx < shouldRowBeRemoved.size(); ++rowIdx)
-    if (!shouldRowBeRemoved[rowIdx])
-      newRowToBasisColumnIdxMap[oldRowIdxToNewRowIdx[rowIdx]] =
-          rowToBasisColumnIdxMap[rowIdx];
-
-  rowToBasisColumnIdxMap = std::move(newRowToBasisColumnIdxMap);
-
-  removeElements(_simplexTableau._constraintMatrix, shouldRowBeRemoved);
+  SPDLOG_INFO("{} CONSTRAINTS TO BE REMOVED", rowsToBeRemoved);
   removeElements(_simplexTableau._rowInfos, shouldRowBeRemoved);
+  removeElements(_simplexTableau._constraintMatrix, shouldRowBeRemoved);
   removeElements(_simplexTableau._rightHandSides, shouldRowBeRemoved);
   removeElements(_simplexTableau._initialRightHandSides, shouldRowBeRemoved);
-  // FIXME PFI CASE
+  removeElements(_simplexTableau._simplexBasisData._rowToBasisColumnIdxMap,
+                 shouldRowBeRemoved);
+
   for (int i = 0; i < _simplexTableau._basisMatrixInverse.size(); ++i)
     removeElements(_simplexTableau._basisMatrixInverse[i], shouldRowBeRemoved);
-
   removeElements(_simplexTableau._basisMatrixInverse, shouldRowBeRemoved);
+}
+
+template <typename T, typename SimplexTraitsT>
+void SimplexTableauResizer<T, SimplexTraitsT>::removeVariables(
+    const std::vector<bool> &shouldVarBeRemoved) {
+  removeElements(_simplexTableau._variableInfos, shouldVarBeRemoved);
+  removeElements(_simplexTableau._variableLowerBounds, shouldVarBeRemoved);
+  removeElements(_simplexTableau._variableUpperBounds, shouldVarBeRemoved);
+
+  removeElements(_simplexTableau._simplexBasisData._isColumnAtLowerBoundBitset,
+                 shouldVarBeRemoved);
+  removeElements(_simplexTableau._simplexBasisData._isColumnAtUpperBoundBitset,
+                 shouldVarBeRemoved);
+  removeElements(_simplexTableau._simplexBasisData._isBasicColumnIndexBitset,
+                 shouldVarBeRemoved);
+
+  removeElements(_simplexTableau._reducedCosts, shouldVarBeRemoved);
+  removeElements(_simplexTableau._objectiveRow, shouldVarBeRemoved);
+  removeElements(_simplexTableau._x, shouldVarBeRemoved);
+  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx)
+    removeElements(_simplexTableau._constraintMatrix[rowIdx],
+                   shouldVarBeRemoved);
 }
 
 template class SimplexTableauResizer<

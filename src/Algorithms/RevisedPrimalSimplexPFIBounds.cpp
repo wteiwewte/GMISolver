@@ -46,9 +46,8 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
 
   SimplexTableauResizer simplexTableauResizer(_simplexTableau,
                                               _reinversionManager);
-  simplexTableauResizer.removeArtificialVariablesFromBasis();
-  simplexTableauResizer.removeArtificialVariablesFromProgram();
-  artLpOptStats._phaseOneSucceeded = _reinversionManager.reinverse();
+  artLpOptStats._phaseOneSucceeded =
+      simplexTableauResizer.removeArtificialVariablesFromProgram();
   return artLpOptStats;
 }
 template <typename T, typename SimplexTraitsT>

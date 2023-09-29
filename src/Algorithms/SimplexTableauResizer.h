@@ -13,13 +13,15 @@ public:
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
       ReinversionManager<T, SimplexTraitsT> &reinversionManager);
 
-  void removeArtificialVariablesFromBasis();
-  void removeArtificialVariablesFromProgram();
+  bool removeArtificialVariablesFromProgram();
 
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
+  std::vector<bool> moveArtificialVariablesOutOfBasis();
+
   void removeRows(const std::vector<bool> &shouldRowBeRemoved);
+  void removeVariables(const std::vector<bool> &shouldVarBeRemoved);
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;

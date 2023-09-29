@@ -401,7 +401,7 @@ MpsReader<T>::read(const std::string &filePath) {
       }
       case BoundType::FREE_VARIABLE: {
         const auto newMinusVariableIdx =
-            tryAddNewVar(variableLabelStr + "_MINUS_VAR");
+            tryAddNewVar(variableLabelStr + "_NEG");
         if (!newMinusVariableIdx.has_value())
           return std::nullopt;
 

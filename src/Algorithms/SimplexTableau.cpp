@@ -51,16 +51,17 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables() {
   const int variableCountAtTheStart = _variableInfos.size();
-  const int newVariableCount = variableCountAtTheStart + _rowInfos.size();
+  const int newVariableCount = variableCountAtTheStart + _rowInfos.size() - 1;
 
   const auto newArtificialLabel = [&](const auto varIdx) {
     return "A" + std::to_string(varIdx + 1);
   };
 
-  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
+  _constraintMatrix[0].resize(newVariableCount);
+  for (int rowIdx = 1; rowIdx < _rowInfos.size(); ++rowIdx) {
     _constraintMatrix[rowIdx].resize(newVariableCount);
 
-    const auto newVariableIdx = variableCountAtTheStart + rowIdx;
+    const auto newVariableIdx = variableCountAtTheStart + rowIdx - 1;
     _constraintMatrix[rowIdx][newVariableIdx] = 1;
     const auto newArtificialLabelStr = newArtificialLabel(newVariableIdx);
     _variableLowerBounds.push_back(0.0);
@@ -115,7 +116,7 @@ SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
   result._isColumnAtLowerBoundBitset[0] = false;
 
   for (int rowIdx = 1; rowIdx < _rowInfos.size(); ++rowIdx) {
-    const auto basicColumnIdx = *firstArtificialIdx + rowIdx;
+    const auto basicColumnIdx = *firstArtificialIdx + rowIdx - 1;
     result._rowToBasisColumnIdxMap[rowIdx] = basicColumnIdx;
     result._isBasicColumnIndexBitset[basicColumnIdx] = true;
     result._isColumnAtLowerBoundBitset[basicColumnIdx] = false;

@@ -48,6 +48,7 @@ protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex_option,
                   ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
+    absl::SetFlag(&FLAGS_use_product_form_of_inverse, true);
     absl::SetFlag(&FLAGS_reinversion_frequency, 60);
   }
 };
@@ -58,9 +59,9 @@ TYPED_TEST_P(PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobi) {
   using SimplexTraitsT = std::tuple_element_t<1, typename TypeParam::types>;
   constexpr auto PRIMAL_SIMPLEX_TEST_DIR_PATH =
       "../../tests/primal_simplex_working_instances";
-  //      "../../tests/dual_simplex_working_instances";
+  //        "../../tests/dual_simplex_working_instances";
 
-  constexpr size_t PRIMAL_SIMPLEX_BASIS_SIZE_LIMIT = 200;
+  constexpr size_t PRIMAL_SIMPLEX_BASIS_SIZE_LIMIT = 500;
   const LPOptimizationType lpOptimizationType{
       LPOptimizationType::LINEAR_RELAXATION};
   this->solveAndCompareInstancesFromSets(

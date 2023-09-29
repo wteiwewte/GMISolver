@@ -14,8 +14,6 @@ struct RowInfo {
 };
 
 struct VariableInfo {
-  std::string _label;
-
   std::string typeStr() const {
     using namespace std::string_literals;
 
@@ -33,11 +31,13 @@ struct VariableInfo {
     return result;
   }
 
+  std::string _label;
   VariableType _type;
   bool _isSlack{false};
   bool _isArtificial{false};
   bool _isFixed{false};
   bool _isObjectiveVar{false};
+  bool _isCutVar{false};
 };
 
 template <typename T> struct PivotData {

@@ -252,8 +252,11 @@ void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
 
   for (; newVarIdx < fractionalBasisVarsRowIndices.size(); ++newVarIdx) {
     const auto newSlackLabelStr = newSlackLabel();
-    _simplexTableau._variableInfos.push_back(VariableInfo{
-        newSlackLabelStr, VariableType::INTEGER, true, false, false});
+    _simplexTableau._variableInfos.push_back(
+        VariableInfo{._label = newSlackLabelStr,
+                     ._type = VariableType::INTEGER,
+                     ._isSlack = true,
+                     ._isCutVar = true});
     _simplexTableau._variableLabelSet.insert(newSlackLabelStr);
     _simplexTableau._variableLowerBounds.push_back(0.0);
     _simplexTableau._variableUpperBounds.push_back(std::nullopt);
@@ -265,6 +268,22 @@ void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
     _simplexTableau._constraintMatrix[rowIdx].resize(newVarCount, 0.0);
   }
 }
+
+// template <typename T, typename SimplexTraitsT>
+// void DualSimplexGomory<T, SimplexTraitsT>::removeSlackCuts() const {
+//   SPDLOG_INFO("INITIAL ROW COUNT {} CURRENT ROW COUNT {}",
+//               _simplexTableau._initialProgram.getRowInfos().size(),
+//               _simplexTableau._rowInfos.size());
+//   for (int rowIdx = _simplexTableau._initialProgram.getRowInfos().size();
+//   rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
+//   {
+//     const auto basicVarIdx = _simplexTableau.basicColumnIdx(rowIdx);
+//     if (_simplexTableau._variableInfos[basicVarIdx]._isCutVar)
+//     {
+//
+//     }
+//   }
+// }
 
 template class DualSimplexGomory<
     double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;

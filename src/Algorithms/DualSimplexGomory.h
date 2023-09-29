@@ -50,6 +50,8 @@ private:
   addSlackVars(const int relaxationNo,
                const std::vector<int> &fractionalBasisVarsRowIndices) const;
 
+  void removeSlackCuts() const;
+
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;

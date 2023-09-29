@@ -100,6 +100,9 @@ private:
       if (_simplexTableau._variableInfos[varIdx]._isFixed)
         continue;
 
+      if (_simplexTableau._variableInfos[varIdx]._isArtificial)
+        continue;
+
       if (_simplexTableau._simplexBasisData
               ._isColumnAtLowerBoundBitset[varIdx] &&
           (_simplexTableau._reducedCosts[varIdx] <

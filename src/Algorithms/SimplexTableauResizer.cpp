@@ -96,12 +96,16 @@ SimplexTableauResizer<T, SimplexTraitsT>::moveArtificialVariablesOutOfBasis() {
 template <typename T, typename SimplexTraitsT>
 void SimplexTableauResizer<T, SimplexTraitsT>::removeRows(
     const std::vector<bool> &shouldRowBeRemoved) {
-  const auto rowsToBeRemoved =
-      std::count(shouldRowBeRemoved.begin(), shouldRowBeRemoved.end(), true);
-  if (rowsToBeRemoved == 0)
+  std::vector<int> rowsToBeRemoved;
+  for (int rowIdx = 0; rowIdx < shouldRowBeRemoved.size(); ++rowIdx)
+    if (shouldRowBeRemoved[rowIdx])
+      rowsToBeRemoved.push_back(rowIdx);
+
+  if (rowsToBeRemoved.size() == 0)
     return;
 
-  SPDLOG_INFO("{} CONSTRAINTS TO BE REMOVED", rowsToBeRemoved);
+  SPDLOG_INFO("{} CONSTRAINTS [{}] TO BE REMOVED", rowsToBeRemoved.size(),
+              fmt::join(rowsToBeRemoved, ", "));
   removeElements(_simplexTableau._rowInfos, shouldRowBeRemoved);
   removeElements(_simplexTableau._constraintMatrix, shouldRowBeRemoved);
   removeElements(_simplexTableau._rightHandSides, shouldRowBeRemoved);

@@ -113,6 +113,34 @@ struct LPPrinter {
   }
 
   template <typename T>
+  void printMatrixWithRHS1(const std::vector<int> &rowToBasisColumnIdxMap,
+                           const Matrix<T> &matrix,
+                           const std::vector<T> &rightHandSides,
+                           const std::vector<T> &initialRightHandSides) {
+    for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
+      if (!rowToBasisColumnIdxMap.empty())
+        _oss << fmt::format(
+            "{:^{}}|", _variableInfos[rowToBasisColumnIdxMap[rowIdx]]._label,
+            _maxVariableWidth);
+
+      for (int variableIdx = 0; variableIdx < _variableInfos.size();
+           ++variableIdx)
+        _oss << fmt::format("{:>{}}|",
+                            (' ' + std::to_string(matrix[rowIdx][variableIdx])),
+                            _variableWidths[variableIdx]);
+
+      _oss << fmt::format("{:^{}}|", rowTypeToStr(_rowInfos[rowIdx]._type),
+                          CONSTRAINT_SIGN_WIDTH);
+      _oss << fmt::format("{:>{}}|",
+                          (' ' + std::to_string(rightHandSides[rowIdx])),
+                          COEFFICIENT_WIDTH);
+      _oss << fmt::format("{:>{}}|\n",
+                          (' ' + std::to_string(initialRightHandSides[rowIdx])),
+                          COEFFICIENT_WIDTH);
+    }
+  }
+
+  template <typename T>
   void printInverseBasis(const Matrix<T> &basisMatrixInverse) {
     _oss << "BASIS MATRIX INVERSE\n";
     for (int rowIdx = 0; rowIdx < basisMatrixInverse.size(); ++rowIdx) {

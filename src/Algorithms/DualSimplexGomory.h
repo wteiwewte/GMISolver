@@ -31,6 +31,7 @@ public:
                          const GomoryCutChoosingRule gomoryCutChoosingRule);
 
 private:
+  using VectorT = typename SimplexTraitsT::VectorT;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
   LPRelaxationStatistics<T>
@@ -50,7 +51,7 @@ private:
   addSlackVars(const int relaxationNo,
                const std::vector<int> &fractionalBasisVarsRowIndices) const;
 
-  void removeSlackCuts() const;
+  bool removeSlackCuts() const;
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;
@@ -58,6 +59,7 @@ private:
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;
   const int32_t _objValueLoggingFrequency;
   const ValidateSimplexOption _validateSimplexOption;
+  const bool _defineCutsInTermsOfOriginalVariables{true};
 };
 
 #endif // GMISOLVER_DUALSIMPLEXGOMORY_H

@@ -37,7 +37,7 @@ struct VariableInfo {
   bool _isArtificial{false};
   bool _isFixed{false};
   bool _isObjectiveVar{false};
-  bool _isCutVar{false};
+  std::optional<int> _cutRowIdx;
 };
 
 template <typename T> struct PivotData {

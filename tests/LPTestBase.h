@@ -32,10 +32,10 @@ template <typename T> struct LPTestBase {
                           const bool isRelaxationOptType,
                           const bool allBoundsMustBeSpecified,
                           InstanceSetStats &instanceSetStats) const {
-    //        if (modelName != "misc02.mps")
-    //        {
-    //          return false;
-    //        }
+    //    if (modelName != "bm23.mps")
+    //    {
+    //      return false;
+    //    }
     ++instanceSetStats._totalModelsCount;
 
     if (linearProgram.getRowInfos().size() > basisSizeLimit ||

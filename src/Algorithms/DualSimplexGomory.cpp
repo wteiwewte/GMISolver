@@ -4,6 +4,7 @@
 #include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
+#include "src/Algorithms/SimplexTableauResizer.h"
 
 #include <fmt/format.h>
 
@@ -46,8 +47,8 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
   while (true) {
     ++relaxationNo;
-    if (relaxationNo > 5)
-      break;
+    //    if (relaxationNo > 5)
+    //      break;
     SPDLOG_INFO("{}TH GOMORY ROUND", relaxationNo);
     checkIfNonBasicVarsAreIntegral();
     const auto fractionalBasisRows =
@@ -70,6 +71,14 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
     ipOptStatistics._lpRelaxationStats.emplace_back() =
         runImpl(relaxationNo, lexicographicReoptType);
+
+    SPDLOG_INFO(_simplexTableau.toString());
+    //    if (!removeSlackCuts())
+    //      break;
+    //    SPDLOG_INFO("AFTER CUT REMOVAL");
+    //    SPDLOG_INFO(_simplexTableau.toString());
+    //    SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
+    //    SPDLOG_INFO(_simplexTableau.toStringSolution());
   }
 
   ipOptStatistics._optimalValue =
@@ -96,7 +105,7 @@ LPRelaxationStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::runImpl(
   relaxationStats._lexicographicReoptStats =
       lexicographicOptimizer().run(lexicographicReoptType, relaxationId());
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-  //  SPDLOG_INFO(_simplexTableau.toStringSolution());
+  SPDLOG_INFO(_simplexTableau.toStringSolution());
   return relaxationStats;
 }
 
@@ -175,54 +184,70 @@ void DualSimplexGomory<T, SimplexTraitsT>::addCutRows(
       newBasisSize);
 
   int rowNo = 0;
+  std::vector<VectorT> tableauRows;
+  for (const auto rowIdx : fractionalBasisVarsRowIndices) {
+    tableauRows.push_back(_simplexTableau.computeTableauRowGeneric(rowIdx));
+  }
+
   for (const auto rowIdx : fractionalBasisVarsRowIndices) {
     _simplexTableau._rowInfos.push_back(
         RowInfo{._label = fmt::format("CUT_{}_{}", relaxationNo, rowNo),
                 ._type = RowType::EQUALITY});
 
-    const auto tableauRow = _simplexTableau.computeTableauRowGeneric(
-        rowIdx); // FIXME this function probably doesnt work after adding new
-                 // cuts
+    //    const auto tableauRow = _simplexTableau.computeTableauRowGeneric(
+    //        rowIdx); // FIXME this function probably doesnt work after adding
+    //        new
+    //                 // cuts
+    const auto &tableauRow = tableauRows[rowNo];
     auto &newCutRow = _simplexTableau._constraintMatrix.emplace_back();
     newCutRow.resize(_simplexTableau._variableInfos.size() +
                          fractionalBasisVarsRowIndices.size(),
                      0.0);
+    T rhsAddition = 0;
     for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
          ++varIdx) {
       if (!_simplexTableau._simplexBasisData
                ._isBasicColumnIndexBitset[varIdx] &&
           !_simplexTableau._variableInfos[varIdx]._isArtificial) {
-        newCutRow[varIdx] = std::floor(tableauRow[varIdx]) - tableauRow[varIdx];
-      } else {
-        //        SPDLOG_INFO("BASIC VAR IDX {} LABEL {}", varIdx,
-        //                    _simplexTableau._variableInfos[varIdx]._label);
+        const auto val = std::floor(tableauRow[varIdx]) - tableauRow[varIdx];
+        if (_defineCutsInTermsOfOriginalVariables) {
+          if (const auto cutRowIdx =
+                  _simplexTableau._variableInfos[varIdx]._cutRowIdx;
+              cutRowIdx.has_value()) {
+            SPDLOG_INFO("CUT VAR IDX {} CUT ROW IDX {}", varIdx, *cutRowIdx);
+            for (int varIdx2 = 0;
+                 varIdx2 < _simplexTableau._variableInfos.size(); ++varIdx2) {
+              if (varIdx2 != varIdx) {
+                SPDLOG_INFO(
+                    "VAR LABEL {} VALUE {}",
+                    _simplexTableau._variableInfos[varIdx2]._label,
+                    val *
+                        _simplexTableau._constraintMatrix[*cutRowIdx][varIdx2]);
+                newCutRow[varIdx2] +=
+                    (-val) *
+                    _simplexTableau._constraintMatrix[*cutRowIdx][varIdx2];
+              }
+            }
+            rhsAddition =
+                (-val) * _simplexTableau._initialRightHandSides[*cutRowIdx];
+          } else {
+            newCutRow[varIdx] += val;
+          }
+        } else {
+          newCutRow[varIdx] = val;
+        }
       }
-      //      SPDLOG_INFO("CUT ROW - VAR IDX {} VAR LABEL {} VALUE {}", varIdx,
-      //                  _simplexTableau._variableInfos[varIdx]._label,
-      //                  newCutRow[varIdx]);
     }
-    newCutRow[_simplexTableau._variableInfos.size() + rowNo] = 1.0;
+    const int newCutVarIdx = _simplexTableau._variableInfos.size() + rowNo;
+    newCutRow[newCutVarIdx] = 1.0;
 
-    [[maybe_unused]] const auto basicColumnIdx =
-        _simplexTableau.basicColumnIdx(rowIdx);
-    //    SPDLOG_INFO("ROW IDX {} RHS VALUE {} SOL VALUE {}", rowIdx,
-    //                _simplexTableau._rightHandSides[rowIdx],
-    //                _simplexTableau._x[basicColumnIdx]);
-    //    SPDLOG_INFO("RHS DIFF {}",
-    //                std::floor(_simplexTableau._rightHandSides[rowIdx]) -
-    //                    _simplexTableau._rightHandSides[rowIdx]);
-    //    SPDLOG_INFO("SOL DIFF {}",
-    //    std::floor(_simplexTableau._x[basicColumnIdx]) -
-    //                                   _simplexTableau._x[basicColumnIdx]);
-    _simplexTableau._rightHandSides.push_back(
-        std::floor(_simplexTableau._rightHandSides[rowIdx]) -
-        _simplexTableau._rightHandSides[rowIdx]);
-    _simplexTableau._initialRightHandSides.push_back(
-        std::floor(_simplexTableau._rightHandSides[rowIdx]) -
-        _simplexTableau._rightHandSides[rowIdx]);
+    const auto cutRhs = rhsAddition +
+                        std::floor(_simplexTableau._rightHandSides[rowIdx]) -
+                        _simplexTableau._rightHandSides[rowIdx];
+    _simplexTableau._rightHandSides.push_back(cutRhs);
+    _simplexTableau._initialRightHandSides.push_back(cutRhs);
     _simplexTableau._simplexBasisData
-        ._rowToBasisColumnIdxMap[oldBasisSize + rowNo] =
-        _simplexTableau._variableInfos.size() + rowNo;
+        ._rowToBasisColumnIdxMap[oldBasisSize + rowNo] = newCutVarIdx;
     ++rowNo;
   }
 }
@@ -251,12 +276,14 @@ void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
   };
 
   for (; newVarIdx < fractionalBasisVarsRowIndices.size(); ++newVarIdx) {
+    const int cutRowIdx = _simplexTableau._rowInfos.size() -
+                          fractionalBasisVarsRowIndices.size() + newVarIdx;
     const auto newSlackLabelStr = newSlackLabel();
     _simplexTableau._variableInfos.push_back(
         VariableInfo{._label = newSlackLabelStr,
                      ._type = VariableType::INTEGER,
                      ._isSlack = true,
-                     ._isCutVar = true});
+                     ._cutRowIdx = cutRowIdx});
     _simplexTableau._variableLabelSet.insert(newSlackLabelStr);
     _simplexTableau._variableLowerBounds.push_back(0.0);
     _simplexTableau._variableUpperBounds.push_back(std::nullopt);
@@ -269,21 +296,38 @@ void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
   }
 }
 
-// template <typename T, typename SimplexTraitsT>
-// void DualSimplexGomory<T, SimplexTraitsT>::removeSlackCuts() const {
-//   SPDLOG_INFO("INITIAL ROW COUNT {} CURRENT ROW COUNT {}",
-//               _simplexTableau._initialProgram.getRowInfos().size(),
-//               _simplexTableau._rowInfos.size());
-//   for (int rowIdx = _simplexTableau._initialProgram.getRowInfos().size();
-//   rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
-//   {
-//     const auto basicVarIdx = _simplexTableau.basicColumnIdx(rowIdx);
-//     if (_simplexTableau._variableInfos[basicVarIdx]._isCutVar)
-//     {
-//
-//     }
-//   }
-// }
+template <typename T, typename SimplexTraitsT>
+bool DualSimplexGomory<T, SimplexTraitsT>::removeSlackCuts() const {
+  SPDLOG_INFO("INITIAL ROW COUNT {} CURRENT ROW COUNT {}",
+              _simplexTableau._initialProgram.getRowInfos().size(),
+              _simplexTableau._rowInfos.size());
+  std::vector<bool> shouldVarBeRemoved(_simplexTableau._variableInfos.size(),
+                                       false);
+  std::vector<bool> shouldRowBeRemoved(_simplexTableau._rowInfos.size(), false);
+  for (int rowIdx = _simplexTableau._initialProgram.getRowInfos().size();
+       rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
+    {
+      const auto basicVarIdx = _simplexTableau.basicColumnIdx(rowIdx);
+      const auto cutRowIdx =
+          _simplexTableau._variableInfos[basicVarIdx]._cutRowIdx;
+      if (cutRowIdx.has_value()) {
+        //      if (_simplexTableau._variableInfos[basicVarIdx]._isCutVar &&
+        //          NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx],
+        //          0.0)) {
+        // FIXME check if slack value == 0 ?
+        shouldVarBeRemoved[basicVarIdx] = true;
+        shouldRowBeRemoved[*cutRowIdx] = true;
+      }
+    }
+  }
+  SimplexTableauResizer simplexTableauResizer(_simplexTableau,
+                                              _reinversionManager);
+  simplexTableauResizer.removeRows(shouldRowBeRemoved);
+  simplexTableauResizer.removeVariables(shouldVarBeRemoved);
+  _simplexTableau.initMatrixRepresentations();
+  _simplexTableau._simplexBasisData.restoreMapping();
+  return _reinversionManager.reinverse();
+}
 
 template class DualSimplexGomory<
     double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;

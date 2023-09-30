@@ -89,7 +89,7 @@ TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
       [&](const auto &linearProgram,
           const std::filesystem::path &modelFileMpsPath) {
         for (const auto lexicographicReoptType :
-             {LexicographicReoptType::MIN}) {
+             {LexicographicReoptType::MAX}) {
           IPOptStatistics<FloatingPointT> ipOptStatistics =
               runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
                                                  SimplexTraitsT>(

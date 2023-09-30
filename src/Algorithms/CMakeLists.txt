@@ -39,6 +39,7 @@ target_link_libraries(
   ReinversionManager
   SimplexTraits
   SimplexTableau
+  SimplexTableauResizer
   RevisedDualSimplexPFIBounds)
 
 add_library(SimplexTableauResizer SimplexTableauResizer.cpp

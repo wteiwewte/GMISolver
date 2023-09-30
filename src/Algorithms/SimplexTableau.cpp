@@ -154,8 +154,9 @@ std::string SimplexTableau<T, SimplexTraitsT>::toString() const {
     lpPrinter.printReducedCostWithObjectiveValue(_reducedCosts,
                                                  _objectiveValue);
 
-  lpPrinter.printMatrixWithRHS(_simplexBasisData._rowToBasisColumnIdxMap,
-                               _constraintMatrix, _rightHandSides);
+  lpPrinter.printMatrixWithRHS1(_simplexBasisData._rowToBasisColumnIdxMap,
+                                _constraintMatrix, _rightHandSides,
+                                _initialRightHandSides);
   lpPrinter.printVariableBounds(_variableLowerBounds, _variableUpperBounds);
   lpPrinter.printLineBreak();
   lpPrinter.printInverseBasis(_basisMatrixInverse);

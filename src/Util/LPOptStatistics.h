@@ -13,6 +13,7 @@ template <typename T> struct LPOptStatistics {
   LPOptimizationResult _optResult;
   T _optimalValue{};
   int32_t _iterationCount{0};
+  double _elapsedTimeSec{0.0};
   bool _phaseOneSucceeded{false}; // only for primal simplex
   int32_t _reinversionFrequency;
 };

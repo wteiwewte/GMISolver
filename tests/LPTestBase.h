@@ -85,55 +85,60 @@ template <typename T> struct LPTestBase {
       const std::string &dirPath, const size_t basisSizeLimit,
       const LPOptimizationType lpOptimizationType, LPOptFunc lpOptFunc,
       const bool allBoundsMustBeSpecified = true) {
-    InstanceSetStats instanceSetStats;
-    const bool isRelaxationOptType =
-        lpOptimizationType == LPOptimizationType::LINEAR_RELAXATION;
-    for (const auto &lpModelSetDirectory :
-         std::filesystem::directory_iterator(dirPath)) {
-      if (!lpModelSetDirectory.is_directory())
-        continue;
+    for (const SimplexTableauType simplexTableauType :
+         absl::GetFlag(FLAGS_simplex_tableau_types)) {
+      InstanceSetStats instanceSetStats;
+      const bool isRelaxationOptType =
+          lpOptimizationType == LPOptimizationType::LINEAR_RELAXATION;
+      for (const auto &lpModelSetDirectory :
+           std::filesystem::directory_iterator(dirPath)) {
+        if (!lpModelSetDirectory.is_directory())
+          continue;
 
-      SPDLOG_INFO("MODEL SET DIRECTORY {}",
-                  std::string{lpModelSetDirectory.path().filename()});
-      for (const auto &lpModelFileEntry :
-           std::filesystem::directory_iterator(lpModelSetDirectory)) {
-        const std::string modelName = lpModelFileEntry.path().filename();
-        SPDLOG_INFO("MODEL {}", modelName);
-        auto linearProgram =
-            MpsReader<FloatingPointT>::read(lpModelFileEntry.path());
-        ASSERT_TRUE(linearProgram.has_value());
+        SPDLOG_INFO("MODEL SET DIRECTORY {}",
+                    std::string{lpModelSetDirectory.path().filename()});
+        for (const auto &lpModelFileEntry :
+             std::filesystem::directory_iterator(lpModelSetDirectory)) {
+          const std::string modelName = lpModelFileEntry.path().filename();
+          SPDLOG_INFO("MODEL {}", modelName);
+          auto linearProgram =
+              MpsReader<FloatingPointT>::read(lpModelFileEntry.path());
+          ASSERT_TRUE(linearProgram.has_value());
 
-        if (isInstanceSuitable(basisSizeLimit, *linearProgram, modelName,
-                               isRelaxationOptType, allBoundsMustBeSpecified,
-                               instanceSetStats)) {
-          lpOptFunc(*linearProgram, lpModelFileEntry.path());
+          if (isInstanceSuitable(basisSizeLimit, *linearProgram, modelName,
+                                 isRelaxationOptType, allBoundsMustBeSpecified,
+                                 instanceSetStats)) {
+            lpOptFunc(*linearProgram, simplexTableauType,
+                      lpModelFileEntry.path());
+          }
         }
       }
-    }
-    SPDLOG_INFO("PROCESSED {} MODELS FROM {} TOTAL",
-                instanceSetStats._processedModelsCount,
-                instanceSetStats._totalModelsCount);
-    SPDLOG_INFO("{} TOO BIG", instanceSetStats._tooBigModelsCount);
-    SPDLOG_INFO("{} WITHOUT BOUNDS", instanceSetStats._modelsWithNoBoundsCount);
-    if (isRelaxationOptType) {
-      ASSERT_EQ(instanceSetStats._totalModelsCount,
-                instanceSetStats._processedModelsCount +
-                    instanceSetStats._tooBigModelsCount +
-                    instanceSetStats._modelsWithNoBoundsCount);
-    } else {
-      SPDLOG_INFO("{} NOT PURE IP",
-                  instanceSetStats._modelsWithNoAllIntegerVariables);
-      SPDLOG_INFO("{} NOT ALL COEFFS INTEGER",
-                  instanceSetStats._modelsWithNoAllIntegerCoeffs);
-      SPDLOG_INFO("{} NOT ALL VARIABLES ARE NONNEGATIVE",
-                  instanceSetStats._modelsWithNoAllNonnegativeVariables);
-      ASSERT_EQ(instanceSetStats._totalModelsCount,
-                instanceSetStats._processedModelsCount +
-                    instanceSetStats._tooBigModelsCount +
-                    instanceSetStats._modelsWithNoBoundsCount +
-                    instanceSetStats._modelsWithNoAllIntegerVariables +
-                    instanceSetStats._modelsWithNoAllIntegerCoeffs +
+      SPDLOG_INFO("PROCESSED {} MODELS FROM {} TOTAL",
+                  instanceSetStats._processedModelsCount,
+                  instanceSetStats._totalModelsCount);
+      SPDLOG_INFO("{} TOO BIG", instanceSetStats._tooBigModelsCount);
+      SPDLOG_INFO("{} WITHOUT BOUNDS",
+                  instanceSetStats._modelsWithNoBoundsCount);
+      if (isRelaxationOptType) {
+        ASSERT_EQ(instanceSetStats._totalModelsCount,
+                  instanceSetStats._processedModelsCount +
+                      instanceSetStats._tooBigModelsCount +
+                      instanceSetStats._modelsWithNoBoundsCount);
+      } else {
+        SPDLOG_INFO("{} NOT PURE IP",
+                    instanceSetStats._modelsWithNoAllIntegerVariables);
+        SPDLOG_INFO("{} NOT ALL COEFFS INTEGER",
+                    instanceSetStats._modelsWithNoAllIntegerCoeffs);
+        SPDLOG_INFO("{} NOT ALL VARIABLES ARE NONNEGATIVE",
                     instanceSetStats._modelsWithNoAllNonnegativeVariables);
+        ASSERT_EQ(instanceSetStats._totalModelsCount,
+                  instanceSetStats._processedModelsCount +
+                      instanceSetStats._tooBigModelsCount +
+                      instanceSetStats._modelsWithNoBoundsCount +
+                      instanceSetStats._modelsWithNoAllIntegerVariables +
+                      instanceSetStats._modelsWithNoAllIntegerCoeffs +
+                      instanceSetStats._modelsWithNoAllNonnegativeVariables);
+      }
     }
   }
 

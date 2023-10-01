@@ -12,10 +12,11 @@
 
 template <typename T> struct LPOptStatisticsPrinter {
   constexpr static int LP_NAME_WIDTH = 30;
-  constexpr static int SIMPLEX_ALGO_TYPE_WIDTH = 35;
+  constexpr static int SIMPLEX_ALGO_TYPE_WIDTH = 65;
   constexpr static int LP_OPT_RESULT_WIDTH = 25;
   constexpr static int OPT_VALUE_WIDTH = 20;
   constexpr static int ITERATION_COUNT_WIDTH = 12;
+  constexpr static int ELAPSED_TIME_WIDTH = 20;
   constexpr static int REINVERSION_FREQUENCY_WIDTH = 12;
 
   LPOptStatisticsPrinter(const LPOptStatisticsVec<T> &lpOptStatisticsVec)
@@ -41,6 +42,7 @@ template <typename T> struct LPOptStatisticsPrinter {
     _oss << fmt::format("{:^{}}|", "LP OPT RESULT", LP_OPT_RESULT_WIDTH);
     _oss << fmt::format("{:^{}}|", "OPT VALUE", OPT_VALUE_WIDTH);
     _oss << fmt::format("{:^{}}|", "ITER COUNT", ITERATION_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", "ELP TIME SECONDS", ELAPSED_TIME_WIDTH);
     _oss << fmt::format("{:^{}}|", "REINV FREQ", REINVERSION_FREQUENCY_WIDTH);
     printLineBreak();
   }
@@ -56,6 +58,8 @@ template <typename T> struct LPOptStatisticsPrinter {
                         OPT_VALUE_WIDTH);
     _oss << fmt::format("{:^{}}|", lpOptStatistics._iterationCount,
                         ITERATION_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", lpOptStatistics._elapsedTimeSec,
+                        ELAPSED_TIME_WIDTH);
     _oss << fmt::format("{:^{}}|", lpOptStatistics._reinversionFrequency,
                         REINVERSION_FREQUENCY_WIDTH);
     printLineBreak();

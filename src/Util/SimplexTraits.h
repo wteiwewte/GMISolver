@@ -1,6 +1,7 @@
 #ifndef GMISOLVER_SIMPLEXTRAITS_H
 #define GMISOLVER_SIMPLEXTRAITS_H
 
+#include "src/DataModel/EnumTypes.h"
 #include "src/DataModel/MatrixTypes.h"
 #include "src/Util/SpdlogHeader.h"
 
@@ -124,6 +125,8 @@ struct SimplexTraits {
   using CurrentAdder = typename NumericalTraitsT::template SimpleAdder<
       typename NumericalTraitsT::NormalAddOp>;
 
+  constexpr static MatrixRepresentationType matrixRepresentationType =
+      representationType;
   constexpr static bool useSparseRepresentationValue =
       representationType == MatrixRepresentationType::SPARSE;
   using ElementaryMatrixT =

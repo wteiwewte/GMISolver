@@ -6,6 +6,7 @@
 #include "src/Algorithms/SimplexValidator.h"
 #include "src/DataModel/LinearProgram.h"
 #include "src/Util/SpdlogHeader.h"
+#include "src/Util/Time.h"
 
 template <typename T, typename SimplexTraitsT>
 RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
@@ -21,10 +22,10 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
 
 template <typename T, typename SimplexTraitsT>
 std::string RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::type() const {
-  return "REVISED PRIMAL SIMPLEX (" +
-         std::string(SimplexTraitsT::useSparseRepresentationValue ? "SPARSE"
-                                                                  : "NORMAL") +
-         ')';
+  return fmt::format(
+      "REVISED PRIMAL SIMPLEX ({}, {})",
+      simplexTableauTypeToStr(_simplexTableau._simplexTableauType),
+      matrixRepresentationTypeToStr(SimplexTraitsT::matrixRepresentationType));
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -66,38 +67,45 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
       ._lpName = (_simplexTableau.getName() + '_' + lpNameSuffix),
       ._simplexAlgorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
-  while (true) {
-    const bool iterResult = runOneIteration();
-    if (iterResult)
-      break;
+  lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
+    while (true) {
+      const bool iterResult = runOneIteration();
+      if (iterResult)
+        break;
 
-    _simplexTableau.calculateCurrentObjectiveValue();
-    _simplexTableau.calculateSolution();
+      _simplexTableau.calculateCurrentObjectiveValue();
+      _simplexTableau.calculateSolution();
 
-    lpOptStatistics._consecutiveObjectiveValues.push_back(
-        _simplexTableau.getCurrentObjectiveValue());
+      lpOptStatistics._consecutiveObjectiveValues.push_back(
+          _simplexTableau.getCurrentObjectiveValue());
 
-    ++iterCount;
-    tryLogObjValue(iterCount);
+      ++iterCount;
+      tryLogObjValue(iterCount);
 
-    if (!tryValidateIteration(iterCount, lpOptStatistics))
-      break;
+      if (!tryValidateIteration(iterCount, lpOptStatistics))
+        break;
 
-    if (!tryReinversion(iterCount, lpOptStatistics))
-      break;
+      if (!tryReinversion(iterCount, lpOptStatistics))
+        break;
 
-    if (!checkIterationLimit(iterCount))
-      break;
+      if (!checkIterationLimit(iterCount))
+        break;
 
-    SPDLOG_TRACE("{}\n", _simplexTableau.toString());
-  }
+      SPDLOG_TRACE("{}\n", _simplexTableau.toString());
+    }
+  });
+
   if (_simplexTableau.getLPOptResult() ==
       LPOptimizationResult::BOUNDED_AND_FEASIBLE)
     tryValidateOptimalSolutions(lpOptStatistics);
 
-  if (printSummary)
-    SPDLOG_INFO("{} ENDED, LP OPT RESULT {}, ITERATION COUNT {}", type(),
-                lpOptimizationResultToStr(_simplexTableau._result), iterCount);
+  if (printSummary) {
+    SPDLOG_INFO("{} ENDED", type());
+    SPDLOG_INFO("LP OPT RESULT {}",
+                lpOptimizationResultToStr(_simplexTableau._result));
+    SPDLOG_INFO("ELAPSED TIME {} SECONDS, ITERATION COUNT {}",
+                lpOptStatistics._elapsedTimeSec, iterCount);
+  }
 
   lpOptStatistics._optResult = _simplexTableau.getLPOptResult();
   lpOptStatistics._optimalValue = _simplexTableau.getCurrentObjectiveValue();

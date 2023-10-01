@@ -79,6 +79,11 @@ enum class SimplexTableauType : int8_t {
   REVISED_PRODUCT_FORM_OF_INVERSE
 };
 
+enum class MatrixRepresentationType : int8_t {
+  NORMAL = 0,
+  SPARSE,
+};
+
 enum class LexicographicReoptType : int8_t {
   MIN = 0,
   MAX,
@@ -103,6 +108,11 @@ std::string AbslUnparseFlag(ValidateSimplexOption validateSimplexOption);
 bool AbslParseFlag(absl::string_view text,
                    SimplexTableauType *simplexTableauType, std::string *error);
 std::string AbslUnparseFlag(SimplexTableauType simplexTableauType);
+bool AbslParseFlag(absl::string_view text,
+                   std::vector<SimplexTableauType> *simplexTableauTypes,
+                   std::string *error);
+std::string
+AbslUnparseFlag(const std::vector<SimplexTableauType> &simplexTableauTypes);
 
 std::optional<SectionType> stringToSectionType(const std::string &string);
 std::optional<RowType> stringToRowType(const std::string &string);
@@ -117,5 +127,9 @@ std::string
 lpOptimizationResultToStr(const LPOptimizationResult lpOptimizationResult);
 std::string lexicographicReoptTypeToStr(
     const LexicographicReoptType lexicographicReoptType);
+std::string
+simplexTableauTypeToStr(const SimplexTableauType simplexTableauType);
+std::string matrixRepresentationTypeToStr(
+    const MatrixRepresentationType representationType);
 
 #endif // GMISOLVER_ENUMTYPES_H

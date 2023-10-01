@@ -7,7 +7,8 @@ target_link_libraries(
                       fmt::fmt-header-only)
 
 add_library(SimplexTraits INTERFACE SimplexTraits.h)
-target_link_libraries(SimplexTraits INTERFACE MatrixTypes SpdlogHeader)
+target_link_libraries(SimplexTraits INTERFACE EnumTypes MatrixTypes
+                                              SpdlogHeader)
 
 add_library(SpdlogHeader INTERFACE SpdlogHeader.h)
 target_link_libraries(SpdlogHeader INTERFACE spdlog::spdlog)
@@ -27,6 +28,8 @@ target_link_libraries(
   GurobiOptimizer INTERFACE LPOptStatistics SpdlogHeader ${GUROBI_CXX_LIBRARY}
                             ${GUROBI_LIBRARY})
 target_include_directories(GurobiOptimizer INTERFACE "${GUROBI_INCLUDE_DIRS}")
+
+add_library(Time INTERFACE Time.h)
 
 set_target_properties(
   LPPrinter

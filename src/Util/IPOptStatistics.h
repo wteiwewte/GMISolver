@@ -13,9 +13,13 @@ template <typename T> struct LPRelaxationStatistics {
 };
 
 template <typename T> struct IPOptStatistics {
+  std::string _lpName;
+  std::string _algorithmType;
   T _optimalValue{};
   std::vector<T> _optimalSolution;
+  double _elapsedTimeMs{0.0};
   std::vector<LPRelaxationStatistics<T>> _lpRelaxationStats;
+  int32_t _reinversionFrequency;
 };
 
 template <typename T>

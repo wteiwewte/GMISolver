@@ -18,11 +18,11 @@ template <typename T> struct PrimalSimplexOutput {
 };
 
 template <typename T, typename SimplexTraitsT>
-PrimalSimplexOutput<T>
-runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
+PrimalSimplexOutput<T> runPrimalSimplexWithImplicitBounds(
+    const LinearProgram<T> &linearProgram,
+    const SimplexTableauType simplexTableauType) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
-      linearProgram, SimplexType::PRIMAL,
-      absl::GetFlag(FLAGS_simplex_tableau_type));
+      linearProgram, SimplexType::PRIMAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
@@ -48,8 +48,8 @@ protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex_option,
                   ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
-    absl::SetFlag(&FLAGS_simplex_tableau_type,
-                  SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE);
+    absl::SetFlag(&FLAGS_simplex_tableau_types,
+                  {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE});
     absl::SetFlag(&FLAGS_reinversion_frequency, 60);
   }
 };
@@ -69,10 +69,11 @@ TYPED_TEST_P(PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobi) {
       PRIMAL_SIMPLEX_TEST_DIR_PATH, PRIMAL_SIMPLEX_BASIS_SIZE_LIMIT,
       lpOptimizationType,
       [&](const auto &linearProgram,
+          const SimplexTableauType simplexTableauType,
           const std::filesystem::path &modelFileMpsPath) {
         const auto primalSimplexOutput =
             runPrimalSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
-                linearProgram);
+                linearProgram, simplexTableauType);
         const auto gurobiLPOptStats =
             GurobiOptimizer("", modelFileMpsPath)
                 .optimize<FloatingPointT>(lpOptimizationType);

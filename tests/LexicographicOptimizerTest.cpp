@@ -15,10 +15,10 @@
 template <typename T, typename SimplexTraitsT>
 LexReoptStatistics<T> runDualSimplexWithLexReopt(
     const LinearProgram<T> &linearProgram,
+    const SimplexTableauType simplexTableauType,
     const LexicographicReoptType lexicographicReoptType) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
-      linearProgram, SimplexType::DUAL,
-      absl::GetFlag(FLAGS_simplex_tableau_type));
+      linearProgram, SimplexType::DUAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
@@ -42,8 +42,8 @@ protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex_option,
                   ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
-    absl::SetFlag(&FLAGS_simplex_tableau_type,
-                  SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE);
+    absl::SetFlag(&FLAGS_simplex_tableau_types,
+                  {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE});
   }
 };
 
@@ -62,12 +62,13 @@ TYPED_TEST_P(LexicographicOptimizerTest,
       DUAL_SIMPLEX_TEST_DIR_PATH, DUAL_SIMPLEX_BASIS_SIZE_LIMIT,
       lpOptimizationType,
       [&](const auto &linearProgram,
+          const SimplexTableauType simplexTableauType,
           const std::filesystem::path &modelFileMpsPath) {
         for (const auto lexicographicReoptType :
              {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
           LexReoptStatistics<FloatingPointT> lexReoptStatistics =
               runDualSimplexWithLexReopt<FloatingPointT, SimplexTraitsT>(
-                  linearProgram, lexicographicReoptType);
+                  linearProgram, simplexTableauType, lexicographicReoptType);
 
           GurobiOptimizer gurobiOptimizer("", modelFileMpsPath);
           gurobiOptimizer.prepareLexicographicObjectives(

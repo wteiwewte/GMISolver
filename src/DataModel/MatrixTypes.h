@@ -4,11 +4,6 @@
 #include <deque>
 #include <vector>
 
-enum class MatrixRepresentationType : int8_t {
-  NORMAL = 0,
-  SPARSE,
-};
-
 template <typename T> struct IndexedValue {
   T _data;
   int _index;

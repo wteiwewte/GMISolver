@@ -5,6 +5,7 @@
 #include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Algorithms/SimplexTableauResizer.h"
+#include "src/Util/Time.h"
 
 #include <fmt/format.h>
 
@@ -24,10 +25,10 @@ DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
 
 template <typename T, typename SimplexTraitsT>
 std::string DualSimplexGomory<T, SimplexTraitsT>::type() const {
-  return "DUAL SIMPLEX GOMORY WITH PRIMAL CUTS (" +
-         std::string(SimplexTraitsT::useSparseRepresentationValue ? "SPARSE"
-                                                                  : "NORMAL") +
-         ')';
+  return fmt::format(
+      "DUAL SIMPLEX GOMORY WITH PRIMAL CUTS ({}, {})",
+      simplexTableauTypeToStr(_simplexTableau._simplexTableauType),
+      matrixRepresentationTypeToStr(SimplexTraitsT::matrixRepresentationType));
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -37,50 +38,55 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
     const GomoryCutChoosingRule gomoryCutChoosingRule) {
   SPDLOG_INFO("GOMORY WITH {} LEXICOGRAPHIC REOPTIMIZATION",
               lexicographicReoptTypeToStr(lexicographicReoptType));
-  IPOptStatistics<T> ipOptStatistics;
-  int relaxationNo = 1;
-  ipOptStatistics._lpRelaxationStats.emplace_back() =
-      runImpl(relaxationNo, lexicographicReoptType);
-
-  if (lpOptimizationType == LPOptimizationType::LINEAR_RELAXATION)
-    return ipOptStatistics;
-
-  while (true) {
-    ++relaxationNo;
-    if (relaxationNo > 25)
-      break;
-    SPDLOG_INFO("{}TH GOMORY ROUND", relaxationNo);
-    checkIfNonBasicVarsAreIntegral();
-    const auto fractionalBasisRows =
-        collectFractionalBasisRowIndices(gomoryCutChoosingRule);
-    SPDLOG_INFO("FOUND {} FRACTIONAL VARIABLES - ROW IDXS [{}]",
-                fractionalBasisRows.size(),
-                fmt::join(fractionalBasisRows, ", "));
-    if (fractionalBasisRows.empty())
-      break;
-
-    addCutRows(relaxationNo, fractionalBasisRows);
-    addSlackVars(relaxationNo, fractionalBasisRows);
-    _simplexTableau.initMatrixRepresentations();
-    if (!_reinversionManager.reinverse())
-      break;
-
-    SPDLOG_INFO("AFTER REINVERSION");
-    SPDLOG_INFO(_simplexTableau.toString());
-    SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-    SPDLOG_INFO(_simplexTableau.toStringSolution());
-
+  IPOptStatistics<T> ipOptStatistics{
+      ._lpName = _simplexTableau.getName(),
+      ._algorithmType = type(),
+      ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
+  ipOptStatistics._elapsedTimeMs = executeAndMeasureTime([&] {
+    int relaxationNo = 1;
     ipOptStatistics._lpRelaxationStats.emplace_back() =
         runImpl(relaxationNo, lexicographicReoptType);
 
-    SPDLOG_INFO(_simplexTableau.toString());
-    if (!removeSlackCuts())
-      break;
-    SPDLOG_INFO("AFTER CUT REMOVAL");
-    SPDLOG_INFO(_simplexTableau.toString());
-    SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-    SPDLOG_INFO(_simplexTableau.toStringSolution());
-  }
+    if (lpOptimizationType == LPOptimizationType::LINEAR_RELAXATION)
+      return;
+
+    while (true) {
+      ++relaxationNo;
+      if (relaxationNo > 25)
+        break;
+      SPDLOG_INFO("{}TH GOMORY ROUND", relaxationNo);
+      checkIfNonBasicVarsAreIntegral();
+      const auto fractionalBasisRows =
+          collectFractionalBasisRowIndices(gomoryCutChoosingRule);
+      SPDLOG_INFO("FOUND {} FRACTIONAL VARIABLES - ROW IDXS [{}]",
+                  fractionalBasisRows.size(),
+                  fmt::join(fractionalBasisRows, ", "));
+      if (fractionalBasisRows.empty())
+        break;
+
+      addCutRows(relaxationNo, fractionalBasisRows);
+      addSlackVars(relaxationNo, fractionalBasisRows);
+      _simplexTableau.initMatrixRepresentations();
+      if (!_reinversionManager.reinverse())
+        break;
+
+      SPDLOG_INFO("AFTER REINVERSION");
+      SPDLOG_INFO(_simplexTableau.toString());
+      SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
+      SPDLOG_INFO(_simplexTableau.toStringSolution());
+
+      ipOptStatistics._lpRelaxationStats.emplace_back() =
+          runImpl(relaxationNo, lexicographicReoptType);
+
+      SPDLOG_INFO(_simplexTableau.toString());
+      if (!removeSlackCuts())
+        break;
+      SPDLOG_INFO("AFTER CUT REMOVAL");
+      SPDLOG_INFO(_simplexTableau.toString());
+      SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
+      SPDLOG_INFO(_simplexTableau.toStringSolution());
+    }
+  });
 
   ipOptStatistics._optimalValue =
       ipOptStatistics._lpRelaxationStats.back()

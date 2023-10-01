@@ -1,5 +1,11 @@
 #include "src/DataModel/EnumTypes.h"
 
+#include "src/Util/SpdlogHeader.h"
+
+#include <absl/flags/marshalling.h>
+#include <absl/strings/str_join.h>
+#include <absl/strings/str_split.h>
+
 std::optional<SectionType> stringToSectionType(const std::string &string) {
   if (string == "NAME")
     return SectionType::NAME;
@@ -152,6 +158,32 @@ std::string lexicographicReoptTypeToStr(
   return "";
 }
 
+std::string
+simplexTableauTypeToStr(const SimplexTableauType simplexTableauType) {
+  switch (simplexTableauType) {
+  case SimplexTableauType::FULL:
+    return "FULL";
+  case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE:
+    return "REVISED_BASIS_MATRIX_INVERSE";
+  case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE:
+    return "REVISED_PRODUCT_FORM_OF_INVERSE";
+  }
+
+  return "";
+}
+
+std::string matrixRepresentationTypeToStr(
+    const MatrixRepresentationType representationType) {
+  switch (representationType) {
+  case MatrixRepresentationType::NORMAL:
+    return "NORMAL";
+  case MatrixRepresentationType::SPARSE:
+    return "SPARSE";
+  }
+
+  return "";
+}
+
 bool AbslParseFlag(absl::string_view text,
                    ValidateSimplexOption *validateSimplexOption,
                    std::string *error) {
@@ -213,4 +245,30 @@ std::string AbslUnparseFlag(SimplexTableauType simplexTableauType) {
   default:
     return "unknown";
   }
+}
+
+bool AbslParseFlag(absl::string_view text,
+                   std::vector<SimplexTableauType> *simplexTableauTypes,
+                   std::string *error) {
+  std::vector<absl::string_view> tokens = absl::StrSplit(text, ',');
+  simplexTableauTypes->resize(tokens.size());
+  for (int tokenIdx = 0; tokenIdx < tokens.size(); ++tokenIdx) {
+    SimplexTableauType &currentSimplexTableauType =
+        simplexTableauTypes->operator[](tokenIdx);
+    if (!absl::ParseFlag(absl::StripLeadingAsciiWhitespace(tokens[tokenIdx]),
+                         &currentSimplexTableauType, error))
+      return false;
+  }
+
+  return true;
+}
+
+std::string
+AbslUnparseFlag(const std::vector<SimplexTableauType> &simplexTableauTypes) {
+  std::vector<std::string> simplexTableauTypesStr(simplexTableauTypes.size());
+  for (int typeIdx = 0; typeIdx < simplexTableauTypes.size(); ++typeIdx)
+    simplexTableauTypesStr[typeIdx] =
+        AbslUnparseFlag(simplexTableauTypes[typeIdx]);
+
+  return absl::StrJoin(simplexTableauTypesStr, ", ");
 }

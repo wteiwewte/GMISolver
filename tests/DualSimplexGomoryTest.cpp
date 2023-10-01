@@ -14,12 +14,12 @@
 template <typename T, typename SimplexTraitsT>
 IPOptStatistics<T> runDualSimplexGomoryWithPrimalCuts(
     const LinearProgram<T> &linearProgram,
+    const SimplexTableauType simplexTableauType,
     const LexicographicReoptType lexicographicReoptType,
     const LPOptimizationType lpOptimizationType,
     const GomoryCutChoosingRule gomoryCutChoosingRule) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
-      linearProgram, SimplexType::DUAL,
-      absl::GetFlag(FLAGS_simplex_tableau_type));
+      linearProgram, SimplexType::DUAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   DualSimplexGomory<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(
@@ -38,8 +38,8 @@ protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex_option,
                   ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
-    absl::SetFlag(&FLAGS_simplex_tableau_type,
-                  SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE);
+    absl::SetFlag(&FLAGS_simplex_tableau_types,
+                  {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE});
   }
 };
 
@@ -58,14 +58,15 @@ TYPED_TEST_P(DualSimplexGomoryTest,
       DUAL_SIMPLEX_TEST_DIR_PATH, DUAL_SIMPLEX_BASIS_SIZE_LIMIT,
       lpOptimizationType,
       [&](const auto &linearProgram,
+          const SimplexTableauType simplexTableauType,
           const std::filesystem::path &modelFileMpsPath) {
         for (const auto lexicographicReoptType :
              {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
           IPOptStatistics<FloatingPointT> ipOptStatistics =
               runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
                                                  SimplexTraitsT>(
-                  linearProgram, lexicographicReoptType, lpOptimizationType,
-                  GomoryCutChoosingRule::FIRST);
+                  linearProgram, simplexTableauType, lexicographicReoptType,
+                  lpOptimizationType, GomoryCutChoosingRule::FIRST);
           const auto gurobiLPOptStats =
               GurobiOptimizer("", modelFileMpsPath)
                   .optimize<FloatingPointT>(lpOptimizationType);
@@ -88,14 +89,15 @@ TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
       DUAL_SIMPLEX_TEST_DIR_PATH, DUAL_SIMPLEX_BASIS_SIZE_LIMIT,
       lpOptimizationType,
       [&](const auto &linearProgram,
+          const SimplexTableauType simplexTableauType,
           const std::filesystem::path &modelFileMpsPath) {
         for (const auto lexicographicReoptType :
              {LexicographicReoptType::MAX}) {
           IPOptStatistics<FloatingPointT> ipOptStatistics =
               runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
                                                  SimplexTraitsT>(
-                  linearProgram, lexicographicReoptType, lpOptimizationType,
-                  GomoryCutChoosingRule::FIRST);
+                  linearProgram, simplexTableauType, lexicographicReoptType,
+                  lpOptimizationType, GomoryCutChoosingRule::FIRST);
           const auto gurobiLPOptStats =
               GurobiOptimizer("", modelFileMpsPath)
                   .optimize<FloatingPointT>(lpOptimizationType);

@@ -8,7 +8,8 @@ target_link_libraries(
   SimplexTraits
   SimplexTableau
   SimplexValidator
-  SpdlogHeader)
+  SpdlogHeader
+  Time)
 
 add_library(RevisedPrimalSimplexPFIBounds RevisedPrimalSimplexPFIBounds.cpp
                                           RevisedPrimalSimplexPFIBounds.h)
@@ -22,7 +23,8 @@ target_link_libraries(
   SimplexTableau
   SimplexTableauResizer
   SimplexValidator
-  SpdlogHeader)
+  SpdlogHeader
+  Time)
 
 add_library(LexicographicOptimizer LexicographicOptimizer.cpp
                                    LexicographicOptimizer.h)
@@ -40,7 +42,8 @@ target_link_libraries(
   SimplexTraits
   SimplexTableau
   SimplexTableauResizer
-  RevisedDualSimplexPFIBounds)
+  RevisedDualSimplexPFIBounds
+  Time)
 
 add_library(SimplexTableauResizer SimplexTableauResizer.cpp
                                   SimplexTableauResizer.h)

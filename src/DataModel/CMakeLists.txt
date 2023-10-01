@@ -3,7 +3,8 @@ target_link_libraries(LinearProgram CommonConstants CommonTypes EnumTypes
                       MatrixTypes LPPrinter)
 
 add_library(EnumTypes EnumTypes.h EnumTypes.cpp)
-target_link_libraries(EnumTypes absl::flags)
+target_link_libraries(EnumTypes absl::flags absl::flags_parse absl::strings
+                      SpdlogHeader)
 
 add_library(CommonTypes INTERFACE CommonTypes.h)
 target_link_libraries(CommonTypes INTERFACE EnumTypes)

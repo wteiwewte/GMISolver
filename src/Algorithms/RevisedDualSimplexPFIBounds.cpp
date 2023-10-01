@@ -5,6 +5,8 @@
 #include "src/Algorithms/SimplexValidator.h"
 #include "src/Util/SpdlogHeader.h"
 
+#include <fmt/format.h>
+
 template <typename T, typename SimplexTraitsT>
 RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::RevisedDualSimplexPFIBounds(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
@@ -172,6 +174,10 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
   const auto enteringColumnIdx = chooseEnteringColumnIdx(
       *pivotRowIdx, pivotRow, isPivotRowUnderLowerBound);
   if (!enteringColumnIdx.has_value()) {
+    if constexpr (!SimplexTraitsT::useSparseRepresentationValue) {
+      SPDLOG_INFO("INFEASIBLE PIVOT (IDX - {}, ROW VALUES - [{}])",
+                  *pivotRowIdx, fmt::join(pivotRow, ", "));
+    }
     _simplexTableau._result = LPOptimizationResult::INFEASIBLE;
     return true;
   }

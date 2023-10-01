@@ -14,31 +14,47 @@ struct SimplexBasisData {
     _isColumnAtUpperBoundBitset.resize(newVarCount);
   }
 
-  void restoreMapping() {
-    std::vector<int> unmappedRowIndices;
-    std::set<int> mappedColumnIndices;
-    for (int rowIdx = 0; rowIdx < _rowToBasisColumnIdxMap.size(); ++rowIdx) {
-      if (!_isBasicColumnIndexBitset[_rowToBasisColumnIdxMap[rowIdx]]) {
-        unmappedRowIndices.push_back(rowIdx);
-      } else {
-        mappedColumnIndices.insert(_rowToBasisColumnIdxMap[rowIdx]);
-      }
+  std::vector<int>
+  fixMappingAfterRemoval(const std::vector<bool> &shouldVarBeRemoved,
+                         const std::vector<bool> &shouldRowBeRemoved) {
+    std::vector<int> oldRowIdxToNewRowIdx(shouldRowBeRemoved.size());
+    int currentNewRowIdx = 0;
+    for (int oldRowIdx = 0; oldRowIdx < shouldRowBeRemoved.size();
+         ++oldRowIdx) {
+      if (!shouldRowBeRemoved[oldRowIdx])
+        oldRowIdxToNewRowIdx[oldRowIdx] = currentNewRowIdx++;
     }
-    SPDLOG_INFO(
-        "UNMAPPED ROW COUNT {} MAPPED COLUMN COUNT {} ALL COLUMN COUNT {}",
-        unmappedRowIndices.size(), mappedColumnIndices.size(),
-        _isBasicColumnIndexBitset.size());
-    if (unmappedRowIndices.empty())
-      return;
+    std::vector<int> oldVarIdxToNewVarIdx(shouldVarBeRemoved.size());
+    int currentNewVarIdx = 0;
+    for (int oldVarIdx = 0; oldVarIdx < shouldVarBeRemoved.size();
+         ++oldVarIdx) {
+      if (!shouldVarBeRemoved[oldVarIdx])
+        oldVarIdxToNewVarIdx[oldVarIdx] = currentNewVarIdx++;
+    }
 
-    int currentUnmappedRowIdx = 0;
-    for (int colIdx = 0; colIdx < _isBasicColumnIndexBitset.size(); ++colIdx) {
-      if (_isBasicColumnIndexBitset[colIdx] &&
-          !mappedColumnIndices.contains(colIdx)) {
-        _rowToBasisColumnIdxMap[unmappedRowIndices[currentUnmappedRowIdx++]] =
-            colIdx;
+    std::vector<int> newVarIndicesToBeRemapped;
+    for (int rowIdx = 0; rowIdx < shouldRowBeRemoved.size(); ++rowIdx) {
+      const auto basicVarIdx = _rowToBasisColumnIdxMap[rowIdx];
+      if (shouldRowBeRemoved[rowIdx] && !shouldVarBeRemoved[basicVarIdx])
+        newVarIndicesToBeRemapped.push_back(oldVarIdxToNewVarIdx[basicVarIdx]);
+    }
+    std::vector<int> newRowToNewBasisColumnIdxMap(currentNewRowIdx);
+    int currentVarIndexToBeRemapped = 0;
+    for (int oldRowIdx = 0; oldRowIdx < shouldRowBeRemoved.size();
+         ++oldRowIdx) {
+      if (!shouldRowBeRemoved[oldRowIdx]) {
+        const int newRowIdx = oldRowIdxToNewRowIdx[oldRowIdx];
+        const int oldBasicVarIdx = _rowToBasisColumnIdxMap[oldRowIdx];
+        if (!shouldVarBeRemoved[oldBasicVarIdx]) {
+          newRowToNewBasisColumnIdxMap[newRowIdx] =
+              oldVarIdxToNewVarIdx[oldBasicVarIdx];
+        } else {
+          newRowToNewBasisColumnIdxMap[newRowIdx] =
+              newVarIndicesToBeRemapped[currentVarIndexToBeRemapped++];
+        }
       }
     }
+    return newRowToNewBasisColumnIdxMap;
   }
 
   std::vector<int> _rowToBasisColumnIdxMap;

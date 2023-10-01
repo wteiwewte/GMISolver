@@ -47,8 +47,8 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
   while (true) {
     ++relaxationNo;
-    //    if (relaxationNo > 5)
-    //      break;
+    if (relaxationNo > 25)
+      break;
     SPDLOG_INFO("{}TH GOMORY ROUND", relaxationNo);
     checkIfNonBasicVarsAreIntegral();
     const auto fractionalBasisRows =
@@ -66,6 +66,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       break;
 
     SPDLOG_INFO("AFTER REINVERSION");
+    SPDLOG_INFO(_simplexTableau.toString());
     SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
     SPDLOG_INFO(_simplexTableau.toStringSolution());
 
@@ -73,12 +74,12 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
         runImpl(relaxationNo, lexicographicReoptType);
 
     SPDLOG_INFO(_simplexTableau.toString());
-    //    if (!removeSlackCuts())
-    //      break;
-    //    SPDLOG_INFO("AFTER CUT REMOVAL");
-    //    SPDLOG_INFO(_simplexTableau.toString());
-    //    SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-    //    SPDLOG_INFO(_simplexTableau.toStringSolution());
+    if (!removeSlackCuts())
+      break;
+    SPDLOG_INFO("AFTER CUT REMOVAL");
+    SPDLOG_INFO(_simplexTableau.toString());
+    SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
+    SPDLOG_INFO(_simplexTableau.toStringSolution());
   }
 
   ipOptStatistics._optimalValue =
@@ -105,7 +106,7 @@ LPRelaxationStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::runImpl(
   relaxationStats._lexicographicReoptStats =
       lexicographicOptimizer().run(lexicographicReoptType, relaxationId());
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-  SPDLOG_INFO(_simplexTableau.toStringSolution());
+  //  SPDLOG_INFO(_simplexTableau.toStringSolution());
   return relaxationStats;
 }
 
@@ -207,22 +208,15 @@ void DualSimplexGomory<T, SimplexTraitsT>::addCutRows(
     for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
          ++varIdx) {
       if (!_simplexTableau._simplexBasisData
-               ._isBasicColumnIndexBitset[varIdx] &&
-          !_simplexTableau._variableInfos[varIdx]._isArtificial) {
+               ._isBasicColumnIndexBitset[varIdx]) {
         const auto val = std::floor(tableauRow[varIdx]) - tableauRow[varIdx];
         if (_defineCutsInTermsOfOriginalVariables) {
           if (const auto cutRowIdx =
                   _simplexTableau._variableInfos[varIdx]._cutRowIdx;
               cutRowIdx.has_value()) {
-            SPDLOG_INFO("CUT VAR IDX {} CUT ROW IDX {}", varIdx, *cutRowIdx);
             for (int varIdx2 = 0;
                  varIdx2 < _simplexTableau._variableInfos.size(); ++varIdx2) {
               if (varIdx2 != varIdx) {
-                SPDLOG_INFO(
-                    "VAR LABEL {} VALUE {}",
-                    _simplexTableau._variableInfos[varIdx2]._label,
-                    val *
-                        _simplexTableau._constraintMatrix[*cutRowIdx][varIdx2]);
                 newCutRow[varIdx2] +=
                     (-val) *
                     _simplexTableau._constraintMatrix[*cutRowIdx][varIdx2];
@@ -301,6 +295,7 @@ bool DualSimplexGomory<T, SimplexTraitsT>::removeSlackCuts() const {
   SPDLOG_INFO("INITIAL ROW COUNT {} CURRENT ROW COUNT {}",
               _simplexTableau._initialProgram.getRowInfos().size(),
               _simplexTableau._rowInfos.size());
+  bool atleastOneRowShouldBeRemoved = false;
   std::vector<bool> shouldVarBeRemoved(_simplexTableau._variableInfos.size(),
                                        false);
   std::vector<bool> shouldRowBeRemoved(_simplexTableau._rowInfos.size(), false);
@@ -311,13 +306,38 @@ bool DualSimplexGomory<T, SimplexTraitsT>::removeSlackCuts() const {
       const auto cutRowIdx =
           _simplexTableau._variableInfos[basicVarIdx]._cutRowIdx;
       if (cutRowIdx.has_value()) {
-        //      if (_simplexTableau._variableInfos[basicVarIdx]._isCutVar &&
-        //          NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx],
-        //          0.0)) {
         // FIXME check if slack value == 0 ?
+        //        if (NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx],
+        //        0.0))
+        atleastOneRowShouldBeRemoved = true;
         shouldVarBeRemoved[basicVarIdx] = true;
         shouldRowBeRemoved[*cutRowIdx] = true;
       }
+    }
+  }
+  if (!atleastOneRowShouldBeRemoved)
+    return true;
+
+  std::vector<int> oldRowIdxToNewRowIdx(_simplexTableau._rowInfos.size());
+  int currentNewRowIdx = 0;
+  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
+    if (!shouldRowBeRemoved[rowIdx])
+      oldRowIdxToNewRowIdx[rowIdx] = currentNewRowIdx++;
+  }
+  SPDLOG_INFO("OLD ROW->COLUMN MAPPING");
+  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
+    SPDLOG_INFO(
+        "{}->{}", rowIdx,
+        _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[rowIdx]);
+  }
+  const auto newRowToBasicColumnIdxMap =
+      _simplexTableau._simplexBasisData.fixMappingAfterRemoval(
+          shouldVarBeRemoved, shouldRowBeRemoved);
+  SPDLOG_INFO("NEW ROW->COLUMN MAPPING");
+  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
+    if (!shouldRowBeRemoved[rowIdx]) {
+      const int newRowIdx = oldRowIdxToNewRowIdx[rowIdx];
+      SPDLOG_INFO("{}->{}", newRowIdx, newRowToBasicColumnIdxMap[newRowIdx]);
     }
   }
   SimplexTableauResizer simplexTableauResizer(_simplexTableau,
@@ -325,7 +345,15 @@ bool DualSimplexGomory<T, SimplexTraitsT>::removeSlackCuts() const {
   simplexTableauResizer.removeRows(shouldRowBeRemoved);
   simplexTableauResizer.removeVariables(shouldVarBeRemoved);
   _simplexTableau.initMatrixRepresentations();
-  _simplexTableau._simplexBasisData.restoreMapping();
+  for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
+       ++varIdx) {
+    if (_simplexTableau._variableInfos[varIdx]._cutRowIdx.has_value())
+      _simplexTableau._variableInfos[varIdx]._cutRowIdx =
+          oldRowIdxToNewRowIdx[_simplexTableau._variableInfos[varIdx]
+                                   ._cutRowIdx.value()];
+  }
+  _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap =
+      newRowToBasicColumnIdxMap;
   return _reinversionManager.reinverse();
 }
 

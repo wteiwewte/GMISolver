@@ -415,16 +415,23 @@ private:
 
   ExpectedT validateBasisReprSizes() const {
     if constexpr (SimplexTraitsT::useSparseRepresentationValue) {
-      if (!_simplexTableau._useProductFormOfInverse)
+      if (_simplexTableau._simplexTableauType !=
+          SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE)
         return tl::unexpected{
             fmt::format("Sparse representation is valid only for PFI mode")};
 
       return validatePFISparse();
     }
 
-    return _simplexTableau._useProductFormOfInverse
-               ? validatePFINormal()
-               : validateBasisMatrixInverse();
+    switch (_simplexTableau._simplexTableauType) {
+    case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE: {
+      return validatePFINormal();
+    }
+    case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE:
+      return validateBasisMatrixInverse();
+    default:
+      return {};
+    }
   }
 
   ExpectedT validatePFINormal() const {

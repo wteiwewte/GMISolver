@@ -10,7 +10,7 @@
 
 ABSL_DECLARE_FLAG(int32_t, obj_value_logging_frequency);
 ABSL_DECLARE_FLAG(int32_t, reinversion_frequency);
-ABSL_DECLARE_FLAG(bool, use_product_form_of_inverse);
+ABSL_DECLARE_FLAG(SimplexTableauType, simplex_tableau_type);
 ABSL_DECLARE_FLAG(ValidateSimplexOption, validate_simplex_option);
 
 template <typename... Ts> struct TypeTuple {

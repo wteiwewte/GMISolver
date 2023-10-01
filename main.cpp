@@ -33,8 +33,9 @@ ABSL_FLAG(
     "Current objective value should be logged every nth iteration of simplex");
 ABSL_FLAG(int32_t, reinversion_frequency, 300,
           "Basis matrix should be reinverted every nth iteration of simplex");
-ABSL_FLAG(bool, use_product_form_of_inverse, true,
-          "Basis matrix inverse is represented via product form of inverse");
+ABSL_FLAG(SimplexTableauType, simplex_tableau_type,
+          SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE,
+          "Simplex tableau type");
 ABSL_FLAG(ValidateSimplexOption, validate_simplex_option,
           ValidateSimplexOption::DONT_VALIDATE,
           "Validate simplex implementations");
@@ -50,7 +51,7 @@ void runPrimalSimplexWithImplicitBounds(
     LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::PRIMAL,
-      absl::GetFlag(FLAGS_use_product_form_of_inverse));
+      absl::GetFlag(FLAGS_simplex_tableau_type));
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
@@ -77,7 +78,7 @@ void runDualSimplexWithImplicitBounds(
     LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::DUAL,
-      absl::GetFlag(FLAGS_use_product_form_of_inverse));
+      absl::GetFlag(FLAGS_simplex_tableau_type));
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   lpOptStatisticsVec.push_back(
@@ -96,7 +97,7 @@ void runDualSimplexGomoryWithPrimalCuts(
     LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::DUAL,
-      absl::GetFlag(FLAGS_use_product_form_of_inverse));
+      absl::GetFlag(FLAGS_simplex_tableau_type));
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   DualSimplexGomory<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(

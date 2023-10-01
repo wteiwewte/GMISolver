@@ -7,7 +7,7 @@
 template <typename T, typename SimplexTraitsT>
 SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
     const LinearProgram<T> &linearProgram, const SimplexType simplexType,
-    const bool useProductFormOfInverse)
+    const SimplexTableauType simplexTableauType)
     : _initialProgram(linearProgram),
       _variableInfos(linearProgram._variableInfos),
       _variableLowerBounds(linearProgram._variableLowerBounds),
@@ -17,7 +17,7 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
       _constraintMatrix(linearProgram._constraintMatrix),
       _rightHandSides(linearProgram._rightHandSides),
       _initialRightHandSides(linearProgram._rightHandSides),
-      _useProductFormOfInverse(useProductFormOfInverse),
+      _simplexTableauType(simplexTableauType),
       _result(LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
   SPDLOG_INFO("Converting LP to standard form");
   convertToStandardForm();
@@ -42,7 +42,8 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
   SPDLOG_TRACE(toStringLpSolveFormat());
 
   if constexpr (SimplexTraitsT::useSparseRepresentationValue) {
-    if (!_useProductFormOfInverse) {
+    if (_simplexTableauType !=
+        SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE) {
       SPDLOG_ERROR("SPARSE REPRESENTATION AVAILABLE ONLY FOR PFI");
     }
   }
@@ -221,11 +222,20 @@ void SimplexTableau<T, SimplexTraitsT>::initBasisMatrixInverse() {
 }
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateDual() {
-  if constexpr (SimplexTraitsT::useSparseRepresentationValue)
-    return calculateDualPFISparse();
+  switch (_simplexTableauType) {
+  case SimplexTableauType::FULL:
+    return calculateDualExplicit();
+  case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE: {
+    if constexpr (SimplexTraitsT::useSparseRepresentationValue)
+      return calculateDualPFISparse();
 
-  return _useProductFormOfInverse ? calculateDualPFI()
-                                  : calculateDualExplicit();
+    return calculateDualPFI();
+  }
+  case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE:
+    return calculateDualExplicit();
+  }
+
+  return calculateDualExplicit();
 }
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateDualExplicit() {
@@ -279,10 +289,20 @@ void SimplexTableau<T, SimplexTraitsT>::calculateReducedCostsBasedOnDual() {
 
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::calculateRHS() {
-  if constexpr (SimplexTraitsT::useSparseRepresentationValue)
-    return calculateRHSPFISparse();
+  switch (_simplexTableauType) {
+  case SimplexTableauType::FULL:
+    return calculateRHSExplicit();
+  case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE: {
+    if constexpr (SimplexTraitsT::useSparseRepresentationValue)
+      return calculateRHSPFISparse();
 
-  return _useProductFormOfInverse ? calculateRHSPFI() : calculateRHSExplicit();
+    return calculateRHSPFI();
+  }
+  case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE:
+    return calculateRHSExplicit();
+  }
+
+  return calculateRHSExplicit();
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -446,10 +466,23 @@ bool SimplexTableau<T, SimplexTraitsT>::isColumnAllowedToEnterBasis(
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T>
-SimplexTableau<T, SimplexTraitsT>::computeTableauColumn(const int colIdx) {
-  return _useProductFormOfInverse ? computeTableauColumnPFI(colIdx)
-                                  : computeTableauColumnExplicit(colIdx);
+auto SimplexTableau<T, SimplexTraitsT>::computeTableauColumnGeneric(
+    const int colIdx) -> VectorT {
+  if constexpr (SimplexTraitsT::useSparseRepresentationValue)
+    return computeTableauColumnPFISparse(colIdx);
+  else {
+    switch (_simplexTableauType) {
+    case SimplexTableauType::FULL:
+      return computeTableauColumnExplicit(colIdx);
+    case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE: {
+
+      return computeTableauColumnPFI(colIdx);
+    }
+    case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE:
+      return computeTableauColumnExplicit(colIdx);
+    }
+    return computeTableauColumnExplicit(colIdx);
+  }
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -483,10 +516,24 @@ SimplexTableau<T, SimplexTraitsT>::computeTableauColumnPFISparse(
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T>
-SimplexTableau<T, SimplexTraitsT>::computeTableauRow(const int rowIdx) {
-  return _useProductFormOfInverse ? computeTableauRowPFI(rowIdx)
-                                  : computeTableauRowExplicit(rowIdx);
+auto SimplexTableau<T, SimplexTraitsT>::computeTableauRowGeneric(
+    const int rowIdx) -> VectorT {
+  if constexpr (SimplexTraitsT::useSparseRepresentationValue)
+    return computeTableauRowPFISparse(rowIdx);
+  else {
+    switch (_simplexTableauType) {
+    case SimplexTableauType::FULL:
+      return computeTableauRowExplicit(rowIdx);
+    case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE: {
+
+      return computeTableauRowPFI(rowIdx);
+    }
+    case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE:
+      return computeTableauRowExplicit(rowIdx);
+    }
+
+    return computeTableauRowExplicit(rowIdx);
+  }
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -609,7 +656,8 @@ void SimplexTableau<T, SimplexTraitsT>::updateInverseMatrixWithRHSGeneric(
         typename NumericalTraitsT::SafeNumericalAddOp>(_sparsePfiEtms.back(),
                                                        _rightHandSides);
   } else {
-    if (!_useProductFormOfInverse) {
+    if (_simplexTableauType !=
+        SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE) {
       SimplexTraitsT::multiplyByETM(etm, _basisMatrixInverse);
       SimplexTraitsT::multiplyByETM(etm, _rightHandSides);
     } else {

@@ -29,12 +29,18 @@ bool ReinversionManager<T, SimplexTraitsT>::reinverse() {
 
 template <typename T, typename SimplexTraitsT>
 bool ReinversionManager<T, SimplexTraitsT>::reinverseBasis() {
-  if constexpr (SimplexTraitsT::useSparseRepresentationValue) {
-    return reinverseBasisPFISparse();
-  }
+  switch (_simplexTableau._simplexTableauType) {
+  case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE: {
+    if constexpr (SimplexTraitsT::useSparseRepresentationValue)
+      return reinverseBasisPFISparse();
 
-  return _simplexTableau._useProductFormOfInverse ? reinverseBasisPFI()
-                                                  : reinverseBasisExplicit();
+    return reinverseBasisPFI();
+  }
+  case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE:
+    return reinverseBasisExplicit();
+  default:
+    return true;
+  }
 }
 
 template <typename T, typename SimplexTraitsT>

@@ -18,7 +18,7 @@
 --obj_value_logging_frequency=0
 --reinversion_frequency=60
 --benchmark_simplex_types=dual
---use_product_form_of_inverse=true
+--simplex_tableau_type=revised_product_form_of_inverse
 --validate_simplex_option=validate_and_dont_stop_on_error
 --run_gomory=false
 #--lp_models_directory=/Users/janmelech/Desktop/magisterka/dane testowe/miplib_couple_instances/

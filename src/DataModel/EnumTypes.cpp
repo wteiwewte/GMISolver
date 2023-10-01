@@ -172,10 +172,6 @@ bool AbslParseFlag(absl::string_view text,
   return false;
 }
 
-// AbslUnparseFlag converts from an OutputMode to a string.
-// Must be in same namespace as OutputMode.
-
-// Returns a textual flag value corresponding to the OutputMode `mode`.
 std::string AbslUnparseFlag(ValidateSimplexOption validateSimplexOption) {
   switch (validateSimplexOption) {
   case ValidateSimplexOption::DONT_VALIDATE:
@@ -184,6 +180,36 @@ std::string AbslUnparseFlag(ValidateSimplexOption validateSimplexOption) {
     return "validate_and_stop_on_error";
   case ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR:
     return "validate_and_dont_stop_on_error";
+  default:
+    return "unknown";
+  }
+}
+bool AbslParseFlag(absl::string_view text,
+                   SimplexTableauType *simplexTableauType, std::string *error) {
+  if (text == "full") {
+    *simplexTableauType = SimplexTableauType::FULL;
+    return true;
+  }
+  if (text == "revised_basis_matrix_inverse") {
+    *simplexTableauType = SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE;
+    return true;
+  }
+  if (text == "revised_product_form_of_inverse") {
+    *simplexTableauType = SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE;
+    return true;
+  }
+  *error = "unknown value for enumeration";
+  return false;
+}
+
+std::string AbslUnparseFlag(SimplexTableauType simplexTableauType) {
+  switch (simplexTableauType) {
+  case SimplexTableauType::FULL:
+    return "full";
+  case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE:
+    return "revised_basis_matrix_inverse";
+  case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE:
+    return "revised_product_form_of_inverse";
   default:
     return "unknown";
   }

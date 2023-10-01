@@ -22,7 +22,7 @@ PrimalSimplexOutput<T>
 runPrimalSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::PRIMAL,
-      absl::GetFlag(FLAGS_use_product_form_of_inverse));
+      absl::GetFlag(FLAGS_simplex_tableau_type));
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
@@ -48,7 +48,8 @@ protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex_option,
                   ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
-    absl::SetFlag(&FLAGS_use_product_form_of_inverse, true);
+    absl::SetFlag(&FLAGS_simplex_tableau_type,
+                  SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE);
     absl::SetFlag(&FLAGS_reinversion_frequency, 60);
   }
 };

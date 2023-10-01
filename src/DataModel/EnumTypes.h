@@ -73,6 +73,12 @@ enum class SimplexType : int8_t {
   DUAL,
 };
 
+enum class SimplexTableauType : int8_t {
+  FULL = 0,
+  REVISED_BASIS_MATRIX_INVERSE,
+  REVISED_PRODUCT_FORM_OF_INVERSE
+};
+
 enum class LexicographicReoptType : int8_t {
   MIN = 0,
   MAX,
@@ -94,6 +100,9 @@ bool AbslParseFlag(absl::string_view text,
                    ValidateSimplexOption *validateSimplexOption,
                    std::string *error);
 std::string AbslUnparseFlag(ValidateSimplexOption validateSimplexOption);
+bool AbslParseFlag(absl::string_view text,
+                   SimplexTableauType *simplexTableauType, std::string *error);
+std::string AbslUnparseFlag(SimplexTableauType simplexTableauType);
 
 std::optional<SectionType> stringToSectionType(const std::string &string);
 std::optional<RowType> stringToRowType(const std::string &string);

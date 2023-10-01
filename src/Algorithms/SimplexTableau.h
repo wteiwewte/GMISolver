@@ -24,7 +24,7 @@ class SimplexTableau {
 public:
   SimplexTableau(const LinearProgram<T> &linearProgram,
                  const SimplexType simplexType,
-                 const bool useProductFormOfInverse);
+                 const SimplexTableauType simplexTableauType);
 
   void convertToStandardForm();
   void makeRightHandSidesNonNegative();
@@ -80,28 +80,15 @@ private:
   bool isColumnAllowedToEnterBasis(const int colIdx);
   std::optional<T> curSatisfiedBound(const int varIdx);
 
-  auto computeTableauColumnGeneric(const int colIdx) {
-    if constexpr (SimplexTraitsT::useSparseRepresentationValue)
-      return computeTableauColumnPFISparse(colIdx);
-    else
-      return computeTableauColumn(colIdx);
-  }
-
-  std::vector<T> computeTableauColumn(const int colIdx);
+  VectorT computeTableauColumnGeneric(const int colIdx);
   std::vector<T> computeTableauColumnExplicit(const int colIdx);
   std::vector<T> computeTableauColumnPFI(const int colIdx);
   SparseVector<T> computeTableauColumnPFISparse(const int colIdx);
-  std::vector<T> computeTableauRow(const int rowIdx);
+
+  VectorT computeTableauRowGeneric(const int rowIdx);
   std::vector<T> computeTableauRowExplicit(const int rowIdx);
   std::vector<T> computeTableauRowPFI(const int rowIdx);
   SparseVector<T> computeTableauRowPFISparse(const int rowIdx);
-
-  auto computeTableauRowGeneric(const int rowIdx) {
-    if constexpr (SimplexTraitsT::useSparseRepresentationValue)
-      return computeTableauRowPFISparse(rowIdx);
-    else
-      return computeTableauRow(rowIdx);
-  }
 
   void updateReducedCostsGeneric(const PivotData<T> &pivotData,
                                  const VectorT &pivotRow);
@@ -155,7 +142,7 @@ private:
   std::vector<T> _initialRightHandSides;
   std::vector<T> _objectiveRow;
 
-  bool _useProductFormOfInverse;
+  SimplexTableauType _simplexTableauType;
   std::vector<std::vector<T>> _basisMatrixInverse;
   std::vector<ElementaryMatrix<T>> _pfiEtms;
   std::vector<SparseElementaryMatrix<T>> _sparsePfiEtms;

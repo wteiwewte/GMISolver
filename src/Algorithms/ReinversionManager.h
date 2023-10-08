@@ -20,7 +20,7 @@ private:
   using VectorT = typename SimplexTraitsT::VectorT;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  bool reinverseBasis();
+  std::optional<bool> reinverseBasis();
   bool reinverseBasisExplicit();
   bool reinverseBasisPFI();
   bool reinverseBasisPFISparse();

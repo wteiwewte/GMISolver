@@ -67,7 +67,9 @@ SimplexTableauResizer<T, SimplexTraitsT>::moveArtificialVariablesOutOfBasis() {
                  rowIdx, basicVarIdx, _simplexTableau._rightHandSides[rowIdx]);
 
     std::optional<int> nonZeroEntryColumnIndex;
-    const auto pivotRow = _simplexTableau.computeTableauRowGeneric(rowIdx);
+    const auto pivotRowSharedPtr =
+        _simplexTableau.computeTableauRowGeneric(rowIdx);
+    const auto &pivotRow = *pivotRowSharedPtr;
 
     for (int j = 0; j < _simplexTableau._variableInfos.size(); ++j) {
       if (_simplexTableau._variableInfos[j]._isArtificial ||
@@ -113,9 +115,21 @@ void SimplexTableauResizer<T, SimplexTraitsT>::removeRows(
   removeElements(_simplexTableau._simplexBasisData._rowToBasisColumnIdxMap,
                  shouldRowBeRemoved);
 
-  for (int i = 0; i < _simplexTableau._basisMatrixInverse.size(); ++i)
-    removeElements(_simplexTableau._basisMatrixInverse[i], shouldRowBeRemoved);
-  removeElements(_simplexTableau._basisMatrixInverse, shouldRowBeRemoved);
+  switch (_simplexTableau._simplexTableauType) {
+  case SimplexTableauType::FULL: {
+    removeElements(_simplexTableau._fullTableau, shouldRowBeRemoved);
+    break;
+  }
+  case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE: {
+    for (int i = 0; i < _simplexTableau._basisMatrixInverse.size(); ++i)
+      removeElements(_simplexTableau._basisMatrixInverse[i],
+                     shouldRowBeRemoved);
+    removeElements(_simplexTableau._basisMatrixInverse, shouldRowBeRemoved);
+    break;
+  }
+  default:
+    break;
+  }
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -135,9 +149,19 @@ void SimplexTableauResizer<T, SimplexTraitsT>::removeVariables(
   removeElements(_simplexTableau._reducedCosts, shouldVarBeRemoved);
   removeElements(_simplexTableau._objectiveRow, shouldVarBeRemoved);
   removeElements(_simplexTableau._x, shouldVarBeRemoved);
-  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx)
+  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
     removeElements(_simplexTableau._constraintMatrix[rowIdx],
                    shouldVarBeRemoved);
+
+    switch (_simplexTableau._simplexTableauType) {
+    case SimplexTableauType::FULL: {
+      removeElements(_simplexTableau._fullTableau[rowIdx], shouldVarBeRemoved);
+      break;
+    }
+    default:
+      break;
+    }
+  }
 }
 
 template class SimplexTableauResizer<

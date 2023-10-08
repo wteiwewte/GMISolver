@@ -19,16 +19,19 @@ bool ReinversionManager<T, SimplexTraitsT>::tryReinverse() {
 }
 template <typename T, typename SimplexTraitsT>
 bool ReinversionManager<T, SimplexTraitsT>::reinverse() {
-  const bool basisReinversionResult = reinverseBasis();
-  if (!basisReinversionResult)
-    return basisReinversionResult;
+  const std::optional<bool> basisReinversionResult = reinverseBasis();
+  if (!basisReinversionResult.has_value())
+    return true;
+
+  if (!basisReinversionResult.value())
+    return basisReinversionResult.value();
 
   updateTableau();
   return true;
 }
 
 template <typename T, typename SimplexTraitsT>
-bool ReinversionManager<T, SimplexTraitsT>::reinverseBasis() {
+std::optional<bool> ReinversionManager<T, SimplexTraitsT>::reinverseBasis() {
   switch (_simplexTableau._simplexTableauType) {
   case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE: {
     if constexpr (SimplexTraitsT::useSparseRepresentationValue)
@@ -39,7 +42,7 @@ bool ReinversionManager<T, SimplexTraitsT>::reinverseBasis() {
   case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE:
     return reinverseBasisExplicit();
   default:
-    return true;
+    return std::nullopt;
   }
 }
 

@@ -300,11 +300,14 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::changeTableau(
   if (pivotRowData._noBasisChangeNeeded)
     moveVarFromOneBoundToAnother(pivotRowData, enteringColumnIdx,
                                  enteringColumn);
-  else
+  else {
+    const auto pivotRowSharedPtr =
+        _simplexTableau.computeTableauRowGeneric(*pivotRowData._pivotRowIdx);
+    const auto &pivotRow = *pivotRowSharedPtr;
     _simplexTableau.pivotImplicitBoundsGeneric(
-        *pivotRowData._pivotRowIdx, enteringColumnIdx, enteringColumn,
-        _simplexTableau.computeTableauRowGeneric(*pivotRowData._pivotRowIdx),
+        *pivotRowData._pivotRowIdx, enteringColumnIdx, enteringColumn, pivotRow,
         pivotRowData._departingIdxBecomesLowerBound);
+  }
 }
 
 template <typename T, typename SimplexTraitsT>

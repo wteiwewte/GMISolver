@@ -170,7 +170,9 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
 
   SPDLOG_DEBUG("PIVOT ROW IDX {} RHS VALUE {}", *pivotRowIdx,
                _simplexTableau._rightHandSides[*pivotRowIdx]);
-  const auto pivotRow = _simplexTableau.computeTableauRowGeneric(*pivotRowIdx);
+  const auto pivotRowSharedPtr =
+      _simplexTableau.computeTableauRowGeneric(*pivotRowIdx);
+  const auto &pivotRow = *pivotRowSharedPtr;
   const auto basicColumnIdx =
       _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[*pivotRowIdx];
   const bool isPivotRowUnderLowerBound =

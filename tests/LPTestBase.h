@@ -32,9 +32,9 @@ template <typename T> struct LPTestBase {
                           const bool isRelaxationOptType,
                           const bool allBoundsMustBeSpecified,
                           InstanceSetStats &instanceSetStats) const {
-    //    if (modelName != "ej_easier.mps") {
-    //      return false;
-    //    }
+    //        if (modelName != "air04.mps") {
+    //          return false;
+    //        }
     ++instanceSetStats._totalModelsCount;
 
     if (linearProgram.getRowInfos().size() > basisSizeLimit ||

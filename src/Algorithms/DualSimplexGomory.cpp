@@ -193,7 +193,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::addCutRows(
   int rowNo = 0;
   std::vector<VectorT> tableauRows;
   for (const auto rowIdx : fractionalBasisVarsRowIndices) {
-    tableauRows.push_back(_simplexTableau.computeTableauRowGeneric(rowIdx));
+    tableauRows.push_back(*_simplexTableau.computeTableauRowGeneric(rowIdx));
   }
 
   for (const auto rowIdx : fractionalBasisVarsRowIndices) {

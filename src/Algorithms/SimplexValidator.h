@@ -77,7 +77,14 @@ private:
            *_simplexTableau._variableLowerBounds[varIdx] -
                NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)) {
         return tl::unexpected{fmt::format(
-            "Lower bound for var {} not satisfied, diff {}", varIdx,
+            "Lower bound for var {} (is at LB {}, is at UB {}, is in basis {}) "
+            "not satisfied, diff {}",
+            varIdx,
+            _simplexTableau._simplexBasisData
+                ._isColumnAtLowerBoundBitset[varIdx],
+            _simplexTableau._simplexBasisData
+                ._isColumnAtUpperBoundBitset[varIdx],
+            _simplexTableau._simplexBasisData._isBasicColumnIndexBitset[varIdx],
             std::abs(_simplexTableau._x[varIdx] -
                      *_simplexTableau._variableLowerBounds[varIdx]))};
       }
@@ -86,7 +93,14 @@ private:
            *_simplexTableau._variableUpperBounds[varIdx] +
                NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)) {
         return tl::unexpected{fmt::format(
-            "Upper bound for var {} not satisfied, diff {}", varIdx,
+            "Upper bound for var {} (is at LB {}, is at UB {}, is in basis {}) "
+            "not satisfied, diff {}",
+            varIdx,
+            _simplexTableau._simplexBasisData
+                ._isColumnAtLowerBoundBitset[varIdx],
+            _simplexTableau._simplexBasisData
+                ._isColumnAtUpperBoundBitset[varIdx],
+            _simplexTableau._simplexBasisData._isBasicColumnIndexBitset[varIdx],
             std::abs(_simplexTableau._x[varIdx] -
                      *_simplexTableau._variableUpperBounds[varIdx]))};
       }

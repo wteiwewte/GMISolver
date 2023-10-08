@@ -81,14 +81,16 @@ private:
   std::optional<T> curSatisfiedBound(const int varIdx);
 
   VectorT computeTableauColumnGeneric(const int colIdx);
+  std::vector<T> retrieveTableauColumn(const int colIdx);
   std::vector<T> computeTableauColumnExplicit(const int colIdx);
   std::vector<T> computeTableauColumnPFI(const int colIdx);
   SparseVector<T> computeTableauColumnPFISparse(const int colIdx);
 
-  VectorT computeTableauRowGeneric(const int rowIdx);
-  std::vector<T> computeTableauRowExplicit(const int rowIdx);
-  std::vector<T> computeTableauRowPFI(const int rowIdx);
-  SparseVector<T> computeTableauRowPFISparse(const int rowIdx);
+  std::shared_ptr<VectorT> computeTableauRowGeneric(const int rowIdx);
+  std::shared_ptr<std::vector<T>> retrieveTableauRow(const int rowIdx);
+  std::shared_ptr<std::vector<T>> computeTableauRowExplicit(const int rowIdx);
+  std::shared_ptr<std::vector<T>> computeTableauRowPFI(const int rowIdx);
+  std::shared_ptr<SparseVector<T>> computeTableauRowPFISparse(const int rowIdx);
 
   void updateReducedCostsGeneric(const PivotData<T> &pivotData,
                                  const VectorT &pivotRow);
@@ -101,7 +103,8 @@ private:
                                   const VectorT &enteringColumn,
                                   const VectorT &pivotRow,
                                   const bool leavingVarBecomesLowerBound);
-
+  void initTableau();
+  void initFullTableau();
   void initBasisMatrixInverse();
   void calculateDual();
   void calculateDualExplicit();
@@ -111,13 +114,16 @@ private:
   void initMatrixRepresentations();
 
   void calculateReducedCostsBasedOnDual();
+  void calculateReducedCostsFullTableau();
   void calculateRHS();
-  void calculateRHSExplicit();
+  void calculateRHSFullTableau();
+  void calculateRHSBasisInverse();
   void calculateRHSPFI();
   void calculateRHSPFISparse();
   void calculateRHSWithoutInverse();
   void updateBasisData(const PivotData<T> &pivotData);
   void setObjective(const std::vector<T> &newObjective);
+  void updateTableauForNewObjective();
   void multiplyByBasisMatrixLeftInverseUsingPFI(std::vector<T> &vec);
   void multiplyByBasisMatrixLeftInverseUsingPFISparse(SparseVector<T> &vec);
   void
@@ -146,6 +152,8 @@ private:
   std::vector<std::vector<T>> _basisMatrixInverse;
   std::vector<ElementaryMatrix<T>> _pfiEtms;
   std::vector<SparseElementaryMatrix<T>> _sparsePfiEtms;
+  Matrix<T> _fullTableau;
+
   std::vector<T> _reducedCosts;
   std::vector<T> _y;
   std::vector<T> _x;

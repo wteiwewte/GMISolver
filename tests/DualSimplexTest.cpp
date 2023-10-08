@@ -36,7 +36,8 @@ protected:
                   ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
     absl::SetFlag(&FLAGS_simplex_tableau_types,
                   {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE,
-                   SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE});
+                   SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE,
+                   SimplexTableauType::FULL});
   }
 };
 

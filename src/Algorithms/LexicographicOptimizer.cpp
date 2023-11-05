@@ -56,7 +56,7 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
     lexReoptStats._solution.assign(
         _simplexTableau._x.begin() + 1,
         _simplexTableau._x.begin() +
-            _simplexTableau._initialProgram.getVariableInfos().size());
+            _simplexTableau._initialProgram.getOriginalVariablesCount());
   }
 
   unfixAllVariables();

@@ -37,7 +37,8 @@ enum class BoundType : int8_t {
   FREE_VARIABLE,
   LOWER_BOUND_MINUS_INF,
   UPPER_BOUND_INTEGER,
-  LOWER_BOUND_INTEGER
+  LOWER_BOUND_INTEGER,
+  UPPER_BOUND_PLUS_INF
 };
 
 enum class LPOptimizationResult : int8_t {

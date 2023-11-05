@@ -42,7 +42,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       ._lpName = _simplexTableau.getName(),
       ._algorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
-  ipOptStatistics._elapsedTimeMs = executeAndMeasureTime([&] {
+  ipOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
     int relaxationNo = 1;
     ipOptStatistics._lpRelaxationStats.emplace_back() =
         runImpl(relaxationNo, lexicographicReoptType);
@@ -201,10 +201,6 @@ void DualSimplexGomory<T, SimplexTraitsT>::addCutRows(
         RowInfo{._label = fmt::format("CUT_{}_{}", relaxationNo, rowNo),
                 ._type = RowType::EQUALITY});
 
-    //    const auto tableauRow = _simplexTableau.computeTableauRowGeneric(
-    //        rowIdx); // FIXME this function probably doesnt work after adding
-    //        new
-    //                 // cuts
     const auto &tableauRow = tableauRows[rowNo];
     auto &newCutRow = _simplexTableau._constraintMatrix.emplace_back();
     newCutRow.resize(_simplexTableau._variableInfos.size() +
@@ -261,6 +257,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
   _simplexTableau._objectiveRow.resize(newVarCount, 0.0);
   _simplexTableau._reducedCosts.resize(newVarCount, 0.0);
   _simplexTableau._variableInfos.reserve(newVarCount);
+  _simplexTableau._isVariableFreeBitset.resize(newVarCount);
   _simplexTableau._variableLowerBounds.reserve(newVarCount);
   _simplexTableau._variableUpperBounds.reserve(newVarCount);
   _simplexTableau._simplexBasisData.resizeVarCount(newVarCount);

@@ -33,6 +33,18 @@ int countBoundsSpecified(const std::vector<std::optional<T>> &bounds) {
       bounds.begin(), bounds.end(),
       [](const std::optional<T> &bound) { return bound.has_value(); });
 }
+
+template <typename T>
+int countFreeVariables(const std::vector<std::optional<T>> &lowerBounds,
+                       const std::vector<std::optional<T>> &upperBounds) {
+  int freeVarCount = 0;
+  for (int varIdx = 0; varIdx < lowerBounds.size(); ++varIdx) {
+    if (!lowerBounds[varIdx].has_value() && !upperBounds[varIdx].has_value()) {
+      ++freeVarCount;
+    }
+  }
+  return freeVarCount;
+}
 } // namespace
 
 template <typename T>
@@ -94,6 +106,8 @@ MpsReader<T>::read(const std::string &filePath) {
           VariableInfo{variableLabelStr, currentSectionIsInteger
                                              ? VariableType::INTEGER
                                              : VariableType::CONTINUOUS});
+      linearProgram._isVariableFreeBitset.resize(
+          linearProgram._variableInfos.size());
       linearProgram._variableLabelSet.insert(variableLabelStr);
       linearProgram._variableLowerBounds.resize(
           linearProgram._variableInfos.size());
@@ -400,18 +414,8 @@ MpsReader<T>::read(const std::string &filePath) {
         break;
       }
       case BoundType::FREE_VARIABLE: {
-        const auto newMinusVariableIdx =
-            tryAddNewVar(variableLabelStr + "_NEG");
-        if (!newMinusVariableIdx.has_value())
-          return std::nullopt;
-
-        linearProgram._objective[*newMinusVariableIdx] =
-            -linearProgram._objective[variableIdx];
-        for (auto &coeffRow : linearProgram._constraintMatrix)
-          coeffRow[*newMinusVariableIdx] = -coeffRow[variableIdx];
-
-        linearProgram._variableLowerBounds[variableIdx] = 0.0;
-        linearProgram._variableLowerBounds[*newMinusVariableIdx] = 0.0;
+        linearProgram._variableInfos[variableIdx]._isFree = true;
+        linearProgram._isVariableFreeBitset[variableIdx] = true;
         break;
       }
       case BoundType::LOWER_BOUND_MINUS_INF: {
@@ -421,6 +425,10 @@ MpsReader<T>::read(const std::string &filePath) {
         for (auto &coeffRow : linearProgram._constraintMatrix)
           coeffRow[variableIdx] = -coeffRow[variableIdx];
 
+        break;
+      }
+      case BoundType::UPPER_BOUND_PLUS_INF: {
+        linearProgram._variableLowerBounds[variableIdx] = 0.0;
         break;
       }
       }
@@ -462,6 +470,8 @@ MpsReader<T>::read(const std::string &filePath) {
     return std::nullopt;
   }
 
+  linearProgram.convertToStandardForm();
+
   if (!finalizeBounds(linearProgram)) {
     SPDLOG_WARN("Cannot finalize bounds");
     return std::nullopt;
@@ -480,7 +490,8 @@ MpsReader<T>::read(const std::string &filePath) {
 template <typename T>
 bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
   for (int varIdx = 1; varIdx < linearProgram._variableInfos.size(); ++varIdx) {
-    if (!linearProgram._variableLowerBounds[varIdx].has_value() &&
+    if (!linearProgram._variableInfos[varIdx]._isFree &&
+        !linearProgram._variableLowerBounds[varIdx].has_value() &&
         !linearProgram._variableUpperBounds[varIdx].has_value()) {
       linearProgram._variableLowerBounds[varIdx] = 0.0;
 
@@ -493,11 +504,13 @@ bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
   }
 
   SPDLOG_INFO("PROGRAM NAME {}, VARIABLE COUNT {}, ROW COUNT {}, LOWER BOUNDS "
-              "{}, UPPER BOUNDS {}",
+              "{}, UPPER BOUNDS {}, FREE VARIABLES {}",
               linearProgram._name, linearProgram._variableInfos.size(),
               linearProgram._rowInfos.size(),
               countBoundsSpecified(linearProgram._variableLowerBounds),
-              countBoundsSpecified(linearProgram._variableUpperBounds));
+              countBoundsSpecified(linearProgram._variableUpperBounds),
+              countFreeVariables(linearProgram._variableLowerBounds,
+                                 linearProgram._variableUpperBounds));
 
   return true;
 }

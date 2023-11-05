@@ -37,6 +37,7 @@ struct VariableInfo {
   bool _isArtificial{false};
   bool _isFixed{false};
   bool _isObjectiveVar{false};
+  bool _isFree{false};
   std::optional<int> _cutRowIdx;
 };
 

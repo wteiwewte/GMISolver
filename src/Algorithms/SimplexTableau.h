@@ -9,6 +9,8 @@
 
 #include <set>
 
+#include <boost/dynamic_bitset.hpp>
+
 template <typename T, typename SimplexTraitsT> class DualSimplexGomory;
 template <typename T, typename SimplexTraitsT> class LexicographicOptimizer;
 template <typename T, typename SimplexTraitsT>
@@ -26,9 +28,8 @@ public:
                  const SimplexType simplexType,
                  const SimplexTableauType simplexTableauType);
 
-  void convertToStandardForm();
   void makeRightHandSidesNonNegative();
-  void addBoundsToMatrix();
+  void addSingleVarBoundsToMatrix();
   void addArtificialVariables();
   void init(const SimplexType simplexType);
 
@@ -135,6 +136,7 @@ private:
 
   const LinearProgram<T> &_initialProgram;
   std::vector<VariableInfo> _variableInfos;
+  boost::dynamic_bitset<> _isVariableFreeBitset;
   std::vector<std::optional<T>> _variableLowerBounds;
   std::vector<std::optional<T>> _variableUpperBounds;
   std::set<std::string> _variableLabelSet;

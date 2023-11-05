@@ -183,22 +183,43 @@ private:
   }
 
   ExpectedT validateCorrectBasisDistribution() const {
+    using BitsetVecT = std::vector<boost::dynamic_bitset<>>;
+
     const auto &simplexBasisData = _simplexTableau._simplexBasisData;
-    if ((simplexBasisData._isBasicColumnIndexBitset &
-         simplexBasisData._isColumnAtLowerBoundBitset &
-         simplexBasisData._isColumnAtUpperBoundBitset)
-            .any()) {
-      return tl::unexpected{fmt::format(
-          "Some variables are assigned to multiple states in basis")};
-    }
-    if (!(simplexBasisData._isBasicColumnIndexBitset |
-          simplexBasisData._isColumnAtLowerBoundBitset |
-          simplexBasisData._isColumnAtUpperBoundBitset)
-             .all()) {
-      return tl::unexpected{
-          fmt::format("Some variables aren't assigned to any state in basis")};
-    }
-    return {};
+    const auto checkIfAllDistinctBitsetPairsAreDisjoint =
+        [](const BitsetVecT &bitsetVec) -> ExpectedT {
+      for (int bitsetIdx1 = 0; bitsetIdx1 < bitsetVec.size(); ++bitsetIdx1) {
+        for (int bitsetIdx2 = bitsetIdx1 + 1; bitsetIdx2 < bitsetVec.size();
+             ++bitsetIdx2) {
+          if ((bitsetVec[bitsetIdx1] & bitsetVec[bitsetIdx2]).any()) {
+            return tl::unexpected{fmt::format(
+                "Some variables are assigned to multiple states in basis")};
+          }
+        }
+      }
+      return {};
+    };
+    return checkIfAllDistinctBitsetPairsAreDisjoint(
+               {simplexBasisData._isBasicColumnIndexBitset,
+                simplexBasisData._isColumnAtLowerBoundBitset,
+                simplexBasisData._isColumnAtUpperBoundBitset})
+        .and_then([&] {
+          return checkIfAllDistinctBitsetPairsAreDisjoint(
+              {simplexBasisData._isColumnAtLowerBoundBitset,
+               simplexBasisData._isColumnAtUpperBoundBitset,
+               _simplexTableau._isVariableFreeBitset});
+        })
+        .and_then([&]() -> ExpectedT {
+          if (!(simplexBasisData._isBasicColumnIndexBitset |
+                simplexBasisData._isColumnAtLowerBoundBitset |
+                simplexBasisData._isColumnAtUpperBoundBitset |
+                _simplexTableau._isVariableFreeBitset)
+                   .all()) {
+            return tl::unexpected{fmt::format(
+                "Some variables aren't assigned to any state in basis")};
+          }
+          return {};
+        });
   }
 
   ExpectedT validateBoundExistence() const {
@@ -266,16 +287,32 @@ private:
 
   ExpectedT validateSingleVarBounds() const {
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
+
     if (_simplexTableau._variableLowerBounds.size() != expectedNumberOfVars ||
         _simplexTableau._variableUpperBounds.size() != expectedNumberOfVars)
       return tl::unexpected{fmt::format(
           "Number of lower/upper bounds doesn't match number of variables")};
 
-    if (!std::all_of(_simplexTableau._variableLowerBounds.begin() + 1,
-                     _simplexTableau._variableLowerBounds.end(),
-                     [](const std::optional<T> &lb) { return lb.has_value(); }))
-      return tl::unexpected{
-          fmt::format("Some of variables don't have lower bound specified")};
+    if (_simplexTableau._isVariableFreeBitset.size() != expectedNumberOfVars)
+      return tl::unexpected{fmt::format(
+          "Size of isFreeVar bitset doesn't match number of variables")};
+
+    for (int varIdx = 1; varIdx < _simplexTableau._variableInfos.size();
+         ++varIdx) {
+      if (!_simplexTableau._variableInfos[varIdx]._isFree &&
+          !_simplexTableau._variableLowerBounds[varIdx].has_value()) {
+        return tl::unexpected{fmt::format(
+            "Non-free var {} doesn't have lower bound specified", varIdx)};
+      }
+
+      if (_simplexTableau._variableInfos[varIdx]._isFree) {
+        if (_simplexTableau._variableLowerBounds[varIdx].has_value() ||
+            _simplexTableau._variableUpperBounds[varIdx].has_value()) {
+          return tl::unexpected{fmt::format(
+              "Free var {} shouldn't havy any bound specified", varIdx)};
+        }
+      }
+    }
 
     return {};
   }

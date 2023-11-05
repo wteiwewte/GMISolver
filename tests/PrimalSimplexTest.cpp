@@ -54,48 +54,62 @@ protected:
                    SimplexTableauType::FULL});
     absl::SetFlag(&FLAGS_reinversion_frequency, 60);
   }
+
+  void testCase(const std::string &primalSimplexTestDirPath,
+                const size_t basisSizeLimit) {
+    using FloatingPointT = std::tuple_element_t<0, typename T::types>;
+    using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
+    const LPOptimizationType lpOptimizationType{
+        LPOptimizationType::LINEAR_RELAXATION};
+    this->solveAndCompareInstancesFromSets(
+        primalSimplexTestDirPath, basisSizeLimit, lpOptimizationType,
+        [&](const auto &linearProgram,
+            const SimplexTableauType simplexTableauType,
+            const std::filesystem::path &modelFileMpsPath) {
+          const auto primalSimplexOutput =
+              runPrimalSimplexWithImplicitBounds<FloatingPointT,
+                                                 SimplexTraitsT>(
+                  linearProgram, simplexTableauType);
+          const auto gurobiLPOptStats =
+              GurobiOptimizer("", modelFileMpsPath)
+                  .optimize<FloatingPointT>(lpOptimizationType);
+          if (primalSimplexOutput._phaseOneLpOptStats._optResult ==
+              LPOptimizationResult::INFEASIBLE) {
+            const std::set<LPOptimizationResult> infeasibleResults{
+                LPOptimizationResult::INFEASIBLE,
+                LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED};
+            ASSERT_TRUE(
+                infeasibleResults.contains(gurobiLPOptStats._optResult));
+          } else {
+            ASSERT_TRUE(primalSimplexOutput._phaseTwoLpOptStats.has_value());
+            this->compareWithGurobi(*primalSimplexOutput._phaseTwoLpOptStats,
+                                    gurobiLPOptStats);
+          }
+        },
+        false);
+  }
 };
 
 TYPED_TEST_SUITE_P(PrimalSimplexTest);
-TYPED_TEST_P(PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobi) {
-  using FloatingPointT = std::tuple_element_t<0, typename TypeParam::types>;
-  using SimplexTraitsT = std::tuple_element_t<1, typename TypeParam::types>;
-  constexpr auto PRIMAL_SIMPLEX_TEST_DIR_PATH =
-      "../../tests/primal_simplex_working_instances";
-  //        "../../tests/dual_simplex_working_instances";
-
-  constexpr size_t PRIMAL_SIMPLEX_BASIS_SIZE_LIMIT = 500;
-  const LPOptimizationType lpOptimizationType{
-      LPOptimizationType::LINEAR_RELAXATION};
-  this->solveAndCompareInstancesFromSets(
-      PRIMAL_SIMPLEX_TEST_DIR_PATH, PRIMAL_SIMPLEX_BASIS_SIZE_LIMIT,
-      lpOptimizationType,
-      [&](const auto &linearProgram,
-          const SimplexTableauType simplexTableauType,
-          const std::filesystem::path &modelFileMpsPath) {
-        const auto primalSimplexOutput =
-            runPrimalSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
-                linearProgram, simplexTableauType);
-        const auto gurobiLPOptStats =
-            GurobiOptimizer("", modelFileMpsPath)
-                .optimize<FloatingPointT>(lpOptimizationType);
-        if (primalSimplexOutput._phaseOneLpOptStats._optResult ==
-            LPOptimizationResult::INFEASIBLE) {
-          const std::set<LPOptimizationResult> infeasibleResults{
-              LPOptimizationResult::INFEASIBLE,
-              LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED};
-          ASSERT_TRUE(infeasibleResults.contains(gurobiLPOptStats._optResult));
-        } else {
-          ASSERT_TRUE(primalSimplexOutput._phaseTwoLpOptStats.has_value());
-          this->compareWithGurobi(*primalSimplexOutput._phaseTwoLpOptStats,
-                                  gurobiLPOptStats);
-        }
-      },
-      false);
+TYPED_TEST_P(PrimalSimplexTest,
+             runPrimalSimplexAndCompareWithGurobiBaseInstanceSet) {
+  EXPECT_NO_FATAL_FAILURE(
+      this->testCase("../../tests/primal_simplex_working_instances", 500));
 }
 
-REGISTER_TYPED_TEST_SUITE_P(PrimalSimplexTest,
-                            runPrimalSimplexAndCompareWithGurobi);
+TYPED_TEST_P(
+    PrimalSimplexTest,
+    runPrimalSimplexAndCompareWithGurobiNetlibInstanceSetWithFreeVars) {
+  absl::SetFlag(&FLAGS_validate_simplex_option,
+                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
+  absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
+  EXPECT_NO_FATAL_FAILURE(this->testCase(
+      "../../tests/primal_simplex_netlib_instances_with_free_vars", 1000));
+}
+
+REGISTER_TYPED_TEST_SUITE_P(
+    PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobiBaseInstanceSet,
+    runPrimalSimplexAndCompareWithGurobiNetlibInstanceSetWithFreeVars);
 
 using PrimalSimplexTypes = ::testing::Types<
     TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>>;

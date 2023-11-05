@@ -10,6 +10,7 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
     const SimplexTableauType simplexTableauType)
     : _initialProgram(linearProgram),
       _variableInfos(linearProgram._variableInfos),
+      _isVariableFreeBitset(linearProgram._isVariableFreeBitset),
       _variableLowerBounds(linearProgram._variableLowerBounds),
       _variableUpperBounds(linearProgram._variableUpperBounds),
       _variableLabelSet(linearProgram._variableLabelSet),
@@ -19,10 +20,6 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
       _initialRightHandSides(linearProgram._rightHandSides),
       _simplexTableauType(simplexTableauType),
       _result(LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
-  SPDLOG_INFO("Converting LP to standard form");
-  convertToStandardForm();
-  SPDLOG_TRACE(toString());
-
   if (simplexType == SimplexType::PRIMAL) {
     SPDLOG_INFO("Making RHS non-negative");
     makeRightHandSidesNonNegative();
@@ -59,6 +56,7 @@ void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables() {
   };
 
   _constraintMatrix[0].resize(newVariableCount);
+  _isVariableFreeBitset.resize(newVariableCount);
   for (int rowIdx = 1; rowIdx < _rowInfos.size(); ++rowIdx) {
     _constraintMatrix[rowIdx].resize(newVariableCount);
 
@@ -67,8 +65,9 @@ void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables() {
     const auto newArtificialLabelStr = newArtificialLabel(newVariableIdx);
     _variableLowerBounds.push_back(0.0);
     _variableUpperBounds.push_back(std::nullopt);
-    _variableInfos.push_back(VariableInfo{
-        newArtificialLabelStr, VariableType::CONTINUOUS, false, true, false});
+    _variableInfos.push_back(VariableInfo{._label = newArtificialLabelStr,
+                                          ._type = VariableType::CONTINUOUS,
+                                          ._isArtificial = true});
   }
 }
 
@@ -107,7 +106,7 @@ SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
 
   SimplexBasisData result;
   result._isBasicColumnIndexBitset.resize(_variableInfos.size());
-  result._isColumnAtLowerBoundBitset.resize(_variableInfos.size(), true);
+  result._isColumnAtLowerBoundBitset.resize(_variableInfos.size(), false);
   result._isColumnAtUpperBoundBitset.resize(_variableInfos.size(), false);
   result._rowToBasisColumnIdxMap.resize(_rowInfos.size());
 
@@ -115,6 +114,11 @@ SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
   result._rowToBasisColumnIdxMap[0] = 0;
   result._isBasicColumnIndexBitset[0] = true;
   result._isColumnAtLowerBoundBitset[0] = false;
+
+  for (int varIdx = 1; varIdx < _variableInfos.size(); ++varIdx) {
+    result._isColumnAtLowerBoundBitset[varIdx] =
+        !_variableInfos[varIdx]._isFree;
+  }
 
   for (int rowIdx = 1; rowIdx < _rowInfos.size(); ++rowIdx) {
     const auto basicColumnIdx = *firstArtificialIdx + rowIdx - 1;
@@ -399,6 +403,16 @@ template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::initBoundsForDualSimplex() {
   for (int varIdx = 1; varIdx < _variableInfos.size(); ++varIdx) {
     if (_reducedCosts[varIdx] < 0.0) {
+      if (_variableInfos[varIdx]._isFree) {
+        SPDLOG_ERROR("FREE VARIABLE {} NOT SUPPORTED IN TRIVIAL DUAL PHASE ONE",
+                     varIdx);
+      }
+
+      if (!_variableUpperBounds[varIdx].has_value()) {
+        SPDLOG_ERROR("VAR IDX {} HAS NEGATIVE REDUCED COST, BUT DOESN'T HAVE "
+                     "UPPER BOUND",
+                     varIdx);
+      }
       _simplexBasisData._isColumnAtLowerBoundBitset[varIdx] = false;
       _simplexBasisData._isColumnAtUpperBoundBitset[varIdx] = true;
     }
@@ -411,61 +425,14 @@ void SimplexTableau<T, SimplexTraitsT>::initBoundsForDualSimplex() {
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::convertToStandardForm() {
-  int nonEqualityRows = 0;
-  for (const auto &rowInfo : _rowInfos)
-    if (!rowInfo.isEqualityRow())
-      ++nonEqualityRows;
-
-  const int variableCountAtTheStart = _variableInfos.size();
-  const int newVariableCount = variableCountAtTheStart + nonEqualityRows;
-  int newVariableIdx = variableCountAtTheStart;
-
-  const auto newSlackLabel = [&]() {
-    const std::string firstPattern = "S" + std::to_string(newVariableIdx + 1);
-    return (_variableLabelSet.find(firstPattern) == _variableLabelSet.end())
-               ? firstPattern
-               : firstPattern + Constants::SLACK_SUFFIX;
-  };
-
-  for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
-    _constraintMatrix[rowIdx].resize(newVariableCount);
-    if (_rowInfos[rowIdx].isEqualityRow())
-      continue;
-
-    switch (_rowInfos[rowIdx]._type) {
-    // TODO - check variable type integer or continuous
-    // TODO - fix slack labeling
-    case RowType::LESS_THAN_OR_EQUAL: {
-      _constraintMatrix[rowIdx][newVariableIdx] = 1;
-      break;
-    }
-    case RowType::GREATER_THAN_OR_EQUAL: {
-      _constraintMatrix[rowIdx][newVariableIdx] = -1;
-      break;
-    }
-    default:
-      break;
-    }
-    const auto newSlackLabelStr = newSlackLabel();
-    _variableInfos.push_back(VariableInfo{
-        newSlackLabelStr, VariableType::CONTINUOUS, true, false, false});
-    _variableLabelSet.insert(newSlackLabelStr);
-    _variableLowerBounds.push_back(0.0);
-    _variableUpperBounds.push_back(std::nullopt);
-    ++newVariableIdx;
-    _rowInfos[rowIdx]._type = RowType::EQUALITY;
-  }
-}
-
-template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::makeRightHandSidesNonNegative() {
   for (int rowIdx = 1; rowIdx < _rowInfos.size(); ++rowIdx) {
     typename SimplexTraitsT::CurrentAdder adder;
     for (int variableIdx = 1; variableIdx < _variableInfos.size();
-         ++variableIdx)
-      adder.addValue(_variableLowerBounds[variableIdx].value() *
+         ++variableIdx) {
+      adder.addValue(_variableLowerBounds[variableIdx].value_or(0.0) *
                      _constraintMatrix[rowIdx][variableIdx]);
+    }
 
     const T diff =
         NumericalTraitsT::add(_rightHandSides[rowIdx], -adder.currentSum());
@@ -482,7 +449,7 @@ void SimplexTableau<T, SimplexTraitsT>::makeRightHandSidesNonNegative() {
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::addBoundsToMatrix() {
+void SimplexTableau<T, SimplexTraitsT>::addSingleVarBoundsToMatrix() {
   for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
     if (const auto lowerBound = _variableLowerBounds[varIdx];
         lowerBound.has_value()) {
@@ -708,8 +675,7 @@ void SimplexTableau<T, SimplexTraitsT>::updateReducedCostsGeneric(
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::updateInverseMatrixWithRHSGeneric(
     const PivotData<T> &pivotData, const VectorT &enteringColumn) {
-  const auto &[leavingRowIdx, enteringColumnIdx, pivotingTermInverse] =
-      pivotData;
+  const auto &[leavingRowIdx, _, pivotingTermInverse] = pivotData;
 
   ElementaryMatrixT etm{enteringColumn, pivotingTermInverse, leavingRowIdx};
   if constexpr (SimplexTraitsT::useSparseRepresentationValue) {
@@ -761,6 +727,10 @@ void SimplexTableau<T, SimplexTraitsT>::pivotImplicitBoundsGeneric(
       "PIVOT - ENTERING COLUMN IDX {}, ROW IDX {} LEAVING COLUMN IDX {}",
       enteringColumnIdx, pivotRowIdx, leavingBasicColumnIdx);
 
+  if (_isVariableFreeBitset[leavingBasicColumnIdx]) {
+    SPDLOG_ERROR("FREE VAR {} SHOULDN'T LEAVE BASIS", leavingBasicColumnIdx);
+  }
+
   for (int rowIdx = 0; rowIdx < _rowInfos.size(); ++rowIdx) {
     _rightHandSides[rowIdx] = NumericalTraitsT::add(
         _rightHandSides[rowIdx],
@@ -793,11 +763,19 @@ void SimplexTableau<T, SimplexTraitsT>::pivotImplicitBoundsGeneric(
 template <typename T, typename SimplexTraitsT>
 std::optional<T>
 SimplexTableau<T, SimplexTraitsT>::curSatisfiedBound(const int varIdx) {
+  if (_simplexBasisData._isBasicColumnIndexBitset[varIdx]) {
+    SPDLOG_ERROR("BASIC VAR IDX {} DOESN'T HAVE SATISFIED BOUND", varIdx);
+  }
+
   if (_simplexBasisData._isColumnAtLowerBoundBitset[varIdx])
     return *_variableLowerBounds[varIdx];
 
   if (_simplexBasisData._isColumnAtUpperBoundBitset[varIdx])
     return *_variableUpperBounds[varIdx];
+
+  if (_isVariableFreeBitset[varIdx]) {
+    return 0.0;
+  }
 
   return std::nullopt;
 }

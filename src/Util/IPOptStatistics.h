@@ -17,7 +17,7 @@ template <typename T> struct IPOptStatistics {
   std::string _algorithmType;
   T _optimalValue{};
   std::vector<T> _optimalSolution;
-  double _elapsedTimeMs{0.0};
+  double _elapsedTimeSec{0.0};
   std::vector<LPRelaxationStatistics<T>> _lpRelaxationStats;
   int32_t _reinversionFrequency;
 };

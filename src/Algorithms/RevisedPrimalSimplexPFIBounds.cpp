@@ -179,7 +179,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
     const int iterCount) {
-  constexpr size_t HARD_ITERATION_LIMIT = 100000;
+  constexpr size_t HARD_ITERATION_LIMIT = 10000;
   if (iterCount > HARD_ITERATION_LIMIT) {
     _simplexTableau._result = LPOptimizationResult::REACHED_ITERATION_LIMIT;
     return false;
@@ -256,6 +256,11 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
         _simplexTableau._simplexBasisData
             ._isColumnAtUpperBoundBitset[columnIdx])
       return columnIdx;
+
+    if (std::fabs(_simplexTableau._reducedCosts[columnIdx]) >
+            NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE &&
+        _simplexTableau._variableInfos[columnIdx]._isFree)
+      return columnIdx;
   }
   return std::nullopt;
 }
@@ -274,7 +279,10 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
         (_simplexTableau._simplexBasisData
              ._isColumnAtUpperBoundBitset[colIdx] &&
          _simplexTableau._reducedCosts[colIdx] >
-             NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE)) {
+             NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE) ||
+        (std::fabs(_simplexTableau._reducedCosts[colIdx]) >
+             NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE &&
+         _simplexTableau._variableInfos[colIdx]._isFree)) {
       const auto currentAbsReducedCost =
           std::fabs(_simplexTableau._reducedCosts[colIdx]);
       if (!biggestAbsReducedCost.has_value() ||
@@ -322,6 +330,10 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
       _simplexTableau._simplexBasisData._isColumnAtLowerBoundBitset;
   auto &isColumnAtUpperBoundBitset =
       _simplexTableau._simplexBasisData._isColumnAtUpperBoundBitset;
+  if (_simplexTableau._isVariableFreeBitset[enteringColumnIdx]) {
+    SPDLOG_ERROR("FREE VAR {} SHOULDN'T BE MOVED FROM ONE BOUND TO ANOTHER",
+                 enteringColumnIdx);
+  }
   const bool isVarIncreasing = isColumnAtLowerBoundBitset[enteringColumnIdx];
 
   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
@@ -363,8 +375,9 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::chooseRowIdx(
     if (!lowerBound.has_value() && !upperBound.has_value())
       continue;
 
-    if (_simplexTableau._simplexBasisData
-            ._isColumnAtLowerBoundBitset[enteringColumnIdx]) {
+    if (const bool isEnteringVarIncreasing =
+            _simplexTableau._reducedCosts[enteringColumnIdx] < 0.0;
+        isEnteringVarIncreasing) {
       if (enteringColumn[rowIdx] > 0.0) {
         if (!lowerBound.has_value())
           continue;

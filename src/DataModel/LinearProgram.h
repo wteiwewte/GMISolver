@@ -13,10 +13,15 @@
 #include <string>
 #include <vector>
 
+#include <boost/dynamic_bitset.hpp>
+
 template <typename T> struct MpsReader;
 
 template <typename T> class LinearProgram {
 public:
+  void convertToStandardForm();
+  size_t getOriginalVariablesCount() const;
+
   std::string toString() const;
   std::string toStringLpSolveFormat() const;
 
@@ -44,6 +49,7 @@ private:
   std::vector<RowInfo> _rowInfos;
 
   std::vector<VariableInfo> _variableInfos;
+  boost::dynamic_bitset<> _isVariableFreeBitset;
   std::vector<std::optional<T>> _variableLowerBounds;
   std::vector<std::optional<T>> _variableUpperBounds;
   std::set<std::string> _variableLabelSet;

@@ -54,6 +54,8 @@ std::optional<BoundType> stringToBoundType(const std::string &string) {
     return BoundType::UPPER_BOUND_INTEGER;
   else if (string == "LI")
     return BoundType::LOWER_BOUND_INTEGER;
+  else if (string == "PL")
+    return BoundType::UPPER_BOUND_PLUS_INF;
 
   return std::nullopt;
 }
@@ -76,6 +78,8 @@ std::set<size_t> allowedLinesCount(const BoundType boundType) {
     return {4};
   case BoundType::LOWER_BOUND_INTEGER:
     return {4};
+  case BoundType::UPPER_BOUND_PLUS_INF:
+    return {3};
   }
 }
 

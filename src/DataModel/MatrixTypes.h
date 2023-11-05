@@ -32,6 +32,25 @@ template <typename T> struct SparseMatrixRepresentation {
 
 template <typename T> using Matrix = std::vector<std::vector<T>>;
 
+template <typename T> Matrix<T> transpose(const Matrix<T> &matrix) {
+  if (matrix.empty())
+    return {};
+
+  Matrix<T> transposedMatrix;
+  const int matrixRowCount = matrix.size();
+  const int matrixColCount = matrix[0].size();
+  transposedMatrix.resize(matrixColCount);
+
+  for (int colIdx = 0; colIdx < matrixColCount; ++colIdx) {
+    transposedMatrix[colIdx].resize(matrixRowCount);
+    for (int rowIdx = 0; rowIdx < matrix.size(); ++rowIdx) {
+      transposedMatrix[colIdx][rowIdx] = matrix[rowIdx][colIdx];
+    }
+  }
+
+  return transposedMatrix;
+}
+
 template <typename T> struct MatrixRepresentation {
   void clear() {
     _rows.clear();

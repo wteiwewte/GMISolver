@@ -113,5 +113,5 @@ REGISTER_TYPED_TEST_SUITE_P(DualSimplexGomoryTest,
 
 using DualSimplexGomoryTypes = ::testing::Types<
     TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>>;
-INSTANTIATE_TYPED_TEST_SUITE_P(DualSimplexTestSuite, DualSimplexGomoryTest,
-                               DualSimplexGomoryTypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(DualSimplexGomoryTestSuite,
+                               DualSimplexGomoryTest, DualSimplexGomoryTypes);

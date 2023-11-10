@@ -216,8 +216,32 @@ template <typename T> struct LPTestBase {
     if (lpOptStatistics._optResult ==
         LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
       SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
-      SPDLOG_INFO("SIMPLEX OPT AFTER OPT {}", lpOptStatistics._optimalValue);
+      SPDLOG_INFO("SIMPLEX OPT {}", lpOptStatistics._optimalValue);
       EXPECT_NEAR(gurobiLPOptStats._optimalValue, lpOptStatistics._optimalValue,
+                  NumericalTraitsT::OPTIMALITY_TOLERANCE);
+    }
+  }
+
+  void compareWithGurobiDual(
+      const LPOptStatistics<FloatingPointT> &primalProgramLpOptStatistics,
+      const LPOptStatistics<FloatingPointT> &dualProgramLpOptStatistics,
+      const LPOptStatistics<FloatingPointT> &gurobiLPOptStats) {
+    ASSERT_EQ(gurobiLPOptStats._optResult,
+              primalProgramLpOptStatistics._optResult);
+    ASSERT_EQ(gurobiLPOptStats._optResult,
+              dualProgramLpOptStatistics._optResult);
+    if (primalProgramLpOptStatistics._optResult ==
+        LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+      SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
+      SPDLOG_INFO("PRIMAL PROGRAM SIMPLEX OPT {}",
+                  primalProgramLpOptStatistics._optimalValue);
+      SPDLOG_INFO("DUAL PROGRAM SIMPLEX OPT {}",
+                  -dualProgramLpOptStatistics._optimalValue);
+      EXPECT_NEAR(gurobiLPOptStats._optimalValue,
+                  primalProgramLpOptStatistics._optimalValue,
+                  NumericalTraitsT::OPTIMALITY_TOLERANCE);
+      EXPECT_NEAR(gurobiLPOptStats._optimalValue,
+                  -dualProgramLpOptStatistics._optimalValue,
                   NumericalTraitsT::OPTIMALITY_TOLERANCE);
     }
   }
@@ -229,7 +253,7 @@ template <typename T> struct LPTestBase {
     if (lexReoptStatistics._optResult ==
         LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
       SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
-      SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC {} REOPT {}",
+      SPDLOG_INFO("LEXICOGRAPHIC {} SIMPLEX REOPT {}",
                   lexicographicReoptTypeToStr(lexicographicReoptType),
                   lexReoptStatistics._objectiveValueAfterLexReopt);
       EXPECT_NEAR(gurobiLPOptStats._optimalValue,

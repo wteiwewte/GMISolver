@@ -31,7 +31,8 @@ std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::type() const {
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
     const std::string &lpNameSuffix) {
-  SPDLOG_INFO("BASIS SIZE {} COLUMN PIVOT RULE {}",
+  SPDLOG_INFO("LP NAME {} BASIS SIZE {}, ROW PIVOT RULE {}",
+              _simplexTableau._initialProgram.getName(),
               _simplexTableau._rowInfos.size(),
               dualSimplexRowPivotRuleToStr(_dualSimplexRowPivotRule));
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
@@ -74,8 +75,9 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
     tryValidateOptimalSolutions(lpOptStatistics);
 
   SPDLOG_INFO("{} ENDED", type());
-  SPDLOG_INFO("LP OPT RESULT {}",
-              lpOptimizationResultToStr(_simplexTableau._result));
+  SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
+              lpOptimizationResultToStr(_simplexTableau._result),
+              _simplexTableau.getCurrentObjectiveValue());
   SPDLOG_INFO("ELAPSED TIME {} SECONDS, ITERATION COUNT {}",
               lpOptStatistics._elapsedTimeSec, iterCount);
 

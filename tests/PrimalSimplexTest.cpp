@@ -55,6 +55,84 @@ protected:
     absl::SetFlag(&FLAGS_reinversion_frequency, 60);
   }
 
+  void testCaseWithDual(const std::string &primalSimplexTestDirPath,
+                        const size_t basisSizeLimit) {
+    using FloatingPointT = std::tuple_element_t<0, typename T::types>;
+    using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
+    const LPOptimizationType lpOptimizationType{
+        LPOptimizationType::LINEAR_RELAXATION};
+    this->solveAndCompareInstancesFromSets(
+        primalSimplexTestDirPath, basisSizeLimit, lpOptimizationType,
+        [&](const auto &primalProgram,
+            const SimplexTableauType simplexTableauType,
+            const std::filesystem::path &modelFileMpsPath) {
+          const auto primalProgramSimplexOutput =
+              runPrimalSimplexWithImplicitBounds<FloatingPointT,
+                                                 SimplexTraitsT>(
+                  primalProgram, simplexTableauType);
+          const auto dualProgram = primalProgram.dualProgram();
+          ASSERT_TRUE(dualProgram.has_value());
+          const auto dualProgramSimplexOutput =
+              runPrimalSimplexWithImplicitBounds<FloatingPointT,
+                                                 SimplexTraitsT>(
+                  *dualProgram, simplexTableauType);
+          const auto gurobiLPOptStats =
+              GurobiOptimizer("", modelFileMpsPath)
+                  .optimize<FloatingPointT>(lpOptimizationType);
+
+          switch (primalProgramSimplexOutput._phaseOneLpOptStats._optResult) {
+          case LPOptimizationResult::INFEASIBLE: {
+            const std::set<LPOptimizationResult> gurobiInfeasibleResults{
+                LPOptimizationResult::INFEASIBLE,
+                LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED};
+            EXPECT_TRUE(
+                gurobiInfeasibleResults.contains(gurobiLPOptStats._optResult));
+            EXPECT_EQ(LPOptimizationResult::BOUNDED_AND_FEASIBLE,
+                      dualProgramSimplexOutput._phaseOneLpOptStats._optResult);
+            ASSERT_TRUE(
+                dualProgramSimplexOutput._phaseTwoLpOptStats.has_value());
+            EXPECT_EQ(LPOptimizationResult::UNBOUNDED,
+                      dualProgramSimplexOutput._phaseTwoLpOptStats->_optResult);
+            break;
+          }
+          case LPOptimizationResult::UNBOUNDED: {
+            const std::set<LPOptimizationResult> gurobiUnboundedResults{
+                LPOptimizationResult::UNBOUNDED,
+                LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED};
+            EXPECT_TRUE(
+                gurobiUnboundedResults.contains(gurobiLPOptStats._optResult));
+            EXPECT_EQ(LPOptimizationResult::INFEASIBLE,
+                      dualProgramSimplexOutput._phaseOneLpOptStats._optResult);
+            ASSERT_FALSE(
+                dualProgramSimplexOutput._phaseTwoLpOptStats.has_value());
+            break;
+          }
+          case LPOptimizationResult::BOUNDED_AND_FEASIBLE: {
+            EXPECT_EQ(LPOptimizationResult::BOUNDED_AND_FEASIBLE,
+                      dualProgramSimplexOutput._phaseOneLpOptStats._optResult);
+            ASSERT_TRUE(
+                primalProgramSimplexOutput._phaseTwoLpOptStats.has_value());
+            ASSERT_TRUE(
+                dualProgramSimplexOutput._phaseTwoLpOptStats.has_value());
+            EXPECT_NO_FATAL_FAILURE(this->compareWithGurobiDual(
+                *primalProgramSimplexOutput._phaseTwoLpOptStats,
+                *dualProgramSimplexOutput._phaseTwoLpOptStats,
+                gurobiLPOptStats));
+            break;
+          }
+          default: {
+            SPDLOG_INFO(
+                "COULD NOT FINISH SIMPLEX FOR PRIMAL PROGRAM DUE TO {}",
+                lpOptimizationResultToStr(
+                    primalProgramSimplexOutput._phaseOneLpOptStats._optResult));
+            EXPECT_TRUE(false);
+            break;
+          }
+          }
+        },
+        false);
+  }
+
   void testCase(const std::string &primalSimplexTestDirPath,
                 const size_t basisSizeLimit) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;
@@ -63,27 +141,50 @@ protected:
         LPOptimizationType::LINEAR_RELAXATION};
     this->solveAndCompareInstancesFromSets(
         primalSimplexTestDirPath, basisSizeLimit, lpOptimizationType,
-        [&](const auto &linearProgram,
+        [&](const auto &primalProgram,
             const SimplexTableauType simplexTableauType,
             const std::filesystem::path &modelFileMpsPath) {
-          const auto primalSimplexOutput =
+          const auto primalProgramSimplexOutput =
               runPrimalSimplexWithImplicitBounds<FloatingPointT,
                                                  SimplexTraitsT>(
-                  linearProgram, simplexTableauType);
+                  primalProgram, simplexTableauType);
           const auto gurobiLPOptStats =
               GurobiOptimizer("", modelFileMpsPath)
                   .optimize<FloatingPointT>(lpOptimizationType);
-          if (primalSimplexOutput._phaseOneLpOptStats._optResult ==
-              LPOptimizationResult::INFEASIBLE) {
-            const std::set<LPOptimizationResult> infeasibleResults{
+
+          switch (primalProgramSimplexOutput._phaseOneLpOptStats._optResult) {
+          case LPOptimizationResult::INFEASIBLE: {
+            const std::set<LPOptimizationResult> gurobiInfeasibleResults{
                 LPOptimizationResult::INFEASIBLE,
                 LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED};
+            EXPECT_TRUE(
+                gurobiInfeasibleResults.contains(gurobiLPOptStats._optResult));
+            break;
+          }
+          case LPOptimizationResult::UNBOUNDED: {
+            const std::set<LPOptimizationResult> gurobiUnboundedResults{
+                LPOptimizationResult::UNBOUNDED,
+                LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED};
+            EXPECT_TRUE(
+                gurobiUnboundedResults.contains(gurobiLPOptStats._optResult));
+            break;
+          }
+          case LPOptimizationResult::BOUNDED_AND_FEASIBLE: {
             ASSERT_TRUE(
-                infeasibleResults.contains(gurobiLPOptStats._optResult));
-          } else {
-            ASSERT_TRUE(primalSimplexOutput._phaseTwoLpOptStats.has_value());
-            this->compareWithGurobi(*primalSimplexOutput._phaseTwoLpOptStats,
-                                    gurobiLPOptStats);
+                primalProgramSimplexOutput._phaseTwoLpOptStats.has_value());
+            EXPECT_NO_FATAL_FAILURE(this->compareWithGurobi(
+                *primalProgramSimplexOutput._phaseTwoLpOptStats,
+                gurobiLPOptStats));
+            break;
+          }
+          default: {
+            SPDLOG_INFO(
+                "COULD NOT FINISH SIMPLEX FOR PRIMAL PROGRAM DUE TO {}",
+                lpOptimizationResultToStr(
+                    primalProgramSimplexOutput._phaseOneLpOptStats._optResult));
+            EXPECT_TRUE(false);
+            break;
+          }
           }
         },
         false);
@@ -99,6 +200,21 @@ TYPED_TEST_P(PrimalSimplexTest,
 
 TYPED_TEST_P(
     PrimalSimplexTest,
+    runPrimalSimplexForPrimalAndDualAndCompareWithGurobiBaseInstanceSet) {
+  EXPECT_NO_FATAL_FAILURE(this->testCaseWithDual(
+      "../../tests/primal_simplex_working_instances", 200));
+}
+
+TYPED_TEST_P(
+    PrimalSimplexTest,
+    runPrimalSimplexForPrimalAndDualAndCompareWithGurobiBaseInstanceSetOnlyFull) {
+  absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
+  EXPECT_NO_FATAL_FAILURE(this->testCaseWithDual(
+      "../../tests/primal_simplex_working_instances", 500));
+}
+
+TYPED_TEST_P(
+    PrimalSimplexTest,
     runPrimalSimplexAndCompareWithGurobiNetlibInstanceSetWithFreeVars) {
   absl::SetFlag(&FLAGS_validate_simplex_option,
                 ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
@@ -109,6 +225,8 @@ TYPED_TEST_P(
 
 REGISTER_TYPED_TEST_SUITE_P(
     PrimalSimplexTest, runPrimalSimplexAndCompareWithGurobiBaseInstanceSet,
+    runPrimalSimplexForPrimalAndDualAndCompareWithGurobiBaseInstanceSet,
+    runPrimalSimplexForPrimalAndDualAndCompareWithGurobiBaseInstanceSetOnlyFull,
     runPrimalSimplexAndCompareWithGurobiNetlibInstanceSetWithFreeVars);
 
 using PrimalSimplexTypes = ::testing::Types<

@@ -20,10 +20,12 @@ template <typename T> struct MpsReader;
 template <typename T> class LinearProgram {
 public:
   void convertToStandardForm();
+  std::optional<LinearProgram<T>> dualProgram() const;
   size_t getOriginalVariablesCount() const;
 
   std::string toString() const;
   std::string toStringLpSolveFormat() const;
+  void logGeneralInfo() const;
 
   const std::vector<RowInfo> &getRowInfos() const { return _rowInfos; }
   const std::vector<VariableInfo> &getVariableInfos() const {
@@ -44,6 +46,7 @@ private:
   template <typename U, typename ComparisonTraitsU> friend class SimplexTableau;
 
   std::string basicInformationStr() const;
+  void logGeneralInformation() const;
 
   std::string _name;
   std::vector<RowInfo> _rowInfos;

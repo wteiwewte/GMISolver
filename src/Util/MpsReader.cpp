@@ -26,25 +26,6 @@ std::vector<std::string> splitString(const std::string &str) {
 }
 
 double convert(const std::string &str) { return std::stod(str); }
-
-template <typename T>
-int countBoundsSpecified(const std::vector<std::optional<T>> &bounds) {
-  return std::count_if(
-      bounds.begin(), bounds.end(),
-      [](const std::optional<T> &bound) { return bound.has_value(); });
-}
-
-template <typename T>
-int countFreeVariables(const std::vector<std::optional<T>> &lowerBounds,
-                       const std::vector<std::optional<T>> &upperBounds) {
-  int freeVarCount = 0;
-  for (int varIdx = 0; varIdx < lowerBounds.size(); ++varIdx) {
-    if (!lowerBounds[varIdx].has_value() && !upperBounds[varIdx].has_value()) {
-      ++freeVarCount;
-    }
-  }
-  return freeVarCount;
-}
 } // namespace
 
 template <typename T>
@@ -482,6 +463,7 @@ MpsReader<T>::read(const std::string &filePath) {
     linearProgram._variableInfos[*objectiveVarIdx]._type =
         VariableType::INTEGER;
   }
+  linearProgram.logGeneralInformation();
 
   // TODO - add more integrity checks
   return linearProgram;
@@ -502,15 +484,6 @@ bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
       //      }
     }
   }
-
-  SPDLOG_INFO("PROGRAM NAME {}, VARIABLE COUNT {}, ROW COUNT {}, LOWER BOUNDS "
-              "{}, UPPER BOUNDS {}, FREE VARIABLES {}",
-              linearProgram._name, linearProgram._variableInfos.size(),
-              linearProgram._rowInfos.size(),
-              countBoundsSpecified(linearProgram._variableLowerBounds),
-              countBoundsSpecified(linearProgram._variableUpperBounds),
-              countFreeVariables(linearProgram._variableLowerBounds,
-                                 linearProgram._variableUpperBounds));
 
   return true;
 }

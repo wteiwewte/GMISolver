@@ -1,6 +1,28 @@
 #include "src/DataModel/LinearProgram.h"
 
 #include "src/Util/LPPrinter.h"
+#include "src/Util/SpdlogHeader.h"
+
+namespace {
+template <typename T>
+int countBoundsSpecified(const std::vector<std::optional<T>> &bounds) {
+  return std::count_if(
+      bounds.begin(), bounds.end(),
+      [](const std::optional<T> &bound) { return bound.has_value(); });
+}
+
+template <typename T>
+int countFreeVariables(const std::vector<std::optional<T>> &lowerBounds,
+                       const std::vector<std::optional<T>> &upperBounds) {
+  int freeVarCount = 0;
+  for (int varIdx = 0; varIdx < lowerBounds.size(); ++varIdx) {
+    if (!lowerBounds[varIdx].has_value() && !upperBounds[varIdx].has_value()) {
+      ++freeVarCount;
+    }
+  }
+  return freeVarCount;
+}
+} // namespace
 
 template <typename T> void LinearProgram<T>::convertToStandardForm() {
   int nonEqualityRows = 0;
@@ -46,9 +68,103 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
     _variableLabelSet.insert(newSlackLabelStr);
     _variableLowerBounds.push_back(0.0);
     _variableUpperBounds.push_back(std::nullopt);
+    _objective.push_back(0.0);
     ++newVariableIdx;
     _rowInfos[rowIdx]._type = RowType::EQUALITY;
   }
+}
+
+template <typename T>
+std::optional<LinearProgram<T>> LinearProgram<T>::dualProgram() const {
+  LinearProgram<T> dualProgram;
+  dualProgram._name = "DUAL_" + _name;
+  dualProgram._constraintMatrix = transpose(_constraintMatrix);
+
+  for (int rowIdx = 0; rowIdx < dualProgram._constraintMatrix.size();
+       ++rowIdx) {
+    auto &currentRow = dualProgram._constraintMatrix[rowIdx];
+    const int currentRowSizeBefore = currentRow.size();
+    currentRow.resize(currentRowSizeBefore + 2 * _objective.size());
+    currentRow[currentRowSizeBefore + rowIdx] = 1.0;
+    currentRow[currentRowSizeBefore + _objective.size() + rowIdx] = -1.0;
+  }
+
+  dualProgram._rightHandSides = _objective;
+  dualProgram._objective = _rightHandSides;
+  const size_t dualVarCount = _rightHandSides.size() + 2 * _objective.size();
+  dualProgram._objective.resize(dualVarCount);
+
+  for (int primalVarIdx = 0; primalVarIdx < _variableInfos.size();
+       ++primalVarIdx) {
+    if (_variableLowerBounds[primalVarIdx].has_value()) {
+      const int dualVarIdV = _rightHandSides.size() + primalVarIdx;
+      dualProgram._objective[dualVarIdV] = *_variableLowerBounds[primalVarIdx];
+    }
+    if (_variableUpperBounds[primalVarIdx].has_value()) {
+      const int dualVarIdW =
+          _rightHandSides.size() + _objective.size() + primalVarIdx;
+      dualProgram._objective[dualVarIdW] = -*_variableUpperBounds[primalVarIdx];
+    }
+  }
+
+  for (int dualVarIdx = 0; dualVarIdx < dualVarCount; ++dualVarIdx) {
+    dualProgram._objective[dualVarIdx] = -dualProgram._objective[dualVarIdx];
+  }
+
+  dualProgram._variableInfos.resize(dualVarCount);
+  dualProgram._isVariableFreeBitset.resize(dualVarCount);
+
+  const auto dualVarLabel = [&](const int dualVarIdx) {
+    if (dualVarIdx < _rightHandSides.size()) {
+      return fmt::format("PI_{}", dualVarIdx);
+    }
+    if (dualVarIdx < _rightHandSides.size() + _objective.size()) {
+      return fmt::format("V_{}", dualVarIdx - _rightHandSides.size());
+    }
+
+    return fmt::format("W_{}",
+                       dualVarIdx - _rightHandSides.size() - _objective.size());
+  };
+
+  for (int dualVarIdx = 0; dualVarIdx < dualVarCount; ++dualVarIdx) {
+    const bool isDualVarFree = dualVarIdx < _rightHandSides.size();
+    dualProgram._variableInfos[dualVarIdx] =
+        VariableInfo{._label = dualVarLabel(dualVarIdx),
+                     ._type = VariableType::CONTINUOUS,
+                     ._isFree = isDualVarFree};
+    dualProgram._isVariableFreeBitset[dualVarIdx] = isDualVarFree;
+  }
+
+  dualProgram._variableLowerBounds.resize(dualProgram._objective.size());
+  dualProgram._variableUpperBounds.resize(dualProgram._objective.size());
+  for (int primalVarIdx = 0; primalVarIdx < _variableInfos.size();
+       ++primalVarIdx) {
+    const int dualVarIdxV = _rightHandSides.size() + primalVarIdx;
+    const int dualVarIdxW =
+        _rightHandSides.size() + _objective.size() + primalVarIdx;
+    dualProgram._variableLowerBounds[dualVarIdxV] =
+        dualProgram._variableLowerBounds[dualVarIdxW] = 0.0;
+
+    if (!_variableLowerBounds[primalVarIdx].has_value()) {
+      dualProgram._variableUpperBounds[dualVarIdxV] = 0.0;
+      dualProgram._variableInfos[dualVarIdxV]._isFixed = true;
+    }
+
+    if (!_variableUpperBounds[primalVarIdx].has_value()) {
+      dualProgram._variableUpperBounds[dualVarIdxW] = 0.0;
+      dualProgram._variableInfos[dualVarIdxW]._isFixed = true;
+    }
+  }
+
+  dualProgram._rowInfos.resize(_objective.size());
+  for (int dualRowIdx = 0; dualRowIdx < dualProgram._rowInfos.size();
+       ++dualRowIdx) {
+    dualProgram._rowInfos[dualRowIdx]._type = RowType::EQUALITY;
+  }
+
+  dualProgram.logGeneralInformation();
+
+  return dualProgram;
 }
 
 template <typename T>
@@ -90,6 +206,18 @@ std::string LinearProgram<T>::basicInformationStr() const {
       << _constraintMatrix.front().size() << '\n';
 
   return oss.str();
+}
+
+template <typename T> void LinearProgram<T>::logGeneralInformation() const {
+  SPDLOG_INFO("NAME: {}", _name);
+  SPDLOG_INFO(
+      "VARIABLE COUNT: {} ROW COUNT: {}, CONSTRAINT MATRIX DIMENSIONS: {} x {}",
+      _variableInfos.size(), _rowInfos.size(), _constraintMatrix.size(),
+      _constraintMatrix.front().size());
+  SPDLOG_INFO("LOWER BOUNDS {}, UPPER BOUNDS {}, FREE VARIABLES {}",
+              countBoundsSpecified(_variableLowerBounds),
+              countBoundsSpecified(_variableUpperBounds),
+              countFreeVariables(_variableLowerBounds, _variableUpperBounds));
 }
 
 template <typename T>

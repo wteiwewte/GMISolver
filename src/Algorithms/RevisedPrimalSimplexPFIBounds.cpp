@@ -31,7 +31,8 @@ std::string RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::type() const {
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T>
 RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
-  SPDLOG_INFO("BASIS SIZE {}, COLUMN PIVOT RULE {}",
+  SPDLOG_INFO("LP NAME {} BASIS SIZE {}, COLUMN PIVOT RULE {}",
+              _simplexTableau._initialProgram.getName(),
               _simplexTableau._rowInfos.size(),
               primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
   auto artLpOptStats = runImpl("PHASE_ONE");
@@ -101,8 +102,9 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
 
   if (printSummary) {
     SPDLOG_INFO("{} ENDED", type());
-    SPDLOG_INFO("LP OPT RESULT {}",
-                lpOptimizationResultToStr(_simplexTableau._result));
+    SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
+                lpOptimizationResultToStr(_simplexTableau._result),
+                _simplexTableau.getCurrentObjectiveValue());
     SPDLOG_INFO("ELAPSED TIME {} SECONDS, ITERATION COUNT {}",
                 lpOptStatistics._elapsedTimeSec, iterCount);
   }
@@ -179,7 +181,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
     const int iterCount) {
-  constexpr size_t HARD_ITERATION_LIMIT = 10000;
+  constexpr size_t HARD_ITERATION_LIMIT = 100000;
   if (iterCount > HARD_ITERATION_LIMIT) {
     _simplexTableau._result = LPOptimizationResult::REACHED_ITERATION_LIMIT;
     return false;

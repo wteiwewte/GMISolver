@@ -77,7 +77,7 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
 template <typename T>
 std::optional<LinearProgram<T>> LinearProgram<T>::dualProgram() const {
   LinearProgram<T> dualProgram;
-  dualProgram._name = "DUAL_" + _name;
+  dualProgram._name = _name + "_DUAL";
   dualProgram._constraintMatrix = transpose(_constraintMatrix);
 
   for (int rowIdx = 0; rowIdx < dualProgram._constraintMatrix.size();

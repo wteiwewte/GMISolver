@@ -37,7 +37,8 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
               primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
   auto artLpOptStats = runImpl("PHASE_ONE");
 
-  if (NumericalTraitsT::greater(_simplexTableau._objectiveValue, 0.0)) {
+  if (_simplexTableau._objectiveValue >
+      NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE) {
     SPDLOG_WARN(
         "PROGRAM WITH ARTIFICIAL VARIABLE HAS OPTIMUM {} GREATER THAN 0 - "
         "INITIAL PROGRAM IS INFEASIBLE",

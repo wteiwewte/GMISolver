@@ -43,28 +43,34 @@ MpsReader<T>::read(const std::string &filePath) {
   std::string readLine;
   std::string currentWord;
 
-  std::map<std::string, int> rowLabelToRowIdxMap;
+  std::map<std::string, std::optional<int>> rowLabelToRowIdxMap;
   std::map<std::string, int> variableLabelToVariableIdxMap;
 
   const auto addNewRowInfo = [&](const auto &rowLabelStr,
                                  const auto rowType) -> std::optional<int> {
     const RowInfo newRowInfo{rowLabelStr, rowType};
+    const bool isRowNeeded =
+        (rowType != RowType::OBJECTIVE) ||
+        (linearProgram._objectiveInfo._type == RowType::UNKNOWN);
     const auto [_, inserted] = rowLabelToRowIdxMap.try_emplace(
-        rowLabelStr, linearProgram._rowInfos.size());
+        rowLabelStr,
+        (isRowNeeded ? std::optional<int>(linearProgram._rowInfos.size())
+                     : std::nullopt));
     if (!inserted) {
       SPDLOG_WARN("Duplicated row label {}", rowLabelStr);
       return false;
     }
 
-    if (rowType == RowType::OBJECTIVE) {
-      // Consecutive objective rows are discarded
-      if (linearProgram._objectiveInfo._type == RowType::UNKNOWN) {
+    if (isRowNeeded) {
+      if (rowType == RowType::OBJECTIVE) {
+        // First objective row is taken into account, consecutive ones are
+        // discarded
         linearProgram._objectiveInfo = newRowInfo;
+      } else {
+        linearProgram._rowInfos.push_back(newRowInfo);
+        linearProgram._constraintMatrix.resize(linearProgram._rowInfos.size());
+        linearProgram._rightHandSides.resize(linearProgram._rowInfos.size());
       }
-    } else {
-      linearProgram._rowInfos.push_back(newRowInfo);
-      linearProgram._constraintMatrix.resize(linearProgram._rowInfos.size());
-      linearProgram._rightHandSides.resize(linearProgram._rowInfos.size());
     }
     return true;
   };
@@ -211,7 +217,12 @@ MpsReader<T>::read(const std::string &filePath) {
           return false;
         }
 
-        linearProgram._constraintMatrix[foundRowIt->second][*variableIdx] =
+        const auto rowIdx = foundRowIt->second;
+        if (!rowIdx.has_value()) {
+          return true;
+        }
+
+        linearProgram._constraintMatrix[*rowIdx][*variableIdx] =
             convert(coefficientValueStr);
         return true;
       };
@@ -235,15 +246,20 @@ MpsReader<T>::read(const std::string &filePath) {
                                    const auto &coefficientValueStr) {
         const auto foundRowIt = rowLabelToRowIdxMap.find(rowLabelStr);
         if (foundRowIt == rowLabelToRowIdxMap.end()) {
-          SPDLOG_WARN("Row label {} given in column section doesn't "
+          SPDLOG_WARN("Row label {} given in rhs section doesn't "
                       "correspond to any row",
                       rowLabelStr);
           return false;
         }
 
+        const auto rowIdx = foundRowIt->second;
+        if (!rowIdx.has_value()) {
+          SPDLOG_WARN("Discarded row {} given in rhs section", rowLabelStr);
+          return false;
+        }
+
         linearProgram._rightHandSides.resize(linearProgram._rowInfos.size());
-        linearProgram._rightHandSides[foundRowIt->second] =
-            convert(coefficientValueStr);
+        linearProgram._rightHandSides[*rowIdx] = convert(coefficientValueStr);
         return true;
       };
 
@@ -267,26 +283,30 @@ MpsReader<T>::read(const std::string &filePath) {
                                           const auto &coefficientValueStr) {
         const auto foundRowIt = rowLabelToRowIdxMap.find(rowLabelStr);
         if (foundRowIt == rowLabelToRowIdxMap.end()) {
-          SPDLOG_WARN("Row label {} given in column section doesn't "
+          SPDLOG_WARN("Row label {} given in range section doesn't "
                       "correspond to any row",
                       rowLabelStr);
           return false;
         }
         const auto rowIdx = foundRowIt->second;
-        const auto rowType = linearProgram._rowInfos[rowIdx]._type;
+        if (!rowIdx.has_value()) {
+          SPDLOG_WARN("Discarded row {} given in range section", rowLabelStr);
+          return false;
+        }
+        const auto rowType = linearProgram._rowInfos[*rowIdx]._type;
 
         std::optional<RowType> rangeConstraintType;
         std::optional<T> rangeRHS;
         switch (rowType) {
         case RowType::GREATER_THAN_OR_EQUAL: {
           rangeConstraintType = RowType::LESS_THAN_OR_EQUAL;
-          rangeRHS = linearProgram._rightHandSides[rowIdx] +
+          rangeRHS = linearProgram._rightHandSides[*rowIdx] +
                      std::abs(convert(coefficientValueStr));
           break;
         }
         case RowType::LESS_THAN_OR_EQUAL: {
           rangeConstraintType = RowType::GREATER_THAN_OR_EQUAL;
-          rangeRHS = linearProgram._rightHandSides[rowIdx] -
+          rangeRHS = linearProgram._rightHandSides[*rowIdx] -
                      std::abs(convert(coefficientValueStr));
           break;
         }
@@ -304,7 +324,7 @@ MpsReader<T>::read(const std::string &filePath) {
           return false;
 
         linearProgram._constraintMatrix.back() =
-            linearProgram._constraintMatrix[rowIdx];
+            linearProgram._constraintMatrix[*rowIdx];
         linearProgram._rightHandSides.back() = *rangeRHS;
         return true;
       };

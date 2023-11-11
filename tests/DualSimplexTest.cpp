@@ -39,37 +39,49 @@ protected:
                    SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE,
                    SimplexTableauType::FULL});
   }
+
+  void testCase(const std::string &dualSimplexTestDirPath,
+                const size_t basisSizeLimit) {
+    using FloatingPointT = std::tuple_element_t<0, typename T::types>;
+    using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
+    const LPOptimizationType lpOptimizationType{
+        LPOptimizationType::LINEAR_RELAXATION};
+    this->solveAndCompareInstancesFromSets(
+        dualSimplexTestDirPath, basisSizeLimit, lpOptimizationType,
+        [&](const auto &linearProgram,
+            const SimplexTableauType simplexTableauType,
+            const std::filesystem::path &modelFileMpsPath) {
+          const auto dualSimplexLpOptStats =
+              runDualSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
+                  linearProgram, simplexTableauType);
+          const auto gurobiLPOptStats =
+              GurobiOptimizer("", modelFileMpsPath)
+                  .optimize<FloatingPointT>(
+                      LPOptimizationType::LINEAR_RELAXATION);
+          this->compareWithGurobi(dualSimplexLpOptStats, gurobiLPOptStats);
+        });
+  }
 };
 
 TYPED_TEST_SUITE_P(DualSimplexTest);
 
 TYPED_TEST_P(DualSimplexTest, runDualSimplexAndCompareWithGurobi) {
-  using FloatingPointT = std::tuple_element_t<0, typename TypeParam::types>;
-  using SimplexTraitsT = std::tuple_element_t<1, typename TypeParam::types>;
-  constexpr auto DUAL_SIMPLEX_TEST_DIR_PATH =
-      "../../tests/dual_simplex_working_instances";
-  constexpr size_t DUAL_SIMPLEX_BASIS_SIZE_LIMIT = 1000;
-  const LPOptimizationType lpOptimizationType{
-      LPOptimizationType::LINEAR_RELAXATION};
-  this->solveAndCompareInstancesFromSets(
-      DUAL_SIMPLEX_TEST_DIR_PATH, DUAL_SIMPLEX_BASIS_SIZE_LIMIT,
-      lpOptimizationType,
-      [&](const auto &linearProgram,
-          const SimplexTableauType simplexTableauType,
-          const std::filesystem::path &modelFileMpsPath) {
-        const auto dualSimplexLpOptStats =
-            runDualSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
-                linearProgram, simplexTableauType);
-        const auto gurobiLPOptStats =
-            GurobiOptimizer("", modelFileMpsPath)
-                .optimize<FloatingPointT>(
-                    LPOptimizationType::LINEAR_RELAXATION);
-        this->compareWithGurobi(dualSimplexLpOptStats, gurobiLPOptStats);
-      });
+  EXPECT_NO_FATAL_FAILURE(
+      this->testCase("../../tests/dual_simplex_working_instances", 1000));
 }
 
-REGISTER_TYPED_TEST_SUITE_P(DualSimplexTest,
-                            runDualSimplexAndCompareWithGurobi);
+TYPED_TEST_P(DualSimplexTest,
+             runDualSimplexAndCompareWithGurobiOnInfeasibleNetlibInstances) {
+  absl::SetFlag(&FLAGS_validate_simplex_option,
+                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
+  absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
+  EXPECT_NO_FATAL_FAILURE(
+      this->testCase("../../tests/netlib_infeasible_instances", 1000));
+}
+
+REGISTER_TYPED_TEST_SUITE_P(
+    DualSimplexTest, runDualSimplexAndCompareWithGurobi,
+    runDualSimplexAndCompareWithGurobiOnInfeasibleNetlibInstances);
 
 using DualSimplexTypes = ::testing::Types<
     TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>,

@@ -143,6 +143,8 @@ lpOptimizationResultToStr(const LPOptimizationResult lpOptimizationResult) {
     return "COULD_NOT_LOAD";
   case LPOptimizationResult::FAILED_VALIDATION:
     return "FAILED_VALIDATION";
+  case LPOptimizationResult::TOO_SMALL_PROGRESS:
+    return "TOO_SMALL_PROGRESS";
   case LPOptimizationResult::UNKNOWN:
     return "UNKNOWN";
   }

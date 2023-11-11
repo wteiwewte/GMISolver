@@ -250,7 +250,7 @@ TYPED_TEST_P(PrimalSimplexTest,
   absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
   absl::SetFlag(&FLAGS_obj_value_logging_frequency, 4000);
   EXPECT_NO_FATAL_FAILURE(
-      this->testCase("../../tests/netlib_infeasible_instances", 500));
+      this->testCase("../../tests/netlib_infeasible_instances", 400));
 }
 TYPED_TEST_P(
     PrimalSimplexTest,

@@ -90,6 +90,9 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
       if (!tryReinversion(iterCount, lpOptStatistics))
         break;
 
+      if (!checkObjectiveProgress(lpOptStatistics))
+        break;
+
       if (!checkIterationLimit(iterCount))
         break;
 
@@ -186,6 +189,28 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
   if (iterCount > HARD_ITERATION_LIMIT) {
     _simplexTableau._result = LPOptimizationResult::REACHED_ITERATION_LIMIT;
     return false;
+  }
+  return true;
+}
+
+template <typename T, typename SimplexTraitsT>
+bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkObjectiveProgress(
+    const LPOptStatistics<T> &lpOptStatistics) {
+  constexpr size_t ITERATION_WINDOW_SIZE = 5000;
+  if (lpOptStatistics._consecutiveObjectiveValues.size() >=
+      ITERATION_WINDOW_SIZE) {
+    const auto currentObjValue =
+        lpOptStatistics._consecutiveObjectiveValues.back();
+    const auto objValueBeforeTheWindow =
+        lpOptStatistics._consecutiveObjectiveValues
+            [lpOptStatistics._consecutiveObjectiveValues.size() -
+             ITERATION_WINDOW_SIZE];
+    if (currentObjValue >=
+        objValueBeforeTheWindow -
+            NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE) {
+      _simplexTableau._result = LPOptimizationResult::TOO_SMALL_PROGRESS;
+      return false;
+    }
   }
   return true;
 }

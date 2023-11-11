@@ -50,6 +50,7 @@ enum class LPOptimizationResult : int8_t {
   REACHED_ITERATION_LIMIT,
   COULD_NOT_LOAD,
   FAILED_VALIDATION,
+  TOO_SMALL_PROGRESS,
   UNKNOWN
 };
 

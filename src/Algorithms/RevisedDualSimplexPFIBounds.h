@@ -36,6 +36,8 @@ private:
                             const LPOptStatistics<T> &lpOptStatistics);
   void tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics);
   bool checkIterationLimit(const int iterCount);
+  bool checkObjectiveProgress(const LPOptStatistics<T> &lpOptStatistics);
+
   std::optional<int> chooseRow();
   std::optional<int> chooseRowFirstEligible();
   std::optional<int> chooseRowBiggestViolation();

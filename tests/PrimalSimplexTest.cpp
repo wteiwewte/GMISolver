@@ -65,7 +65,8 @@ protected:
         primalSimplexTestDirPath, basisSizeLimit, lpOptimizationType,
         [&](const auto &primalProgram,
             const SimplexTableauType simplexTableauType,
-            const std::filesystem::path &modelFileMpsPath) {
+            const std::filesystem::path &modelFileMpsPath,
+            LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
           const auto primalProgramSimplexOutput =
               runPrimalSimplexWithImplicitBounds<FloatingPointT,
                                                  SimplexTraitsT>(
@@ -80,6 +81,11 @@ protected:
               GurobiOptimizer("", modelFileMpsPath)
                   .optimize<FloatingPointT>(lpOptimizationType);
 
+          lpOptStatisticsVec.push_back(gurobiLPOptStats);
+          lpOptStatisticsVec.push_back(
+              primalProgramSimplexOutput._phaseOneLpOptStats);
+          lpOptStatisticsVec.push_back(
+              dualProgramSimplexOutput._phaseOneLpOptStats);
           ASSERT_EQ(LPOptimizationResult::BOUNDED_AND_FEASIBLE,
                     primalProgramSimplexOutput._phaseOneLpOptStats._optResult);
           const bool isPrimalProgramInfeasible =
@@ -101,6 +107,8 @@ protected:
           } else {
             ASSERT_TRUE(
                 primalProgramSimplexOutput._phaseTwoLpOptStats.has_value());
+            lpOptStatisticsVec.push_back(
+                *primalProgramSimplexOutput._phaseTwoLpOptStats);
             switch (
                 primalProgramSimplexOutput._phaseTwoLpOptStats->_optResult) {
             case LPOptimizationResult::UNBOUNDED: {
@@ -122,6 +130,8 @@ protected:
                   dualProgramSimplexOutput._phaseOneLpOptStats._optResult);
               ASSERT_TRUE(
                   dualProgramSimplexOutput._phaseTwoLpOptStats.has_value());
+              lpOptStatisticsVec.push_back(
+                  *dualProgramSimplexOutput._phaseTwoLpOptStats);
               EXPECT_EQ(
                   LPOptimizationResult::BOUNDED_AND_FEASIBLE,
                   dualProgramSimplexOutput._phaseTwoLpOptStats->_optResult);
@@ -156,7 +166,8 @@ protected:
         primalSimplexTestDirPath, basisSizeLimit, lpOptimizationType,
         [&](const auto &primalProgram,
             const SimplexTableauType simplexTableauType,
-            const std::filesystem::path &modelFileMpsPath) {
+            const std::filesystem::path &modelFileMpsPath,
+            LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
           const auto primalProgramSimplexOutput =
               runPrimalSimplexWithImplicitBounds<FloatingPointT,
                                                  SimplexTraitsT>(
@@ -164,6 +175,10 @@ protected:
           const auto gurobiLPOptStats =
               GurobiOptimizer("", modelFileMpsPath)
                   .optimize<FloatingPointT>(lpOptimizationType);
+
+          lpOptStatisticsVec.push_back(gurobiLPOptStats);
+          lpOptStatisticsVec.push_back(
+              primalProgramSimplexOutput._phaseOneLpOptStats);
           ASSERT_EQ(LPOptimizationResult::BOUNDED_AND_FEASIBLE,
                     primalProgramSimplexOutput._phaseOneLpOptStats._optResult);
           const bool isPrimalProgramInfeasible =
@@ -179,6 +194,8 @@ protected:
           } else {
             ASSERT_TRUE(
                 primalProgramSimplexOutput._phaseTwoLpOptStats.has_value());
+            lpOptStatisticsVec.push_back(
+                *primalProgramSimplexOutput._phaseTwoLpOptStats);
             switch (
                 primalProgramSimplexOutput._phaseTwoLpOptStats->_optResult) {
             case LPOptimizationResult::UNBOUNDED: {

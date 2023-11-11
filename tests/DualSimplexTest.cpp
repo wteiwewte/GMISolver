@@ -50,7 +50,8 @@ protected:
         dualSimplexTestDirPath, basisSizeLimit, lpOptimizationType,
         [&](const auto &linearProgram,
             const SimplexTableauType simplexTableauType,
-            const std::filesystem::path &modelFileMpsPath) {
+            const std::filesystem::path &modelFileMpsPath,
+            LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
           const auto dualSimplexLpOptStats =
               runDualSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
                   linearProgram, simplexTableauType);
@@ -59,6 +60,8 @@ protected:
                   .optimize<FloatingPointT>(
                       LPOptimizationType::LINEAR_RELAXATION);
           this->compareWithGurobi(dualSimplexLpOptStats, gurobiLPOptStats);
+          lpOptStatisticsVec.push_back(dualSimplexLpOptStats);
+          lpOptStatisticsVec.push_back(gurobiLPOptStats);
         });
   }
 };

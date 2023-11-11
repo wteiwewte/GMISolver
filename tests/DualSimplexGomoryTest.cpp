@@ -59,9 +59,11 @@ TYPED_TEST_P(DualSimplexGomoryTest,
       lpOptimizationType,
       [&](const auto &linearProgram,
           const SimplexTableauType simplexTableauType,
-          const std::filesystem::path &modelFileMpsPath) {
+          const std::filesystem::path &modelFileMpsPath,
+          LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
         for (const auto lexicographicReoptType :
              {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
+          // FIXME add support for ipOptStatsVec
           IPOptStatistics<FloatingPointT> ipOptStatistics =
               runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
                                                  SimplexTraitsT>(
@@ -90,9 +92,11 @@ TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
       lpOptimizationType,
       [&](const auto &linearProgram,
           const SimplexTableauType simplexTableauType,
-          const std::filesystem::path &modelFileMpsPath) {
+          const std::filesystem::path &modelFileMpsPath,
+          LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
         for (const auto lexicographicReoptType :
              {LexicographicReoptType::MAX}) {
+          // FIXME add support for ipOptStatsVec
           IPOptStatistics<FloatingPointT> ipOptStatistics =
               runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
                                                  SimplexTraitsT>(

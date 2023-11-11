@@ -1,6 +1,7 @@
 #ifndef GMISOLVER_LPTESTBASE_H
 #define GMISOLVER_LPTESTBASE_H
 
+#include "Util/LPOptStatisticsPrinter.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/DataModel/EnumTypes.h"
 #include "src/Util/IPOptStatistics.h"
@@ -85,6 +86,7 @@ template <typename T> struct LPTestBase {
       const std::string &dirPath, const size_t basisSizeLimit,
       const LPOptimizationType lpOptimizationType, LPOptFunc lpOptFunc,
       const bool allBoundsMustBeSpecified = true) {
+    LPOptStatisticsVec<FloatingPointT> lpOptStatisticsVec;
     for (const SimplexTableauType simplexTableauType :
          absl::GetFlag(FLAGS_simplex_tableau_types)) {
       InstanceSetStats instanceSetStats;
@@ -109,7 +111,7 @@ template <typename T> struct LPTestBase {
                                  isRelaxationOptType, allBoundsMustBeSpecified,
                                  instanceSetStats)) {
             lpOptFunc(*linearProgram, simplexTableauType,
-                      lpModelFileEntry.path());
+                      lpModelFileEntry.path(), lpOptStatisticsVec);
           }
         }
       }
@@ -140,6 +142,10 @@ template <typename T> struct LPTestBase {
                       instanceSetStats._modelsWithNoAllNonnegativeVariables);
       }
     }
+    LPOptStatisticsPrinter<FloatingPointT> lpOptStatisticsPrinter(
+        lpOptStatisticsVec);
+    lpOptStatisticsPrinter.print();
+    SPDLOG_INFO(lpOptStatisticsPrinter.toString());
   }
 
   void compare(const LPOptimizationType lpOptimizationType,

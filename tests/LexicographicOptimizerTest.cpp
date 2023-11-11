@@ -65,7 +65,8 @@ TYPED_TEST_P(LexicographicOptimizerTest,
       lpOptimizationType,
       [&](const auto &linearProgram,
           const SimplexTableauType simplexTableauType,
-          const std::filesystem::path &modelFileMpsPath) {
+          const std::filesystem::path &modelFileMpsPath,
+          LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
         for (const auto lexicographicReoptType :
              {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
           LexReoptStatistics<FloatingPointT> lexReoptStatistics =
@@ -86,8 +87,14 @@ TYPED_TEST_P(LexicographicOptimizerTest,
             EXPECT_NEAR(gurobiSolution[varIdx], lexOptimizerSolution[varIdx],
                         0.00001);
           }
+
           this->compareWithGurobi(lexicographicReoptType, lexReoptStatistics,
                                   gurobiLPOptStats);
+          lpOptStatisticsVec.push_back(gurobiLPOptStats);
+          for (const auto &lexLPReoptStats :
+               lexReoptStatistics._lexLPReoptStatsVec) {
+            lpOptStatisticsVec.push_back(lexLPReoptStats);
+          }
         }
       });
 }

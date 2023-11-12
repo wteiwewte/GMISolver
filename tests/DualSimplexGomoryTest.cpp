@@ -41,74 +41,49 @@ protected:
     absl::SetFlag(&FLAGS_simplex_tableau_types,
                   {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE});
   }
+
+  void testCase(const std::string &dualSimplexGomoryTestDirPath,
+                const size_t basisSizeLimit,
+                const LPOptimizationType lpOptimizationType) {
+    using FloatingPointT = std::tuple_element_t<0, typename T::types>;
+    using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
+    this->solveAndCompareInstancesFromSets(
+        dualSimplexGomoryTestDirPath, basisSizeLimit, lpOptimizationType,
+        [&](const auto &linearProgram,
+            const SimplexTableauType simplexTableauType,
+            const std::filesystem::path &modelFileMpsPath,
+            LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
+          for (const auto lexicographicReoptType :
+               {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
+            // FIXME add support for ipOptStatsVec
+            IPOptStatistics<FloatingPointT> ipOptStatistics =
+                runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
+                                                   SimplexTraitsT>(
+                    linearProgram, simplexTableauType, lexicographicReoptType,
+                    lpOptimizationType, GomoryCutChoosingRule::FIRST);
+            const auto gurobiLPOptStats =
+                GurobiOptimizer("", modelFileMpsPath)
+                    .optimize<FloatingPointT>(lpOptimizationType);
+            this->compare(lpOptimizationType, lexicographicReoptType,
+                          ipOptStatistics, gurobiLPOptStats);
+          }
+        });
+  }
 };
 
 TYPED_TEST_SUITE_P(DualSimplexGomoryTest);
 
 TYPED_TEST_P(DualSimplexGomoryTest,
              runDualSimplexWithLexReoptAndCompareWithGurobi) {
-  using FloatingPointT = std::tuple_element_t<0, typename TypeParam::types>;
-  using SimplexTraitsT = std::tuple_element_t<1, typename TypeParam::types>;
-  constexpr auto DUAL_SIMPLEX_TEST_DIR_PATH =
-      "../../tests/dual_simplex_working_instances";
-  constexpr size_t DUAL_SIMPLEX_BASIS_SIZE_LIMIT = 1000;
-  const LPOptimizationType lpOptimizationType{
-      LPOptimizationType::LINEAR_RELAXATION};
-  this->solveAndCompareInstancesFromSets(
-      DUAL_SIMPLEX_TEST_DIR_PATH, DUAL_SIMPLEX_BASIS_SIZE_LIMIT,
-      lpOptimizationType,
-      [&](const auto &linearProgram,
-          const SimplexTableauType simplexTableauType,
-          const std::filesystem::path &modelFileMpsPath,
-          LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
-        for (const auto lexicographicReoptType :
-             {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
-          // FIXME add support for ipOptStatsVec
-          IPOptStatistics<FloatingPointT> ipOptStatistics =
-              runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
-                                                 SimplexTraitsT>(
-                  linearProgram, simplexTableauType, lexicographicReoptType,
-                  lpOptimizationType, GomoryCutChoosingRule::FIRST);
-          const auto gurobiLPOptStats =
-              GurobiOptimizer("", modelFileMpsPath)
-                  .optimize<FloatingPointT>(lpOptimizationType);
-          this->compare(lpOptimizationType, lexicographicReoptType,
-                        ipOptStatistics, gurobiLPOptStats);
-        }
-      });
+  EXPECT_NO_FATAL_FAILURE(
+      this->testCase("../../tests/dual_simplex_working_instances", 1000,
+                     LPOptimizationType::LINEAR_RELAXATION));
 }
 TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
-  using FloatingPointT = std::tuple_element_t<0, typename TypeParam::types>;
-  using SimplexTraitsT = std::tuple_element_t<1, typename TypeParam::types>;
-  constexpr auto DUAL_SIMPLEX_TEST_DIR_PATH =
-      "../../tests/gomory_example_instances";
-  //      "../../tests/dual_simplex_working_instances";
-
-  constexpr size_t DUAL_SIMPLEX_BASIS_SIZE_LIMIT = 25;
-  const LPOptimizationType lpOptimizationType{
-      LPOptimizationType::INTEGER_PROGRAM};
-  this->solveAndCompareInstancesFromSets(
-      DUAL_SIMPLEX_TEST_DIR_PATH, DUAL_SIMPLEX_BASIS_SIZE_LIMIT,
-      lpOptimizationType,
-      [&](const auto &linearProgram,
-          const SimplexTableauType simplexTableauType,
-          const std::filesystem::path &modelFileMpsPath,
-          LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
-        for (const auto lexicographicReoptType :
-             {LexicographicReoptType::MAX}) {
-          // FIXME add support for ipOptStatsVec
-          IPOptStatistics<FloatingPointT> ipOptStatistics =
-              runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
-                                                 SimplexTraitsT>(
-                  linearProgram, simplexTableauType, lexicographicReoptType,
-                  lpOptimizationType, GomoryCutChoosingRule::FIRST);
-          const auto gurobiLPOptStats =
-              GurobiOptimizer("", modelFileMpsPath)
-                  .optimize<FloatingPointT>(lpOptimizationType);
-          this->compare(lpOptimizationType, lexicographicReoptType,
-                        ipOptStatistics, gurobiLPOptStats);
-        }
-      });
+  absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
+  EXPECT_NO_FATAL_FAILURE(this->testCase("../../tests/gomory_example_instances",
+                                         25,
+                                         LPOptimizationType::INTEGER_PROGRAM));
 }
 
 REGISTER_TYPED_TEST_SUITE_P(DualSimplexGomoryTest,

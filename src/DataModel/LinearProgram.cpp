@@ -22,6 +22,18 @@ int countFreeVariables(const std::vector<std::optional<T>> &lowerBounds,
   }
   return freeVarCount;
 }
+
+int countIntegerVariables(const std::vector<VariableInfo> &variableInfos) {
+  return std::count_if(variableInfos.begin(), variableInfos.end(),
+                       [](const VariableInfo &variableInfo) {
+                         return variableInfo._type == VariableType::INTEGER;
+                       });
+}
+
+const auto isInteger = [](const auto val) {
+  double integerPart;
+  return std::modf(val, &integerPart) == 0.0;
+};
 } // namespace
 
 template <typename T> void LinearProgram<T>::convertToStandardForm() {
@@ -62,9 +74,11 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
       break;
     }
     const auto newSlackLabelStr = newSlackLabel();
-    _variableInfos.push_back(VariableInfo{._label = newSlackLabelStr,
-                                          ._type = VariableType::CONTINUOUS,
-                                          ._isSlack = true});
+    _variableInfos.push_back(VariableInfo{
+        ._label = newSlackLabelStr,
+        ._type = areAllCoefficientsInteger(rowIdx) ? VariableType::INTEGER
+                                                   : VariableType::CONTINUOUS,
+        ._isSlack = true});
     _variableLabelSet.insert(newSlackLabelStr);
     _variableLowerBounds.push_back(0.0);
     _variableUpperBounds.push_back(std::nullopt);
@@ -72,6 +86,13 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
     ++newVariableIdx;
     _rowInfos[rowIdx]._type = RowType::EQUALITY;
   }
+}
+
+template <typename T>
+bool LinearProgram<T>::areAllCoefficientsInteger(const int rowIdx) const {
+  return isInteger(_rightHandSides[rowIdx]) &&
+         std::all_of(_constraintMatrix[rowIdx].begin(),
+                     _constraintMatrix[rowIdx].end(), isInteger);
 }
 
 template <typename T>
@@ -214,10 +235,12 @@ template <typename T> void LinearProgram<T>::logGeneralInformation() const {
       "VARIABLE COUNT: {} ROW COUNT: {}, CONSTRAINT MATRIX DIMENSIONS: {} x {}",
       _variableInfos.size(), _rowInfos.size(), _constraintMatrix.size(),
       _constraintMatrix.front().size());
-  SPDLOG_INFO("LOWER BOUNDS {}, UPPER BOUNDS {}, FREE VARIABLES {}",
+  SPDLOG_INFO("LOWER BOUNDS {}, UPPER BOUNDS {}, FREE VARIABLES {}, INTEGER "
+              "VARIABLES {}",
               countBoundsSpecified(_variableLowerBounds),
               countBoundsSpecified(_variableUpperBounds),
-              countFreeVariables(_variableLowerBounds, _variableUpperBounds));
+              countFreeVariables(_variableLowerBounds, _variableUpperBounds),
+              countIntegerVariables(_variableInfos));
 }
 
 template <typename T>
@@ -249,11 +272,6 @@ bool LinearProgram<T>::isPureIP(const bool checkObjVar) const {
 
 template <typename T>
 bool LinearProgram<T>::allCoefficientsAreIntegers() const {
-  const auto isInteger = [](const auto val) {
-    double integerPart;
-    return std::modf(val, &integerPart) == 0.0;
-  };
-
   return std::all_of(_objective.begin(), _objective.end(), isInteger) &&
          std::all_of(_rightHandSides.begin(), _rightHandSides.end(),
                      isInteger) &&

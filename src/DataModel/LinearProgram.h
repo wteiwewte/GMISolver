@@ -44,9 +44,12 @@ public:
 private:
   friend struct MpsReader<T>;
   template <typename U, typename ComparisonTraitsU> friend class SimplexTableau;
+  template <typename U, typename ComparisonTraitsU>
+  friend class SimplexValidator;
 
   std::string basicInformationStr() const;
   void logGeneralInformation() const;
+  bool areAllCoefficientsInteger(const int rowIdx) const;
 
   std::string _name;
   std::vector<RowInfo> _rowInfos;

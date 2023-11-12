@@ -50,15 +50,18 @@ private:
   }
 
   ExpectedT validateConstraints() const {
-    for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
+    for (int rowIdx = 0;
+         rowIdx < _simplexTableau._initialProgram._rowInfos.size(); ++rowIdx) {
       typename SimplexTraitsT::CurrentAdder adder;
-      for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
+      for (int varIdx = 0;
+           varIdx < _simplexTableau._initialProgram._variableInfos.size();
            ++varIdx) {
-        adder.addValue(_simplexTableau._x[varIdx] *
-                       _simplexTableau._constraintMatrix[rowIdx][varIdx]);
+        adder.addValue(
+            _simplexTableau._x[varIdx] *
+            _simplexTableau._initialProgram._constraintMatrix[rowIdx][varIdx]);
       }
       const auto lhs = adder.currentSum();
-      const auto rhs = _simplexTableau._initialRightHandSides[rowIdx];
+      const auto rhs = _simplexTableau._initialProgram._rightHandSides[rowIdx];
       if (!NumericalTraitsT::equal(
               lhs, rhs, NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)) {
         return tl::unexpected{
@@ -321,21 +324,37 @@ private:
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
 
-    if (_simplexTableau._constraintMatrix.size() != expectedNumberOfRows)
-      return tl::unexpected{
-          fmt::format("Number of constraints doesn't match number of rows")};
+    if (_simplexTableau._simplexTableauType == SimplexTableauType::FULL) {
+      if (_simplexTableau._fullTableau.size() != expectedNumberOfRows)
+        return tl::unexpected{fmt::format(
+            "Number of full tableau constraints doesn't match number of rows")};
 
-    for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
-      if (_simplexTableau._constraintMatrix[rowIdx].size() !=
-          expectedNumberOfVars)
+      for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
+        if (_simplexTableau._fullTableau[rowIdx].size() != expectedNumberOfVars)
+          return tl::unexpected{fmt::format(
+              "Number of full tableau constraint row {} coefficients doesn't "
+              "match number of variables",
+              rowIdx)};
+      }
+
+      return {};
+    } else {
+      if (_simplexTableau._constraintMatrix.size() != expectedNumberOfRows)
         return tl::unexpected{
-            fmt::format("Number of constraint row {} coefficients doesn't "
-                        "match number of variables",
-                        rowIdx)};
-    }
+            fmt::format("Number of constraints doesn't match number of rows")};
 
-    return validateMatrixReprNormal().and_then(
-        [&] { return validateMatrixReprSparse(); });
+      for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
+        if (_simplexTableau._constraintMatrix[rowIdx].size() !=
+            expectedNumberOfVars)
+          return tl::unexpected{
+              fmt::format("Number of constraint row {} coefficients doesn't "
+                          "match number of variables",
+                          rowIdx)};
+      }
+
+      return validateMatrixReprNormal().and_then(
+          [&] { return validateMatrixReprSparse(); });
+    }
   }
 
   ExpectedT validateMatrixReprNormal() const {
@@ -412,12 +431,17 @@ private:
 
   ExpectedT validateRHS() const {
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
-    if (_simplexTableau._rightHandSides.size() == expectedNumberOfRows &&
-        _simplexTableau._initialRightHandSides.size() == expectedNumberOfRows)
-      return {};
+    if (_simplexTableau._rightHandSides.size() != expectedNumberOfRows)
+      return tl::unexpected{
+          fmt::format("RHS size doesn't match number of rows")};
 
-    return tl::unexpected{
-        fmt::format("RHS or initial RHS sizes don't match number of rows")};
+    if (_simplexTableau._simplexTableauType != SimplexTableauType::FULL) {
+      if (_simplexTableau._initialRightHandSides.size() != expectedNumberOfRows)
+        return tl::unexpected{
+            fmt::format("Initial RHS size doesn't match number of rows")};
+    }
+
+    return {};
   }
 
   ExpectedT validateObjectiveRelatedThings() const {

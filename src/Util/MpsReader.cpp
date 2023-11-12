@@ -470,7 +470,6 @@ MpsReader<T>::read(const std::string &filePath) {
     SPDLOG_WARN("Could not find objective row");
     return std::nullopt;
   }
-
   linearProgram.convertToStandardForm();
 
   if (!finalizeBounds(linearProgram)) {

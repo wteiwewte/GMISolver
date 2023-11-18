@@ -60,8 +60,8 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
     while (true) {
       ++relaxationNo;
-      //      if (relaxationNo > 25)
-      //        break;
+      if (relaxationNo > 16)
+        break;
       SPDLOG_INFO("{}TH GOMORY ROUND", relaxationNo);
       checkIfNonBasicVarsAreIntegral();
       const auto fractionalBasisRows =
@@ -73,6 +73,9 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
         break;
       addCutRows(relaxationNo, fractionalBasisRows);
       addSlackVars(relaxationNo, fractionalBasisRows);
+
+      _simplexTableau.calculateCurrentObjectiveValue();
+      _simplexTableau.calculateSolution();
 
       SPDLOG_INFO("AFTER ADDITION OF NEW CUTS");
       SPDLOG_INFO(_simplexTableau.toString());
@@ -213,7 +216,16 @@ void DualSimplexGomory<T, SimplexTraitsT>::addCutRows(
          ++varIdx) {
       if (!_simplexTableau._simplexBasisData
                ._isBasicColumnIndexBitset[varIdx]) {
-        newCutRow[varIdx] = std::floor(tableauRow[varIdx]) - tableauRow[varIdx];
+        if (_simplexTableau._simplexBasisData
+                ._isColumnAtLowerBoundBitset[varIdx] ||
+            _simplexTableau._isVariableFreeBitset[varIdx]) {
+          newCutRow[varIdx] =
+              std::floor(tableauRow[varIdx]) - tableauRow[varIdx];
+        } else {
+          SPDLOG_INFO("HALLOOO");
+          newCutRow[varIdx] =
+              tableauRow[varIdx] + std::floor(-tableauRow[varIdx]);
+        }
       }
     }
     const int newCutVarIdx = _simplexTableau._variableInfos.size() + rowNo;

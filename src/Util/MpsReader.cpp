@@ -254,7 +254,8 @@ MpsReader<T>::read(const std::string &filePath) {
 
         const auto rowIdx = foundRowIt->second;
         if (!rowIdx.has_value()) {
-          SPDLOG_WARN("Discarded row {} given in rhs section", rowLabelStr);
+          SPDLOG_WARN("Discarded non-constraining row {} given in rhs section",
+                      rowLabelStr);
           return false;
         }
 
@@ -290,7 +291,9 @@ MpsReader<T>::read(const std::string &filePath) {
         }
         const auto rowIdx = foundRowIt->second;
         if (!rowIdx.has_value()) {
-          SPDLOG_WARN("Discarded row {} given in range section", rowLabelStr);
+          SPDLOG_WARN(
+              "Discarded non-constraining row {} given in range section",
+              rowLabelStr);
           return false;
         }
         const auto rowType = linearProgram._rowInfos[*rowIdx]._type;

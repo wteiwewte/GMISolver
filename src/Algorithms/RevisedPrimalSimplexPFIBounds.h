@@ -25,7 +25,8 @@ public:
   LPOptStatistics<T> runPhaseOne();
   LPOptStatistics<T> runPhaseTwo();
   LPOptStatistics<T> runImpl(const std::string &lpNameSuffix,
-                             const bool printSummary = true);
+                             const bool printSummary = true,
+                             const bool isPhaseOne = false);
 
 private:
   using VectorT = typename SimplexTraitsT::VectorT;
@@ -33,12 +34,15 @@ private:
 
   void tryLogObjValue(const int iterCount);
   bool tryReinversion(const int iterCount,
-                      const LPOptStatistics<T> &lpOptStatistics);
+                      const LPOptStatistics<T> &lpOptStatistics,
+                      const bool isPhaseOne);
   bool checkIterationLimit(const int iterCount);
   bool checkObjectiveProgress(const LPOptStatistics<T> &lpOptStatistics);
   bool tryValidateIteration(const int iterCount,
-                            const LPOptStatistics<T> &lpOptStatistics);
-  void tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics);
+                            const LPOptStatistics<T> &lpOptStatistics,
+                            const bool isPhaseOne);
+  void tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics,
+                                   const bool isPhaseOne);
   bool runOneIteration();
 
   std::optional<int> chooseEnteringColumn();

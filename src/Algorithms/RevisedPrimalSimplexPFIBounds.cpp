@@ -35,7 +35,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
               _simplexTableau._initialProgram.getName(),
               _simplexTableau._rowInfos.size(),
               primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
-  auto artLpOptStats = runImpl("PHASE_ONE");
+  auto artLpOptStats = runImpl("PHASE_ONE", true, true);
 
   if (_simplexTableau._objectiveValue >
       NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE) {
@@ -62,7 +62,8 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseTwo() {
 
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
-    const std::string &lpNameSuffix, const bool printSummary) {
+    const std::string &lpNameSuffix, const bool printSummary,
+    const bool isPhaseOne) {
   [[maybe_unused]] int iterCount = 1;
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   LPOptStatistics<T> lpOptStatistics{
@@ -84,10 +85,10 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
       ++iterCount;
       tryLogObjValue(iterCount);
 
-      if (!tryValidateIteration(iterCount, lpOptStatistics))
+      if (!tryValidateIteration(iterCount, lpOptStatistics, isPhaseOne))
         break;
 
-      if (!tryReinversion(iterCount, lpOptStatistics))
+      if (!tryReinversion(iterCount, lpOptStatistics, isPhaseOne))
         break;
 
       if (!checkObjectiveProgress(lpOptStatistics))
@@ -102,7 +103,7 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
 
   if (_simplexTableau.getLPOptResult() ==
       LPOptimizationResult::BOUNDED_AND_FEASIBLE)
-    tryValidateOptimalSolutions(lpOptStatistics);
+    tryValidateOptimalSolutions(lpOptStatistics, isPhaseOne);
 
   if (printSummary) {
     SPDLOG_INFO("{} ENDED", type());
@@ -132,24 +133,26 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(
 
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
-    const int iterCount, const LPOptStatistics<T> &lpOptStatistics) {
+    const int iterCount, const LPOptStatistics<T> &lpOptStatistics,
+    const bool isPhaseOne) {
   if (!_reinversionManager.tryReinverse()) {
     SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
     _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
     return false;
   }
 
-  return tryValidateIteration(iterCount, lpOptStatistics);
+  return tryValidateIteration(iterCount, lpOptStatistics, isPhaseOne);
 }
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
-    const int iterCount, const LPOptStatistics<T> &lpOptStatistics) {
+    const int iterCount, const LPOptStatistics<T> &lpOptStatistics,
+    const bool isPhaseOne) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return true;
 
   const auto validationResult =
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-          .validatePrimalIteration();
+          .validatePrimalIteration(isPhaseOne);
   if (!validationResult) {
     SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
                  validationResult.error());
@@ -166,13 +169,14 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
 
 template <typename T, typename SimplexTraitsT>
 void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
-    tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics) {
+    tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics,
+                                const bool isPhaseOne) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return;
 
   const auto validationResult =
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-          .validateOptimality(SimplexType::PRIMAL);
+          .validateOptimality(SimplexType::PRIMAL, isPhaseOne);
   if (!validationResult) {
     SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}", validationResult.error());
     if (_validateSimplexOption ==

@@ -17,10 +17,10 @@ public:
       : _simplexTableau(_simplexTableau),
         _simplexLpOptStats(simplexLpOptStats) {}
 
-  ExpectedT validatePrimalIteration() const {
+  ExpectedT validatePrimalIteration(const bool isPhaseOne) const {
     return validateTableau()
         .and_then([&] { return validateBasis(); })
-        .and_then([&] { return validatePrimalFeasibility(); })
+        .and_then([&] { return validatePrimalFeasibility(isPhaseOne); })
         .and_then(
             [&] { return validateObjectiveMonotonicity(SimplexType::PRIMAL); });
   }
@@ -33,10 +33,11 @@ public:
             [&] { return validateObjectiveMonotonicity(SimplexType::DUAL); });
   }
 
-  ExpectedT validateOptimality(const SimplexType simplexType) const {
+  ExpectedT validateOptimality(const SimplexType simplexType,
+                               const bool isPhaseOne = false) const {
     return validateTableau()
         .and_then([&] { return validateBasis(); })
-        .and_then([&] { return validatePrimalFeasibility(); })
+        .and_then([&] { return validatePrimalFeasibility(isPhaseOne); })
         .and_then([&] { return validateDualFeasibility(); })
         .and_then([&] { return validateObjectiveMonotonicity(simplexType); });
   }
@@ -44,29 +45,48 @@ public:
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  ExpectedT validatePrimalFeasibility() const {
-    return validateConstraints().and_then(
-        [&] { return validateVariableBounds(); });
+  ExpectedT validatePrimalFeasibility(const bool isPhaseOne) const {
+    return validateConstraints(isPhaseOne).and_then([&] {
+      return validateVariableBounds();
+    });
   }
 
-  ExpectedT validateConstraints() const {
-    for (int rowIdx = 0;
-         rowIdx < _simplexTableau._initialProgram._rowInfos.size(); ++rowIdx) {
+  ExpectedT validateConstraints(const bool isPhaseOne) const {
+    return validateConstraints(
+               "initial_simplex", _simplexTableau._constraintMatrix,
+               _simplexTableau._initialRightHandSides, _simplexTableau._x)
+        .and_then([&]() -> ExpectedT {
+          if (isPhaseOne)
+            return {};
+
+          return validateConstraints(
+              "initial_lp", _simplexTableau._initialProgram._constraintMatrix,
+              _simplexTableau._initialProgram._rightHandSides,
+              _simplexTableau._x);
+        });
+  }
+
+  static ExpectedT validateConstraints(const std::string &constraintsType,
+                                       const Matrix<T> &constraintMatrix,
+                                       const std::vector<T> &rightHandSides,
+                                       const std::vector<T> &x) {
+    if (constraintMatrix.empty()) {
+      return {};
+    }
+
+    for (int rowIdx = 0; rowIdx < constraintMatrix.size(); ++rowIdx) {
+      const int constraintMatrixWidth = constraintMatrix[0].size();
       typename SimplexTraitsT::CurrentAdder adder;
-      for (int varIdx = 0;
-           varIdx < _simplexTableau._initialProgram._variableInfos.size();
-           ++varIdx) {
-        adder.addValue(
-            _simplexTableau._x[varIdx] *
-            _simplexTableau._initialProgram._constraintMatrix[rowIdx][varIdx]);
+      for (int varIdx = 0; varIdx < constraintMatrixWidth; ++varIdx) {
+        adder.addValue(x[varIdx] * constraintMatrix[rowIdx][varIdx]);
       }
       const auto lhs = adder.currentSum();
-      const auto rhs = _simplexTableau._initialProgram._rightHandSides[rowIdx];
+      const auto rhs = rightHandSides[rowIdx];
       if (!NumericalTraitsT::equal(
               lhs, rhs, NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)) {
         return tl::unexpected{
-            fmt::format("{}-th constraint not satisfied, diff {}", rowIdx,
-                        std::abs(lhs - rhs))};
+            fmt::format("{}-th {} constraint not satisfied, diff {}", rowIdx,
+                        constraintsType, std::abs(lhs - rhs))};
       }
     }
     return {};

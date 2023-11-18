@@ -81,6 +81,8 @@ TYPED_TEST_P(DualSimplexGomoryTest,
 }
 TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
   absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
+  //  absl::SetFlag(&FLAGS_validate_simplex_option,
+  //                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
   EXPECT_NO_FATAL_FAILURE(this->testCase("../../tests/gomory_example_instances",
                                          25,
                                          LPOptimizationType::INTEGER_PROGRAM));

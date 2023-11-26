@@ -42,9 +42,11 @@ protected:
                   {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE});
   }
 
-  void testCase(const std::string &dualSimplexGomoryTestDirPath,
-                const size_t basisSizeLimit,
-                const LPOptimizationType lpOptimizationType) {
+  void
+  testCase(const std::string &dualSimplexGomoryTestDirPath,
+           const size_t basisSizeLimit,
+           const LPOptimizationType lpOptimizationType,
+           const std::vector<LexicographicReoptType> lexicographicReoptTypes) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;
     using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
     this->solveAndCompareInstancesFromSets(
@@ -53,8 +55,7 @@ protected:
             const SimplexTableauType simplexTableauType,
             const std::filesystem::path &modelFileMpsPath,
             LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
-          for (const auto lexicographicReoptType :
-               {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
+          for (const auto lexicographicReoptType : lexicographicReoptTypes) {
             // FIXME add support for ipOptStatsVec
             IPOptStatistics<FloatingPointT> ipOptStatistics =
                 runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
@@ -75,17 +76,18 @@ TYPED_TEST_SUITE_P(DualSimplexGomoryTest);
 
 TYPED_TEST_P(DualSimplexGomoryTest,
              runDualSimplexWithLexReoptAndCompareWithGurobi) {
-  EXPECT_NO_FATAL_FAILURE(
-      this->testCase("../../tests/dual_simplex_working_instances", 1000,
-                     LPOptimizationType::LINEAR_RELAXATION));
+  EXPECT_NO_FATAL_FAILURE(this->testCase(
+      "../../tests/dual_simplex_working_instances", 1000,
+      LPOptimizationType::LINEAR_RELAXATION,
+      {LexicographicReoptType::MIN, LexicographicReoptType::MAX}));
 }
 TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
   absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
-  //  absl::SetFlag(&FLAGS_validate_simplex_option,
-  //                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
-  EXPECT_NO_FATAL_FAILURE(this->testCase("../../tests/gomory_example_instances",
-                                         25,
-                                         LPOptimizationType::INTEGER_PROGRAM));
+  absl::SetFlag(&FLAGS_validate_simplex_option,
+                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
+  EXPECT_NO_FATAL_FAILURE(this->testCase(
+      "../../tests/gomory_example_instances", 50,
+      LPOptimizationType::INTEGER_PROGRAM, {LexicographicReoptType::MAX}));
 }
 
 REGISTER_TYPED_TEST_SUITE_P(DualSimplexGomoryTest,

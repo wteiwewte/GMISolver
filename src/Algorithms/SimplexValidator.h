@@ -332,7 +332,7 @@ private:
         if (_simplexTableau._variableLowerBounds[varIdx].has_value() ||
             _simplexTableau._variableUpperBounds[varIdx].has_value()) {
           return tl::unexpected{fmt::format(
-              "Free var {} shouldn't havy any bound specified", varIdx)};
+              "Free var {} shouldn't have any bound specified", varIdx)};
         }
       }
     }

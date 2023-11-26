@@ -190,9 +190,11 @@ std::optional<LinearProgram<T>> LinearProgram<T>::dualProgram() const {
 
 template <typename T>
 size_t LinearProgram<T>::getOriginalVariablesCount() const {
-  const auto firstSlackVarIt = std::find_if(
-      _variableInfos.begin(), _variableInfos.end(),
-      [](const auto &variableInfo) { return variableInfo._isSlack; });
+  const auto firstSlackVarIt =
+      std::find_if(_variableInfos.begin(), _variableInfos.end(),
+                   [](const auto &variableInfo) {
+                     return variableInfo._isSlack || variableInfo._isArtificial;
+                   });
 
   return firstSlackVarIt - _variableInfos.begin();
 }

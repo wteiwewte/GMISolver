@@ -197,17 +197,27 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
 
   SPDLOG_DEBUG("PIVOT ROW IDX {} RHS VALUE {}", *pivotRowIdx,
                _simplexTableau._rightHandSides[*pivotRowIdx]);
-  const auto pivotRowSharedPtr =
-      _simplexTableau.computeTableauRowGeneric(*pivotRowIdx);
-  const auto &pivotRow = *pivotRowSharedPtr;
   const auto basicColumnIdx =
       _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[*pivotRowIdx];
   const bool isPivotRowUnderLowerBound =
       _simplexTableau._rightHandSides[*pivotRowIdx] <
       *_simplexTableau._variableLowerBounds[basicColumnIdx] -
           NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE;
-  const auto enteringColumnIdx = chooseEnteringColumnIdx(
-      *pivotRowIdx, pivotRow, isPivotRowUnderLowerBound);
+  return pivot(*pivotRowIdx, std::nullopt, isPivotRowUnderLowerBound);
+}
+
+template <typename T, typename SimplexTraitsT>
+bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::pivot(
+    const int pivotRowIdx, const std::optional<int> customEnteringColumnIdx,
+    const bool isPivotRowUnderLowerBound) {
+  const auto pivotRowSharedPtr =
+      _simplexTableau.computeTableauRowGeneric(pivotRowIdx);
+  const auto &pivotRow = *pivotRowSharedPtr;
+  const std::optional<int> enteringColumnIdx =
+      customEnteringColumnIdx.has_value()
+          ? customEnteringColumnIdx
+          : chooseEnteringColumnIdx(pivotRowIdx, pivotRow,
+                                    isPivotRowUnderLowerBound);
   if (!enteringColumnIdx.has_value()) {
     _simplexTableau._result = LPOptimizationResult::INFEASIBLE;
     return true;
@@ -216,7 +226,7 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
   const auto enteringColumn =
       _simplexTableau.computeTableauColumnGeneric(*enteringColumnIdx);
 
-  _simplexTableau.pivotImplicitBoundsGeneric(*pivotRowIdx, *enteringColumnIdx,
+  _simplexTableau.pivotImplicitBoundsGeneric(pivotRowIdx, *enteringColumnIdx,
                                              enteringColumn, pivotRow,
                                              isPivotRowUnderLowerBound);
   return false;

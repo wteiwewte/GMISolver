@@ -51,7 +51,17 @@ private:
   addSlackVars(const int relaxationNo,
                const std::vector<int> &fractionalBasisVarsRowIndices) const;
 
-  bool removeSlackCuts() const;
+  bool removeCutsInBasis() const;
+  void removeCutFromBasis(const int basisRowIdxMappedToCutVar,
+                          const int cutVarIdx, const int cutRowIdx) const;
+
+  void removeCuts(const std::vector<bool> &shouldVarBeRemoved,
+                  const std::vector<bool> &shouldRowBeRemoved) const;
+
+  void
+  debugLogOldAndNewBasis(const std::vector<int> &oldRowIdxToNewRowIdx,
+                         const std::vector<int> &newRowToBasicColumnIdxMap,
+                         const std::vector<bool> &shouldRowBeRemoved) const;
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;

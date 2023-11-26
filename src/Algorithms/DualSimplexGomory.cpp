@@ -60,7 +60,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
     while (true) {
       ++relaxationNo;
-      if (relaxationNo > 16)
+      if (relaxationNo > 50)
         break;
       SPDLOG_INFO("{}TH GOMORY ROUND", relaxationNo);
       checkIfNonBasicVarsAreIntegral();
@@ -85,13 +85,14 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       ipOptStatistics._lpRelaxationStats.emplace_back() =
           runImpl(relaxationNo, lexicographicReoptType);
 
-      //      SPDLOG_INFO(_simplexTableau.toString());
-      //      if (!removeSlackCuts())
-      //        break;
-      //      SPDLOG_INFO("AFTER CUT REMOVAL");
-      //      SPDLOG_INFO(_simplexTableau.toString());
-      //      SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-      //      SPDLOG_INFO(_simplexTableau.toStringSolution());
+      if (removeCutsInBasis()) {
+        SPDLOG_INFO("AFTER CUT REMOVAL");
+        SPDLOG_INFO(_simplexTableau.toString());
+        SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
+        SPDLOG_INFO(_simplexTableau.toStringSolution());
+        ipOptStatistics._lpRelaxationStats.emplace_back() =
+            runImpl(relaxationNo, lexicographicReoptType);
+      }
     }
   });
 
@@ -168,14 +169,17 @@ DualSimplexGomory<T, SimplexTraitsT>::collectFractionalBasisRowIndices(
   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
     const auto basicVarIdx = _simplexTableau.basicColumnIdx(rowIdx);
     const auto &varInfo = _simplexTableau._variableInfos[basicVarIdx];
-    // TODO maybe checking slack variables is needed
-    // TODO for IP it doesn't seem so
-    // TODO for MIP it does - to be verified
-    if (varInfo._isArtificial || varInfo._isSlack || varInfo._isFixed)
-      continue;
-
-    if (varInfo._type == VariableType::INTEGER &&
+    const bool isOriginalVariable =
+        basicVarIdx <
+        _simplexTableau._initialProgram.getOriginalVariablesCount();
+    if (isOriginalVariable && varInfo._type == VariableType::INTEGER &&
         !NumericalTraitsT::isInteger(_simplexTableau._x[basicVarIdx])) {
+      if (varInfo._isFixed) {
+        SPDLOG_ERROR("FIXED INTEGER VARIABLE {} HAS NON-INTEGER VALUE {}",
+                     basicVarIdx, _simplexTableau._x[basicVarIdx]);
+        continue;
+      }
+
       fractionalBasisVarsRowIndices.push_back(rowIdx);
 
       if (gomoryCutChoosingRule == GomoryCutChoosingRule::FIRST)
@@ -224,7 +228,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::addCutRows(
         } else {
           SPDLOG_INFO("HALLOOO");
           newCutRow[varIdx] =
-              tableauRow[varIdx] + std::floor(-tableauRow[varIdx]);
+              -(tableauRow[varIdx] + std::floor(-tableauRow[varIdx]));
         }
       }
     }
@@ -284,62 +288,78 @@ void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
     _simplexTableau._fullTableau[rowIdx].resize(newVarCount, 0.0);
   }
 }
-
 template <typename T, typename SimplexTraitsT>
-bool DualSimplexGomory<T, SimplexTraitsT>::removeSlackCuts() const {
-  SPDLOG_INFO("INITIAL ROW COUNT {} CURRENT ROW COUNT {}",
-              _simplexTableau._initialProgram.getRowInfos().size(),
-              _simplexTableau._rowInfos.size());
-  bool atleastOneRowShouldBeRemoved = false;
-  std::vector<bool> shouldVarBeRemoved(_simplexTableau._variableInfos.size(),
-                                       false);
-  std::vector<bool> shouldRowBeRemoved(_simplexTableau._rowInfos.size(), false);
-  for (int rowIdx = _simplexTableau._initialProgram.getRowInfos().size();
-       rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
+bool DualSimplexGomory<T, SimplexTraitsT>::removeCutsInBasis() const {
+  bool atleastOneCutRemoved = false;
+  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
     {
       const auto basicVarIdx = _simplexTableau.basicColumnIdx(rowIdx);
       const auto cutRowIdx =
           _simplexTableau._variableInfos[basicVarIdx]._cutRowIdx;
+      // FIXME check if slack value == 0 ?
+      //        if (NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx],
+      //        0.0))
       if (cutRowIdx.has_value()) {
-        // FIXME check if slack value == 0 ?
-        //        if (NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx],
-        //        0.0))
-        atleastOneRowShouldBeRemoved = true;
-        shouldVarBeRemoved[basicVarIdx] = true;
-        shouldRowBeRemoved[*cutRowIdx] = true;
+        SPDLOG_INFO("FOUND BASIC CUT VAR IDX {}", basicVarIdx);
+        removeCutFromBasis(rowIdx, basicVarIdx, *cutRowIdx);
+        atleastOneCutRemoved = true;
       }
     }
   }
-  if (!atleastOneRowShouldBeRemoved)
-    return true;
+  return atleastOneCutRemoved;
+}
 
+template <typename T, typename SimplexTraitsT>
+void DualSimplexGomory<T, SimplexTraitsT>::removeCutFromBasis(
+    const int basisRowIdxMappedToCutVar, const int cutVarIdx,
+    const int cutRowIdx) const {
+  if (basisRowIdxMappedToCutVar != cutRowIdx) {
+    //    SPDLOG_INFO(_simplexTableau.toString());
+    //    SPDLOG_INFO(_simplexTableau.toStringSolution());
+    dualSimplex().pivot(basisRowIdxMappedToCutVar, std::nullopt, true);
+    dualSimplex().pivot(cutRowIdx, cutVarIdx, true);
+    //    SPDLOG_INFO(_simplexTableau.toString());
+    //    SPDLOG_INFO(_simplexTableau.toStringSolution());
+    if (cutVarIdx != _simplexTableau.basicColumnIdx(cutRowIdx)) {
+      SPDLOG_ERROR("CUT VAR IDX {} IS STILL NOT MAPPED TO CUR ROW IDX {}",
+                   cutVarIdx, cutRowIdx);
+    }
+  }
+
+  std::vector<bool> shouldVarBeRemoved(_simplexTableau._variableInfos.size(),
+                                       false);
+  std::vector<bool> shouldRowBeRemoved(_simplexTableau._rowInfos.size(), false);
+  shouldVarBeRemoved[cutVarIdx] = true;
+  shouldRowBeRemoved[cutRowIdx] = true;
+  removeCuts(shouldVarBeRemoved, shouldRowBeRemoved);
+}
+
+template <typename T, typename SimplexTraitsT>
+void DualSimplexGomory<T, SimplexTraitsT>::removeCuts(
+    const std::vector<bool> &shouldVarBeRemoved,
+    const std::vector<bool> &shouldRowBeRemoved) const {
   std::vector<int> oldRowIdxToNewRowIdx(_simplexTableau._rowInfos.size());
   int currentNewRowIdx = 0;
   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
     if (!shouldRowBeRemoved[rowIdx])
       oldRowIdxToNewRowIdx[rowIdx] = currentNewRowIdx++;
   }
-  SPDLOG_INFO("OLD ROW->COLUMN MAPPING");
-  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
-    SPDLOG_INFO(
-        "{}->{}", rowIdx,
-        _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[rowIdx]);
-  }
   const auto newRowToBasicColumnIdxMap =
       _simplexTableau._simplexBasisData.fixMappingAfterRemoval(
           shouldVarBeRemoved, shouldRowBeRemoved);
-  SPDLOG_INFO("NEW ROW->COLUMN MAPPING");
-  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
-    if (!shouldRowBeRemoved[rowIdx]) {
-      const int newRowIdx = oldRowIdxToNewRowIdx[rowIdx];
-      SPDLOG_INFO("{}->{}", newRowIdx, newRowToBasicColumnIdxMap[newRowIdx]);
-    }
-  }
+
+#if SPDLOG_ACTIVE_LEVEL <= SPDLOG_LEVEL_DEBUG
+  debugLogOldAndNewBasis(oldRowIdxToNewRowIdx, newRowToBasicColumnIdxMap,
+                         shouldRowBeRemoved);
+#endif
   SimplexTableauResizer simplexTableauResizer(_simplexTableau,
                                               _reinversionManager);
   simplexTableauResizer.removeRows(shouldRowBeRemoved);
   simplexTableauResizer.removeVariables(shouldVarBeRemoved);
-  _simplexTableau.initMatrixRepresentations();
+
+  if (_simplexTableau._simplexTableauType != SimplexTableauType::FULL) {
+    _simplexTableau.initMatrixRepresentations();
+  }
   for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
        ++varIdx) {
     if (_simplexTableau._variableInfos[varIdx]._cutRowIdx.has_value())
@@ -349,7 +369,27 @@ bool DualSimplexGomory<T, SimplexTraitsT>::removeSlackCuts() const {
   }
   _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap =
       newRowToBasicColumnIdxMap;
-  return _reinversionManager.reinverse();
+  _reinversionManager.reinverse();
+}
+
+template <typename T, typename SimplexTraitsT>
+void DualSimplexGomory<T, SimplexTraitsT>::debugLogOldAndNewBasis(
+    const std::vector<int> &oldRowIdxToNewRowIdx,
+    const std::vector<int> &newRowToBasicColumnIdxMap,
+    const std::vector<bool> &shouldRowBeRemoved) const {
+  SPDLOG_DEBUG("OLD ROW->COLUMN MAPPING");
+  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
+    SPDLOG_DEBUG(
+        "{}->{}", rowIdx,
+        _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[rowIdx]);
+  }
+  SPDLOG_DEBUG("NEW ROW->COLUMN MAPPING");
+  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
+    if (!shouldRowBeRemoved[rowIdx]) {
+      [[maybe_unused]] const int newRowIdx = oldRowIdxToNewRowIdx[rowIdx];
+      SPDLOG_DEBUG("{}->{}", newRowIdx, newRowToBasicColumnIdxMap[newRowIdx]);
+    }
+  }
 }
 
 template class DualSimplexGomory<

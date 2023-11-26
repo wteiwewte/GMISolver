@@ -17,7 +17,7 @@
 
 struct LPPrinter {
   constexpr static int CONSTRAINT_SIGN_WIDTH = 6;
-  constexpr static int COEFFICIENT_WIDTH = 12;
+  constexpr static int COEFFICIENT_WIDTH = 18;
 
   LPPrinter(const std::vector<VariableInfo> &variableInfos,
             const std::vector<RowInfo> &rowInfos)

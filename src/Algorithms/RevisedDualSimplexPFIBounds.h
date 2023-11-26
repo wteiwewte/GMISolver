@@ -13,6 +13,9 @@ template <typename T, typename SimplexTraitsT> class ReinversionManager;
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class RevisedDualSimplexPFIBounds {
 public:
+  using VectorT = typename SimplexTraitsT::VectorT;
+  using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
+
   RevisedDualSimplexPFIBounds(
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
       ReinversionManager<T, SimplexTraitsT> &reinversionManager,
@@ -24,11 +27,11 @@ public:
 
   LPOptStatistics<T> run(const std::string &lpNameSuffix);
   bool runOneIteration();
+  bool pivot(const int pivotRowIdx,
+             const std::optional<int> customEnteringColumnIdx,
+             const bool isPivotRowUnderLowerBound);
 
 private:
-  using VectorT = typename SimplexTraitsT::VectorT;
-  using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
-
   void tryLogObjValue(const int iterCount);
   bool tryReinversion(const int iterCount,
                       const LPOptStatistics<T> &lpOptStatistics);

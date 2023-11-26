@@ -109,9 +109,7 @@ void SimplexTableauResizer<T, SimplexTraitsT>::removeRows(
   SPDLOG_INFO("{} CONSTRAINTS [{}] TO BE REMOVED", rowsToBeRemoved.size(),
               fmt::join(rowsToBeRemoved, ", "));
   removeElements(_simplexTableau._rowInfos, shouldRowBeRemoved);
-  removeElements(_simplexTableau._constraintMatrix, shouldRowBeRemoved);
   removeElements(_simplexTableau._rightHandSides, shouldRowBeRemoved);
-  removeElements(_simplexTableau._initialRightHandSides, shouldRowBeRemoved);
   removeElements(_simplexTableau._simplexBasisData._rowToBasisColumnIdxMap,
                  shouldRowBeRemoved);
 
@@ -121,10 +119,18 @@ void SimplexTableauResizer<T, SimplexTraitsT>::removeRows(
     break;
   }
   case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE: {
-    for (int i = 0; i < _simplexTableau._basisMatrixInverse.size(); ++i)
+    removeElements(_simplexTableau._constraintMatrix, shouldRowBeRemoved);
+    removeElements(_simplexTableau._initialRightHandSides, shouldRowBeRemoved);
+    for (int i = 0; i < _simplexTableau._basisMatrixInverse.size(); ++i) {
       removeElements(_simplexTableau._basisMatrixInverse[i],
                      shouldRowBeRemoved);
+    }
     removeElements(_simplexTableau._basisMatrixInverse, shouldRowBeRemoved);
+    break;
+  }
+  case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE: {
+    removeElements(_simplexTableau._constraintMatrix, shouldRowBeRemoved);
+    removeElements(_simplexTableau._initialRightHandSides, shouldRowBeRemoved);
     break;
   }
   default:
@@ -151,16 +157,11 @@ void SimplexTableauResizer<T, SimplexTraitsT>::removeVariables(
   removeElements(_simplexTableau._objectiveRow, shouldVarBeRemoved);
   removeElements(_simplexTableau._x, shouldVarBeRemoved);
   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
-    removeElements(_simplexTableau._constraintMatrix[rowIdx],
-                   shouldVarBeRemoved);
-
-    switch (_simplexTableau._simplexTableauType) {
-    case SimplexTableauType::FULL: {
+    if (_simplexTableau._simplexTableauType == SimplexTableauType::FULL) {
       removeElements(_simplexTableau._fullTableau[rowIdx], shouldVarBeRemoved);
-      break;
-    }
-    default:
-      break;
+    } else {
+      removeElements(_simplexTableau._constraintMatrix[rowIdx],
+                     shouldVarBeRemoved);
     }
   }
 }

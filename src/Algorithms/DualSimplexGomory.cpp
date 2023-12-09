@@ -74,8 +74,8 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       addCutRows(relaxationNo, fractionalBasisRows);
       addSlackVars(relaxationNo, fractionalBasisRows);
 
-      _simplexTableau.calculateCurrentObjectiveValue();
       _simplexTableau.calculateSolution();
+      _simplexTableau.calculateCurrentObjectiveValue();
 
       SPDLOG_INFO("AFTER ADDITION OF NEW CUTS");
       SPDLOG_INFO(_simplexTableau.toString());
@@ -321,7 +321,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::removeCutFromBasis(
     //    SPDLOG_INFO(_simplexTableau.toString());
     //    SPDLOG_INFO(_simplexTableau.toStringSolution());
     if (cutVarIdx != _simplexTableau.basicColumnIdx(cutRowIdx)) {
-      SPDLOG_ERROR("CUT VAR IDX {} IS STILL NOT MAPPED TO CUR ROW IDX {}",
+      SPDLOG_ERROR("CUT VAR IDX {} IS STILL NOT MAPPED TO CUT ROW IDX {}",
                    cutVarIdx, cutRowIdx);
     }
   }

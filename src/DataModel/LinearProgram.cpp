@@ -92,39 +92,52 @@ template <typename T>
 bool LinearProgram<T>::areAllCoefficientsInteger(const int rowIdx) const {
   return isInteger(_rightHandSides[rowIdx]) &&
          std::all_of(_constraintMatrix[rowIdx].begin(),
-                     _constraintMatrix[rowIdx].end(), isInteger);
+                     _constraintMatrix[rowIdx].end(), isInteger) &&
+         std::all_of(_variableInfos.begin(), _variableInfos.end(),
+                     [&](const auto &variableInfo) {
+                       const int varIdx = &variableInfo - &_variableInfos[0];
+                       return _constraintMatrix[rowIdx][varIdx] == 0.0 ||
+                              variableInfo._type == VariableType::INTEGER;
+                     });
 }
 
 template <typename T>
-std::optional<LinearProgram<T>> LinearProgram<T>::dualProgram() const {
+std::optional<LinearProgram<T>>
+LinearProgram<T>::dualProgram(const bool addObjValueFirstVar) const {
   LinearProgram<T> dualProgram;
   dualProgram._name = _name + "_DUAL";
-  dualProgram._constraintMatrix = transpose(_constraintMatrix);
-
-  for (int rowIdx = 0; rowIdx < dualProgram._constraintMatrix.size();
-       ++rowIdx) {
-    auto &currentRow = dualProgram._constraintMatrix[rowIdx];
-    const int currentRowSizeBefore = currentRow.size();
-    currentRow.resize(currentRowSizeBefore + 2 * _objective.size());
-    currentRow[currentRowSizeBefore + rowIdx] = 1.0;
-    currentRow[currentRowSizeBefore + _objective.size() + rowIdx] = -1.0;
+  const int indexOffset = (int)addObjValueFirstVar;
+  const size_t dualVarCount =
+      indexOffset + _rightHandSides.size() + 2 * _objective.size();
+  const size_t dualRowCount = indexOffset + _objective.size();
+  const auto getDualVarIdV = [&](const int primalVarIdx) {
+    return indexOffset + _rightHandSides.size() + primalVarIdx;
+  };
+  const auto getDualVarIdW = [&](const int primalVarIdx) {
+    return indexOffset + _rightHandSides.size() + _objective.size() +
+           primalVarIdx;
+  };
+  if (addObjValueFirstVar) {
+    dualProgram._rightHandSides.push_back(0.0);
   }
+  dualProgram._rightHandSides.insert(dualProgram._rightHandSides.end(),
+                                     _objective.begin(), _objective.end());
 
-  dualProgram._rightHandSides = _objective;
-  dualProgram._objective = _rightHandSides;
-  const size_t dualVarCount = _rightHandSides.size() + 2 * _objective.size();
+  if (addObjValueFirstVar) {
+    dualProgram._objective.push_back(0.0);
+  }
+  dualProgram._objective.insert(dualProgram._objective.end(),
+                                _rightHandSides.begin(), _rightHandSides.end());
   dualProgram._objective.resize(dualVarCount);
-
   for (int primalVarIdx = 0; primalVarIdx < _variableInfos.size();
        ++primalVarIdx) {
     if (_variableLowerBounds[primalVarIdx].has_value()) {
-      const int dualVarIdV = _rightHandSides.size() + primalVarIdx;
-      dualProgram._objective[dualVarIdV] = *_variableLowerBounds[primalVarIdx];
+      dualProgram._objective[getDualVarIdV(primalVarIdx)] =
+          *_variableLowerBounds[primalVarIdx];
     }
     if (_variableUpperBounds[primalVarIdx].has_value()) {
-      const int dualVarIdW =
-          _rightHandSides.size() + _objective.size() + primalVarIdx;
-      dualProgram._objective[dualVarIdW] = -*_variableUpperBounds[primalVarIdx];
+      dualProgram._objective[getDualVarIdW(primalVarIdx)] =
+          -*_variableUpperBounds[primalVarIdx];
     }
   }
 
@@ -132,37 +145,67 @@ std::optional<LinearProgram<T>> LinearProgram<T>::dualProgram() const {
     dualProgram._objective[dualVarIdx] = -dualProgram._objective[dualVarIdx];
   }
 
+  dualProgram._constraintMatrix = transpose(_constraintMatrix);
+  if (addObjValueFirstVar) {
+    dualProgram._constraintMatrix.insert(dualProgram._constraintMatrix.begin(),
+                                         std::vector<T>());
+    dualProgram._constraintMatrix[0].push_back(1.0);
+    dualProgram._constraintMatrix[0].insert(
+        dualProgram._constraintMatrix[0].end(),
+        dualProgram._objective.begin() + 1, dualProgram._objective.end());
+    for (int dualVarIdx = 1; dualVarIdx < dualVarCount; ++dualVarIdx) {
+      dualProgram._constraintMatrix[0][dualVarIdx] =
+          -dualProgram._constraintMatrix[0][dualVarIdx];
+    }
+  }
+
+  for (int rowIdx = indexOffset; rowIdx < dualProgram._constraintMatrix.size();
+       ++rowIdx) {
+    auto &currentRow = dualProgram._constraintMatrix[rowIdx];
+    if (addObjValueFirstVar) {
+      currentRow.insert(currentRow.begin(), 0.0);
+    }
+    currentRow.resize(dualVarCount);
+    currentRow[getDualVarIdV(rowIdx - indexOffset)] = 1.0;
+    currentRow[getDualVarIdW(rowIdx - indexOffset)] = -1.0;
+  }
+
   dualProgram._variableInfos.resize(dualVarCount);
   dualProgram._isVariableFreeBitset.resize(dualVarCount);
 
-  const auto dualVarLabel = [&](const int dualVarIdx) {
-    if (dualVarIdx < _rightHandSides.size()) {
-      return fmt::format("PI_{}", dualVarIdx);
+  const auto dualVarLabel = [&](const int dualVarIdx) -> std::string {
+    if (addObjValueFirstVar && dualVarIdx == 0) {
+      return "DUAL_OBJ";
     }
-    if (dualVarIdx < _rightHandSides.size() + _objective.size()) {
-      return fmt::format("V_{}", dualVarIdx - _rightHandSides.size());
+    if (dualVarIdx < indexOffset + _rightHandSides.size()) {
+      return fmt::format("PI_{}", dualVarIdx - indexOffset);
+    }
+    if (dualVarIdx < indexOffset + _rightHandSides.size() + _objective.size()) {
+      return fmt::format("V_{}",
+                         dualVarIdx - _rightHandSides.size() - indexOffset);
     }
 
-    return fmt::format("W_{}",
-                       dualVarIdx - _rightHandSides.size() - _objective.size());
+    return fmt::format("W_{}", dualVarIdx - _rightHandSides.size() -
+                                   _objective.size() - indexOffset);
   };
 
   for (int dualVarIdx = 0; dualVarIdx < dualVarCount; ++dualVarIdx) {
-    const bool isDualVarFree = dualVarIdx < _rightHandSides.size();
-    dualProgram._variableInfos[dualVarIdx] =
-        VariableInfo{._label = dualVarLabel(dualVarIdx),
-                     ._type = VariableType::CONTINUOUS,
-                     ._isFree = isDualVarFree};
+    const bool isDualVarFree =
+        dualVarIdx < _rightHandSides.size() + indexOffset;
+    dualProgram._variableInfos[dualVarIdx] = VariableInfo{
+        ._label = dualVarLabel(dualVarIdx),
+        ._type = VariableType::CONTINUOUS,
+        ._isObjectiveVar = (addObjValueFirstVar && dualVarIdx == 0),
+        ._isFree = isDualVarFree};
     dualProgram._isVariableFreeBitset[dualVarIdx] = isDualVarFree;
   }
 
-  dualProgram._variableLowerBounds.resize(dualProgram._objective.size());
-  dualProgram._variableUpperBounds.resize(dualProgram._objective.size());
+  dualProgram._variableLowerBounds.resize(dualVarCount);
+  dualProgram._variableUpperBounds.resize(dualVarCount);
   for (int primalVarIdx = 0; primalVarIdx < _variableInfos.size();
        ++primalVarIdx) {
-    const int dualVarIdxV = _rightHandSides.size() + primalVarIdx;
-    const int dualVarIdxW =
-        _rightHandSides.size() + _objective.size() + primalVarIdx;
+    const int dualVarIdxV = getDualVarIdV(primalVarIdx);
+    const int dualVarIdxW = getDualVarIdW(primalVarIdx);
     dualProgram._variableLowerBounds[dualVarIdxV] =
         dualProgram._variableLowerBounds[dualVarIdxW] = 0.0;
 
@@ -177,14 +220,13 @@ std::optional<LinearProgram<T>> LinearProgram<T>::dualProgram() const {
     }
   }
 
-  dualProgram._rowInfos.resize(_objective.size());
+  dualProgram._rowInfos.resize(dualRowCount);
   for (int dualRowIdx = 0; dualRowIdx < dualProgram._rowInfos.size();
        ++dualRowIdx) {
     dualProgram._rowInfos[dualRowIdx]._type = RowType::EQUALITY;
   }
 
   dualProgram.logGeneralInformation();
-
   return dualProgram;
 }
 

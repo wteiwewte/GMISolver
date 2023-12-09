@@ -117,6 +117,7 @@ MpsReader<T>::read(const std::string &filePath) {
   linearProgram
       ._constraintMatrix[OBJECTIVE_ROW_CONSTRAINT_IDX][*objectiveVarIdx] = 1;
   linearProgram._variableInfos[*objectiveVarIdx]._isObjectiveVar = true;
+  linearProgram._variableInfos[*objectiveVarIdx]._isFree = true;
 
   while (std::getline(fileStream, readLine)) {
     if (readLine.empty() || readLine[0] == '*')
@@ -493,7 +494,7 @@ MpsReader<T>::read(const std::string &filePath) {
 
 template <typename T>
 bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
-  for (int varIdx = 1; varIdx < linearProgram._variableInfos.size(); ++varIdx) {
+  for (int varIdx = 0; varIdx < linearProgram._variableInfos.size(); ++varIdx) {
     if (!linearProgram._variableInfos[varIdx]._isFree &&
         !linearProgram._variableLowerBounds[varIdx].has_value() &&
         !linearProgram._variableUpperBounds[varIdx].has_value()) {

@@ -267,8 +267,9 @@ private:
   ExpectedT validateRowToColumnMapping() const {
     const auto &simplexBasisData = _simplexTableau._simplexBasisData;
 
-    if (simplexBasisData._rowToBasisColumnIdxMap[0] != 0 ||
-        !simplexBasisData._isBasicColumnIndexBitset[0])
+    if (_simplexTableau._variableInfos[0]._isObjectiveVar &&
+        (simplexBasisData._rowToBasisColumnIdxMap[0] != 0 ||
+         !simplexBasisData._isBasicColumnIndexBitset[0]))
       return tl::unexpected{
           fmt::format("Row 0 should be mapped always to column 0 - both are "
                       "objective related")};
@@ -320,7 +321,7 @@ private:
       return tl::unexpected{fmt::format(
           "Size of isFreeVar bitset doesn't match number of variables")};
 
-    for (int varIdx = 1; varIdx < _simplexTableau._variableInfos.size();
+    for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
          ++varIdx) {
       if (!_simplexTableau._variableInfos[varIdx]._isFree &&
           !_simplexTableau._variableLowerBounds[varIdx].has_value()) {
@@ -341,24 +342,11 @@ private:
   }
 
   ExpectedT validateMatrixRepresentations() const {
-    const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
-    const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
-
     if (_simplexTableau._simplexTableauType == SimplexTableauType::FULL) {
-      if (_simplexTableau._fullTableau.size() != expectedNumberOfRows)
-        return tl::unexpected{fmt::format(
-            "Number of full tableau constraints doesn't match number of rows")};
-
-      for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
-        if (_simplexTableau._fullTableau[rowIdx].size() != expectedNumberOfVars)
-          return tl::unexpected{fmt::format(
-              "Number of full tableau constraint row {} coefficients doesn't "
-              "match number of variables",
-              rowIdx)};
-      }
-
-      return {};
+      return validateFullTableau();
     } else {
+      const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
+      const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
       if (_simplexTableau._constraintMatrix.size() != expectedNumberOfRows)
         return tl::unexpected{
             fmt::format("Number of constraints doesn't match number of rows")};
@@ -375,6 +363,51 @@ private:
       return validateMatrixReprNormal().and_then(
           [&] { return validateMatrixReprSparse(); });
     }
+  }
+
+  ExpectedT validateFullTableau() const {
+    const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
+    const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
+    if (_simplexTableau._fullTableau.size() != expectedNumberOfRows)
+      return tl::unexpected{fmt::format(
+          "Number of full tableau constraints doesn't match number of rows")};
+
+    for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
+      if (_simplexTableau._fullTableau[rowIdx].size() != expectedNumberOfVars)
+        return tl::unexpected{fmt::format(
+            "Number of full tableau constraint row {} coefficients doesn't "
+            "match number of variables",
+            rowIdx)};
+    }
+    for (int rowIdx = 0; rowIdx < expectedNumberOfRows; ++rowIdx) {
+      const int mappedBasicVarIdx = _simplexTableau.basicColumnIdx(rowIdx);
+      const auto &tableauRow = _simplexTableau._fullTableau[rowIdx];
+      for (int varIdx = 0; varIdx < tableauRow.size(); ++varIdx) {
+        if (varIdx == mappedBasicVarIdx) {
+          if (!NumericalTraitsT::equal(
+                  tableauRow[varIdx], 1.0,
+                  NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)) {
+            return tl::unexpected{
+                fmt::format("Mapped basic variable {} has value {} != 1.0 in "
+                            "tableau row {}",
+                            varIdx, tableauRow[varIdx], rowIdx)};
+          }
+        } else {
+          if (_simplexTableau._simplexBasisData
+                  ._isBasicColumnIndexBitset[varIdx] &&
+              !NumericalTraitsT::equal(
+                  tableauRow[varIdx], 0.0,
+                  NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE)) {
+            return tl::unexpected{fmt::format(
+                "Basic variable {} has value {} != 0.0 in tableau row {} "
+                "mapped to variable {}",
+                varIdx, tableauRow[varIdx], rowIdx, mappedBasicVarIdx)};
+          }
+        }
+      }
+    }
+
+    return {};
   }
 
   ExpectedT validateMatrixReprNormal() const {

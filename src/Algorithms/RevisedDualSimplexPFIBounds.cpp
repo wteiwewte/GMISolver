@@ -48,11 +48,11 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
       if (iterResult)
         break;
 
-      _simplexTableau.calculateCurrentObjectiveValue();
       _simplexTableau.calculateSolution();
+      _simplexTableau.calculateCurrentObjectiveValue();
 
       lpOptStatistics._consecutiveObjectiveValues.push_back(
-          _simplexTableau.getCurrentObjectiveValue());
+          _simplexTableau._objectiveValue);
 
       ++iterCount;
       tryLogObjValue(iterCount);
@@ -73,19 +73,18 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
     }
   });
 
-  if (_simplexTableau.getLPOptResult() ==
-      LPOptimizationResult::BOUNDED_AND_FEASIBLE)
+  if (_simplexTableau._result == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
     tryValidateOptimalSolutions(lpOptStatistics);
 
   SPDLOG_INFO("{} ENDED", type());
   SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
               lpOptimizationResultToStr(_simplexTableau._result),
-              _simplexTableau.getCurrentObjectiveValue());
+              _simplexTableau._objectiveValue);
   SPDLOG_INFO("ELAPSED TIME {} SECONDS, ITERATION COUNT {}",
               lpOptStatistics._elapsedTimeSec, iterCount);
 
-  lpOptStatistics._optResult = _simplexTableau.getLPOptResult();
-  lpOptStatistics._optimalValue = _simplexTableau.getCurrentObjectiveValue();
+  lpOptStatistics._optResult = _simplexTableau._result;
+  lpOptStatistics._optimalValue = _simplexTableau._objectiveValue;
   lpOptStatistics._iterationCount = iterCount;
 
   return lpOptStatistics;
@@ -168,7 +167,7 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
 template <typename T, typename SimplexTraitsT>
 bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkObjectiveProgress(
     const LPOptStatistics<T> &lpOptStatistics) {
-  constexpr size_t ITERATION_WINDOW_SIZE = 5000;
+  constexpr size_t ITERATION_WINDOW_SIZE = 10000;
   if (lpOptStatistics._consecutiveObjectiveValues.size() >=
       ITERATION_WINDOW_SIZE) {
     const auto currentObjValue =
@@ -349,7 +348,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumnIdx(
     }
   };
 
-  for (int columnIdx = 0; columnIdx < _simplexTableau.getVariableInfos().size();
+  for (int columnIdx = 0; columnIdx < _simplexTableau._variableInfos.size();
        ++columnIdx)
     if (_simplexTableau.isColumnAllowedToEnterBasis(columnIdx))
       tryUpdateBest(columnIdx);

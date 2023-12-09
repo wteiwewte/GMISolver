@@ -74,8 +74,12 @@ bool ReinversionManager<T, SimplexTraitsT>::reinverseBasisExplicit() {
   }
 
   std::vector<bool> isUnusedColumn(basisSize, true);
-  isUnusedColumn[0] = false;
-  for (int rowIdx = 1; rowIdx < basisSize; ++rowIdx) {
+  const bool isFirstVarObj = _simplexTableau._variableInfos[0]._isObjectiveVar;
+  if (isFirstVarObj) {
+    isUnusedColumn[0] = false;
+  }
+  const int firstRowIdx = ((int)isFirstVarObj);
+  for (int rowIdx = firstRowIdx; rowIdx < basisSize; ++rowIdx) {
     const auto pivotColumnIdx =
         findPivotColumnMaxAbsValue(basisColumns, isUnusedColumn, rowIdx);
     if (!pivotColumnIdx.has_value()) {
@@ -114,11 +118,15 @@ bool ReinversionManager<T, SimplexTraitsT>::reinverseBasisPFI() {
             ._columns[_simplexTableau.basicColumnIdx(rowIdx)];
 
   std::vector<bool> isUnusedColumn(basisSize, true);
-  isUnusedColumn[0] = false;
+  const bool isFirstVarObj = _simplexTableau._variableInfos[0]._isObjectiveVar;
+  if (isFirstVarObj) {
+    isUnusedColumn[0] = false;
+  }
   std::vector<ElementaryMatrix<T>> newPfiEtms;
   newPfiEtms.reserve(_simplexTableau._rowInfos.size());
 
-  for (int rowIdx = 1; rowIdx < basisSize; ++rowIdx) {
+  const int firstRowIdx = ((int)isFirstVarObj);
+  for (int rowIdx = firstRowIdx; rowIdx < basisSize; ++rowIdx) {
     const auto pivotColumnIdx =
         findPivotColumnMaxAbsValue(basisColumns, isUnusedColumn, rowIdx);
     if (!pivotColumnIdx.has_value()) {
@@ -158,11 +166,15 @@ bool ReinversionManager<T, SimplexTraitsT>::reinverseBasisPFISparse() {
             ._columns[_simplexTableau.basicColumnIdx(rowIdx)];
 
   std::vector<bool> isUnusedColumn(basisSize, true);
-  isUnusedColumn[0] = false;
+  const bool isFirstVarObj = _simplexTableau._variableInfos[0]._isObjectiveVar;
+  if (isFirstVarObj) {
+    isUnusedColumn[0] = false;
+  }
   std::vector<SparseElementaryMatrix<T>> newSparsePfiEtms;
   newSparsePfiEtms.reserve(_simplexTableau._rowInfos.size());
 
-  for (int rowIdx = 1; rowIdx < basisSize; ++rowIdx) {
+  const int firstRowIdx = ((int)isFirstVarObj);
+  for (int rowIdx = firstRowIdx; rowIdx < basisSize; ++rowIdx) {
     const auto pivotColumnIdx =
         findPivotColumnMaxAbsValue(basisColumns, isUnusedColumn, rowIdx);
     if (!pivotColumnIdx.has_value()) {

@@ -20,7 +20,8 @@ template <typename T> struct MpsReader;
 template <typename T> class LinearProgram {
 public:
   void convertToStandardForm();
-  std::optional<LinearProgram<T>> dualProgram() const;
+  std::optional<LinearProgram<T>>
+  dualProgram(const bool addObjValueFirstVar) const;
   size_t getOriginalVariablesCount() const;
 
   std::string toString() const;
@@ -31,8 +32,6 @@ public:
   const std::vector<VariableInfo> &getVariableInfos() const {
     return _variableInfos;
   }
-  const Matrix<T> &getConstraintMatrix() const { return _constraintMatrix; }
-  const std::vector<T> &getRightHandSides() const { return _rightHandSides; }
   const std::vector<T> &getObjective() const { return _objective; }
   const std::string &getName() const { return _name; }
 

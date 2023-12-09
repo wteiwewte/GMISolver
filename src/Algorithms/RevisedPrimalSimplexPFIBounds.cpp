@@ -76,11 +76,11 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
       if (iterResult)
         break;
 
-      _simplexTableau.calculateCurrentObjectiveValue();
       _simplexTableau.calculateSolution();
+      _simplexTableau.calculateCurrentObjectiveValue();
 
       lpOptStatistics._consecutiveObjectiveValues.push_back(
-          _simplexTableau.getCurrentObjectiveValue());
+          _simplexTableau._objectiveValue);
 
       ++iterCount;
       tryLogObjValue(iterCount);
@@ -101,21 +101,20 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
     }
   });
 
-  if (_simplexTableau.getLPOptResult() ==
-      LPOptimizationResult::BOUNDED_AND_FEASIBLE)
+  if (_simplexTableau._result == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
     tryValidateOptimalSolutions(lpOptStatistics, isPhaseOne);
 
   if (printSummary) {
     SPDLOG_INFO("{} ENDED", type());
     SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
                 lpOptimizationResultToStr(_simplexTableau._result),
-                _simplexTableau.getCurrentObjectiveValue());
+                _simplexTableau._objectiveValue);
     SPDLOG_INFO("ELAPSED TIME {} SECONDS, ITERATION COUNT {}",
                 lpOptStatistics._elapsedTimeSec, iterCount);
   }
 
-  lpOptStatistics._optResult = _simplexTableau.getLPOptResult();
-  lpOptStatistics._optimalValue = _simplexTableau.getCurrentObjectiveValue();
+  lpOptStatistics._optResult = _simplexTableau._result;
+  lpOptStatistics._optimalValue = _simplexTableau._objectiveValue;
   lpOptStatistics._iterationCount = iterCount;
 
   return lpOptStatistics;
@@ -156,6 +155,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
   if (!validationResult) {
     SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
                  validationResult.error());
+    //    SPDLOG_INFO(_simplexTableau.toString());
 
     if (_validateSimplexOption ==
         ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR) {
@@ -200,7 +200,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
 template <typename T, typename SimplexTraitsT>
 bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkObjectiveProgress(
     const LPOptStatistics<T> &lpOptStatistics) {
-  constexpr size_t ITERATION_WINDOW_SIZE = 5000;
+  constexpr size_t ITERATION_WINDOW_SIZE = 10000;
   if (lpOptStatistics._consecutiveObjectiveValues.size() >=
       ITERATION_WINDOW_SIZE) {
     const auto currentObjValue =
@@ -257,7 +257,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumn() {
 template <typename T, typename SimplexTraitsT>
 std::optional<int> RevisedPrimalSimplexPFIBounds<
     T, SimplexTraitsT>::chooseEnteringColumnFirstEligible() {
-  for (int columnIdx = 0; columnIdx < _simplexTableau.getVariableInfos().size();
+  for (int columnIdx = 0; columnIdx < _simplexTableau._variableInfos.size();
        ++columnIdx) {
     SPDLOG_TRACE(
         "COL IDX {} ART {} BASIC {} RED COST {} < 0.0 {} > 0.0 {}", columnIdx,
@@ -325,7 +325,7 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
     }
   };
 
-  for (int columnIdx = 0; columnIdx < _simplexTableau.getVariableInfos().size();
+  for (int columnIdx = 0; columnIdx < _simplexTableau._variableInfos.size();
        ++columnIdx)
     if (_simplexTableau.isColumnAllowedToEnterBasis(columnIdx))
       tryUpdateBest(columnIdx);
@@ -393,8 +393,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::chooseRowIdx(
   std::optional<int> rowIdxMostRestrictiveUpperBound;
   std::optional<T> mostRestrictiveUpperBound;
 
-  for (int rowIdx = 0; rowIdx < _simplexTableau.getRowInfos().size();
-       ++rowIdx) {
+  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
     if (!NumericalTraitsT::isEligibleForPivot(enteringColumn[rowIdx]))
       continue;
 

@@ -231,9 +231,8 @@ protected:
 TYPED_TEST_SUITE_P(PrimalSimplexTest);
 TYPED_TEST_P(PrimalSimplexTest,
              runPrimalSimplexAndCompareWithGurobiBaseInstanceSet) {
-  absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
   EXPECT_NO_FATAL_FAILURE(
-      this->testCase("../../tests/primal_simplex_working_instances", 100));
+      this->testCase("../../tests/primal_simplex_working_instances", 500));
 }
 
 TYPED_TEST_P(
@@ -246,11 +245,7 @@ TYPED_TEST_P(
 TYPED_TEST_P(
     PrimalSimplexTest,
     runPrimalSimplexForPrimalAndDualAndCompareWithGurobiBaseInstanceSetOnlyFull) {
-  absl::SetFlag(&FLAGS_validate_simplex_option,
-                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
   absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
-  //  EXPECT_NO_FATAL_FAILURE(this->testCaseWithDual(
-  //      "../../tests/primal_simplex_one_instance", 500));
   EXPECT_NO_FATAL_FAILURE(this->testCaseWithDual(
       "../../tests/primal_simplex_working_instances", 500));
 }

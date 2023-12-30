@@ -30,6 +30,7 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
     const std::string &lexOptId, const bool saveSolution) {
   LexReoptStatistics<T> lexReoptStats{._optResult = _simplexTableau._result};
   int curVarIdxToBeOptimized = 0;
+  // FIXME should varsFixedCount count already fixed variables
   int varsFixedCount = 0;
   int optimizedVarCount = 0;
   while (curVarIdxToBeOptimized < _simplexTableau._variableInfos.size() &&

@@ -226,7 +226,6 @@ void DualSimplexGomory<T, SimplexTraitsT>::addCutRows(
           newCutRow[varIdx] =
               std::floor(tableauRow[varIdx]) - tableauRow[varIdx];
         } else {
-          SPDLOG_INFO("HALLOOO");
           newCutRow[varIdx] =
               -(tableauRow[varIdx] + std::floor(-tableauRow[varIdx]));
         }
@@ -291,20 +290,29 @@ void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
 template <typename T, typename SimplexTraitsT>
 bool DualSimplexGomory<T, SimplexTraitsT>::removeCutsInBasis() const {
   bool atleastOneCutRemoved = false;
-  for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
-    {
+  while (true) {
+    for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
       const auto basicVarIdx = _simplexTableau.basicColumnIdx(rowIdx);
       const auto cutRowIdx =
           _simplexTableau._variableInfos[basicVarIdx]._cutRowIdx;
       // FIXME check if slack value == 0 ?
-      //        if (NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx],
-      //        0.0))
-      if (cutRowIdx.has_value()) {
-        SPDLOG_INFO("FOUND BASIC CUT VAR IDX {}", basicVarIdx);
+      //              if
+      //              (NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx],
+      //              0.0))
+      if (NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx], 0.0) &&
+          cutRowIdx.has_value()) {
+        SPDLOG_INFO(
+            "FOUND BASIC CUT VAR IDX {} LABEL {} (CUT ROW IDX {} LABEL {})",
+            basicVarIdx, _simplexTableau._variableInfos[basicVarIdx]._label,
+            *cutRowIdx, _simplexTableau._rowInfos[*cutRowIdx]._label);
         removeCutFromBasis(rowIdx, basicVarIdx, *cutRowIdx);
         atleastOneCutRemoved = true;
+        // FIXME continue instead of return
+        return true;
       }
     }
+
+    break;
   }
   return atleastOneCutRemoved;
 }

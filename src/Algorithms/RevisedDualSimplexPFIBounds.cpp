@@ -38,7 +38,8 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
 
   LPOptStatistics<T> lpOptStatistics{
-      ._lpName = _simplexTableau.getName() + '_' + lpNameSuffix,
+      ._lpName = _simplexTableau.getName() +
+                 (!lpNameSuffix.empty() ? "_" + lpNameSuffix : ""),
       ._simplexAlgorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   [[maybe_unused]] int iterCount = 1;

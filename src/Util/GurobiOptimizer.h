@@ -3,6 +3,7 @@
 
 #include "src/Util/LPOptStatistics.h"
 #include "src/Util/SpdlogHeader.h"
+#include "src/Util/Time.h"
 
 #include <filesystem>
 
@@ -37,33 +38,35 @@ public:
     LPOptStatistics<T> lpOptStatistics{
         ._lpName = _grbModel.get(GRB_StringAttr_ModelName),
         ._simplexAlgorithmType = "GUROBI"};
-    try {
-      _grbModel.optimize();
+    lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
+      try {
+        _grbModel.optimize();
 
-      LPOptimizationResult gurobiLpOptResult =
-          gurobiStatusToLPOptResult(_grbModel.get(GRB_IntAttr_Status));
-      double iterCount = _grbModel.get(GRB_DoubleAttr_IterCount);
-      double runTime = _grbModel.get(GRB_DoubleAttr_Runtime);
-      lpOptStatistics._optResult = gurobiLpOptResult;
-      lpOptStatistics._iterationCount = iterCount;
+        LPOptimizationResult gurobiLpOptResult =
+            gurobiStatusToLPOptResult(_grbModel.get(GRB_IntAttr_Status));
+        double iterCount = _grbModel.get(GRB_DoubleAttr_IterCount);
+        double runTime = _grbModel.get(GRB_DoubleAttr_Runtime);
+        lpOptStatistics._optResult = gurobiLpOptResult;
+        lpOptStatistics._iterationCount = iterCount;
 
-      SPDLOG_INFO("Gurobi performed {} iterations in {} seconds", iterCount,
-                  runTime);
-      SPDLOG_INFO("Model optimization status {}",
-                  lpOptimizationResultToStr(gurobiLpOptResult));
+        SPDLOG_INFO("Gurobi performed {} iterations in {} seconds", iterCount,
+                    runTime);
+        SPDLOG_INFO("Model optimization status {}",
+                    lpOptimizationResultToStr(gurobiLpOptResult));
 
-      if (gurobiLpOptResult == LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
-        double optimalValue = _grbModel.get(GRB_DoubleAttr_ObjVal);
-        SPDLOG_INFO("Model {} has optimal value {}",
-                    _grbModel.get(GRB_StringAttr_ModelName), optimalValue);
-        lpOptStatistics._optimalValue = optimalValue;
+        if (gurobiLpOptResult == LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+          double optimalValue = _grbModel.get(GRB_DoubleAttr_ObjVal);
+          SPDLOG_INFO("Model {} has optimal value {}",
+                      _grbModel.get(GRB_StringAttr_ModelName), optimalValue);
+          lpOptStatistics._optimalValue = optimalValue;
+        }
+      } catch (const GRBException &e) {
+        SPDLOG_INFO("Optimization phase - Error code = {}", e.getErrorCode());
+        SPDLOG_INFO(e.getMessage());
+      } catch (...) {
+        SPDLOG_INFO("Error during optimization");
       }
-    } catch (const GRBException &e) {
-      SPDLOG_INFO("Optimization phase - Error code = {}", e.getErrorCode());
-      SPDLOG_INFO(e.getMessage());
-    } catch (...) {
-      SPDLOG_INFO("Error during optimization");
-    }
+    });
 
     return lpOptStatistics;
   }

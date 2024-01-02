@@ -67,7 +67,8 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
   [[maybe_unused]] int iterCount = 1;
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   LPOptStatistics<T> lpOptStatistics{
-      ._lpName = (_simplexTableau.getName() + '_' + lpNameSuffix),
+      ._lpName = (_simplexTableau.getName() +
+                  (!lpNameSuffix.empty() ? "_" + lpNameSuffix : "")),
       ._simplexAlgorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
@@ -155,7 +156,6 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
   if (!validationResult) {
     SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
                  validationResult.error());
-    //    SPDLOG_INFO(_simplexTableau.toString());
 
     if (_validateSimplexOption ==
         ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR) {

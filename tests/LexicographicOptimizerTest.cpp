@@ -1,6 +1,7 @@
 #include "Algorithms/LexicographicOptimizer.h"
 #include "Algorithms/ReinversionManager.h"
 #include "Algorithms/RevisedDualSimplexPFIBounds.h"
+#include "Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
 #include "src/Util/LPOptStatistics.h"
@@ -35,6 +36,36 @@ LexReoptStatistics<T> runDualSimplexWithLexReopt(
       .run(lexicographicReoptType, "", true);
 }
 
+template <typename T, typename SimplexTraitsT>
+LexReoptStatistics<T> runPrimalSimplexWithLexReopt(
+    const LinearProgram<T> &linearProgram,
+    const SimplexTableauType simplexTableauType,
+    const LexicographicReoptType lexicographicReoptType) {
+  SimplexTableau<T, SimplexTraitsT> simplexTableau(
+      linearProgram, SimplexType::PRIMAL, simplexTableauType);
+  ReinversionManager<T, SimplexTraitsT> reinversionManager(
+      simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
+  RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> primalSimplex(
+      simplexTableau, reinversionManager,
+      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_validate_simplex_option));
+
+  auto phaseOneLpOptStats = primalSimplex.runPhaseOne();
+  if (!phaseOneLpOptStats._phaseOneSucceeded) {
+    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", primalSimplex.type());
+    return {};
+  }
+  primalSimplex.runPhaseTwo();
+
+  return LexicographicOptimizer<T, SimplexTraitsT>(
+             simplexTableau, reinversionManager,
+             PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+             absl::GetFlag(FLAGS_obj_value_logging_frequency),
+             absl::GetFlag(FLAGS_validate_simplex_option))
+      .run(lexicographicReoptType, "", true);
+}
+
 template <typename T>
 class LexicographicOptimizerTest : public LPTestBase<T>,
                                    public ::testing::Test {
@@ -47,6 +78,40 @@ protected:
                    SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE,
                    SimplexTableauType::FULL});
   }
+
+  template <typename SimplexFunc>
+  void testCase(const std::string &testDirPath, const size_t basisSizeLimit,
+                SimplexFunc simplexFunc) {
+    using FloatingPointT = std::tuple_element_t<0, typename T::types>;
+    const LPOptimizationType lpOptimizationType{
+        LPOptimizationType::LINEAR_RELAXATION};
+    this->solveAndCompareInstancesFromSets(
+        testDirPath, basisSizeLimit, lpOptimizationType,
+        [&](const auto &linearProgram,
+            const SimplexTableauType simplexTableauType,
+            const std::filesystem::path &modelFileMpsPath,
+            LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
+          for (const auto lexicographicReoptType :
+               {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
+            LexReoptStatistics<FloatingPointT> lexReoptStatistics = simplexFunc(
+                linearProgram, simplexTableauType, lexicographicReoptType);
+
+            GurobiOptimizer gurobiOptimizer("", modelFileMpsPath);
+            gurobiOptimizer.prepareLexicographicObjectives(
+                lexicographicReoptType);
+            const auto gurobiLPOptStats =
+                gurobiOptimizer.optimize<FloatingPointT>(lpOptimizationType);
+            this->compareWithGurobi(
+                lexicographicReoptType, lexReoptStatistics, gurobiLPOptStats,
+                gurobiOptimizer.getSolutionVector<FloatingPointT>());
+            //            lpOptStatisticsVec.push_back(gurobiLPOptStats);
+            //            for (const auto &lexLPReoptStats :
+            //                 lexReoptStatistics._lexLPReoptStatsVec) {
+            //              lpOptStatisticsVec.push_back(lexLPReoptStats);
+            //            }
+          }
+        });
+  }
 };
 
 TYPED_TEST_SUITE_P(LexicographicOptimizerTest);
@@ -55,63 +120,35 @@ TYPED_TEST_P(LexicographicOptimizerTest,
              runDualSimplexWithLexReoptAndCompareWithGurobi) {
   using FloatingPointT = std::tuple_element_t<0, typename TypeParam::types>;
   using SimplexTraitsT = std::tuple_element_t<1, typename TypeParam::types>;
-  constexpr auto DUAL_SIMPLEX_TEST_DIR_PATH =
-      "../../tests/dual_simplex_working_instances";
-  constexpr size_t DUAL_SIMPLEX_BASIS_SIZE_LIMIT = 1000;
-  const LPOptimizationType lpOptimizationType{
-      LPOptimizationType::LINEAR_RELAXATION};
-  this->solveAndCompareInstancesFromSets(
-      DUAL_SIMPLEX_TEST_DIR_PATH, DUAL_SIMPLEX_BASIS_SIZE_LIMIT,
-      lpOptimizationType,
-      [&](const auto &linearProgram,
-          const SimplexTableauType simplexTableauType,
-          const std::filesystem::path &modelFileMpsPath,
-          LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
-        for (const auto lexicographicReoptType :
-             {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
-          LexReoptStatistics<FloatingPointT> lexReoptStatistics =
-              runDualSimplexWithLexReopt<FloatingPointT, SimplexTraitsT>(
-                  linearProgram, simplexTableauType, lexicographicReoptType);
-
-          GurobiOptimizer gurobiOptimizer("", modelFileMpsPath);
-          gurobiOptimizer.prepareLexicographicObjectives(
-              lexicographicReoptType);
-          const auto gurobiLPOptStats =
-              gurobiOptimizer.optimize<FloatingPointT>(lpOptimizationType);
-
-          const auto gurobiSolution =
-              gurobiOptimizer.getSolutionVector<FloatingPointT>();
-          const auto &lexOptimizerSolution = lexReoptStatistics._solution;
-          ASSERT_EQ(gurobiSolution.size(), lexOptimizerSolution.size());
-          for (int varIdx = 0; varIdx < gurobiSolution.size(); ++varIdx) {
-            EXPECT_NEAR(gurobiSolution[varIdx], lexOptimizerSolution[varIdx],
-                        0.00001);
-          }
-
-          this->compareWithGurobi(lexicographicReoptType, lexReoptStatistics,
-                                  gurobiLPOptStats);
-          lpOptStatisticsVec.push_back(gurobiLPOptStats);
-          for (const auto &lexLPReoptStats :
-               lexReoptStatistics._lexLPReoptStatsVec) {
-            lpOptStatisticsVec.push_back(lexLPReoptStats);
-          }
-        }
-      });
+  EXPECT_NO_FATAL_FAILURE(this->testCase(
+      "../../tests/dual_simplex_working_instances", 1000,
+      [](const auto &linearProgram, const SimplexTableauType simplexTableauType,
+         const LexicographicReoptType lexicographicReoptType) {
+        return runDualSimplexWithLexReopt<FloatingPointT, SimplexTraitsT>(
+            linearProgram, simplexTableauType, lexicographicReoptType);
+      }));
+}
+TYPED_TEST_P(LexicographicOptimizerTest,
+             runPrimalSimplexWithLexReoptAndCompareWithGurobi) {
+  using FloatingPointT = std::tuple_element_t<0, typename TypeParam::types>;
+  using SimplexTraitsT = std::tuple_element_t<1, typename TypeParam::types>;
+  EXPECT_NO_FATAL_FAILURE(this->testCase(
+      "../../tests/primal_simplex_working_instances", 500,
+      [](const auto &linearProgram, const SimplexTableauType simplexTableauType,
+         const LexicographicReoptType lexicographicReoptType) {
+        return runPrimalSimplexWithLexReopt<FloatingPointT, SimplexTraitsT>(
+            linearProgram, simplexTableauType, lexicographicReoptType);
+      }));
 }
 
 REGISTER_TYPED_TEST_SUITE_P(LexicographicOptimizerTest,
-                            runDualSimplexWithLexReoptAndCompareWithGurobi);
+                            runDualSimplexWithLexReoptAndCompareWithGurobi,
+                            runPrimalSimplexWithLexReoptAndCompareWithGurobi);
 
-// using LexicographicOptimizerTypes = ::testing::Types<
-//     TypeTuple<double, SimplexTraits<double,
-//     MatrixRepresentationType::NORMAL>>>;
 using LexicographicOptimizerTypes = ::testing::Types<
     TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>,
     TypeTuple<long double,
               SimplexTraits<long double, MatrixRepresentationType::NORMAL>>>;
-//    TypeTuple<double, SimplexTraits<double,
-//    MatrixRepresentationType::SPARSE>>, TypeTuple<long double,
-//              SimplexTraits<long double, MatrixRepresentationType::SPARSE>>>;
 INSTANTIATE_TYPED_TEST_SUITE_P(LexicographicOptimizerTestSuite,
                                LexicographicOptimizerTest,
                                LexicographicOptimizerTypes);

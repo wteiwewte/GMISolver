@@ -53,8 +53,10 @@ void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables() {
   const int artificialVarCount = _rowInfos.size() - ((int)isFirstVarObjective);
   const int newVariableCount = variableCountAtTheStart + artificialVarCount;
 
+  SPDLOG_INFO("ADDING {} ARTIFICIAL VARIABLES", artificialVarCount);
+
   const auto newArtificialLabel = [&](const auto varIdx) {
-    return "A" + std::to_string(varIdx + 1);
+    return "A" + std::to_string(varIdx);
   };
 
   _constraintMatrix[0].resize(newVariableCount);

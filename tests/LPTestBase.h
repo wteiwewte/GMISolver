@@ -254,10 +254,17 @@ template <typename T> struct LPTestBase {
   void compareWithGurobi(
       const LexicographicReoptType lexicographicReoptType,
       const LexReoptStatistics<FloatingPointT> &lexReoptStatistics,
-      const LPOptStatistics<FloatingPointT> &gurobiLPOptStats) {
+      const LPOptStatistics<FloatingPointT> &gurobiLPOptStats,
+      const std::vector<FloatingPointT> &gurobiSolution) {
     ASSERT_EQ(gurobiLPOptStats._optResult, lexReoptStatistics._optResult);
     if (lexReoptStatistics._optResult ==
         LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+      const auto &lexOptimizerSolution = lexReoptStatistics._solution;
+      ASSERT_EQ(gurobiSolution.size(), lexOptimizerSolution.size());
+      for (int varIdx = 0; varIdx < gurobiSolution.size(); ++varIdx) {
+        EXPECT_NEAR(gurobiSolution[varIdx], lexOptimizerSolution[varIdx],
+                    NumericalTraitsT::OPTIMALITY_TOLERANCE);
+      }
       SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
       SPDLOG_INFO("LEXICOGRAPHIC {} SIMPLEX REOPT {}",
                   lexicographicReoptTypeToStr(lexicographicReoptType),

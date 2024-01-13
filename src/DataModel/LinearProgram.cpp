@@ -30,6 +30,12 @@ int countIntegerVariables(const std::vector<VariableInfo> &variableInfos) {
                        });
 }
 
+int countFixedVariables(const std::vector<VariableInfo> &variableInfos) {
+  return std::count_if(
+      variableInfos.begin(), variableInfos.end(),
+      [](const VariableInfo &variableInfo) { return variableInfo._isFixed; });
+}
+
 const auto isInteger = [](const auto val) {
   double integerPart;
   return std::modf(val, &integerPart) == 0.0;
@@ -48,7 +54,7 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
   _isVariableFreeBitset.resize(newVariableCount);
 
   const auto newSlackLabel = [&]() {
-    const std::string firstPattern = "S" + std::to_string(newVariableIdx + 1);
+    const std::string firstPattern = "S" + std::to_string(newVariableIdx);
     return (_variableLabelSet.find(firstPattern) == _variableLabelSet.end())
                ? firstPattern
                : firstPattern + Constants::SLACK_SUFFIX;
@@ -279,11 +285,13 @@ template <typename T> void LinearProgram<T>::logGeneralInformation() const {
       "VARIABLE COUNT: {} ROW COUNT: {}, CONSTRAINT MATRIX DIMENSIONS: {} x {}",
       _variableInfos.size(), _rowInfos.size(), _constraintMatrix.size(),
       _constraintMatrix.front().size());
-  SPDLOG_INFO("LOWER BOUNDS {}, UPPER BOUNDS {}, FREE VARIABLES {}, INTEGER "
+  SPDLOG_INFO("LOWER BOUNDS {}, UPPER BOUNDS {}, FREE VARIABLES {}, FIXED "
+              "VARIABLES {}, INTEGER "
               "VARIABLES {}",
               countBoundsSpecified(_variableLowerBounds),
               countBoundsSpecified(_variableUpperBounds),
               countFreeVariables(_variableLowerBounds, _variableUpperBounds),
+              countFixedVariables(_variableInfos),
               countIntegerVariables(_variableInfos));
 }
 

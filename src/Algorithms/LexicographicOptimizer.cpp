@@ -51,20 +51,25 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
     }
     ++curVarIdxToBeOptimized;
   }
+  SPDLOG_INFO("FIXED VAR COUNT {} ALL VAR COUNT {}", varsFixedCount,
+              _simplexTableau._variableInfos.size());
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
   lexReoptStats._objectiveValueAfterLexReopt = _simplexTableau._objectiveValue;
   if (saveSolution) {
+    const bool isFirstVarObjective =
+        _simplexTableau._variableInfos[0]._isObjectiveVar;
     lexReoptStats._solution.assign(
-        _simplexTableau._x.begin() + 1,
+        _simplexTableau._x.begin() + (isFirstVarObjective ? 1 : 0),
         _simplexTableau._x.begin() +
             _simplexTableau._initialProgram.getOriginalVariablesCount());
   }
 
   unfixAllVariables();
 
-  SPDLOG_INFO("LEXICOGRAPHIC {} REOPTIMIZATION RAN {} VARIABLE-SUBPROGRAMS",
+  SPDLOG_INFO("LEXICOGRAPHIC {} REOPTIMIZATION RAN {} VARIABLE-SUBPROGRAMS "
+              "(OUT OF {} ALL VARIABLES)",
               lexicographicReoptTypeToStr(lexicographicReoptType),
-              optimizedVarCount);
+              optimizedVarCount, _simplexTableau._variableInfos.size());
 
   return lexReoptStats;
 }

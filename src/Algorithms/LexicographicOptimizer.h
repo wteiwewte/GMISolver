@@ -5,6 +5,8 @@
 #include "src/Util/LPOptStatistics.h"
 #include "src/Util/SimplexTraits.h"
 
+#include <boost/dynamic_bitset.hpp>
+
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
 template <typename T, typename SimplexTraitsT> class ReinversionManager;
 template <typename T, typename SimplexTraitsT>
@@ -31,11 +33,12 @@ private:
 
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> primalSimplex() const;
 
+  boost::dynamic_bitset<> getIsFixedBitset() const;
   std::vector<T>
   singleVarObjective(const int varIdx,
                      const LexicographicReoptType lexicographicReoptType);
   void fixNonBasicVariables(int &varsFixedCount);
-  void unfixAllVariables();
+  void unfixVariables(const boost::dynamic_bitset<> &initialIsFixedBitset);
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;

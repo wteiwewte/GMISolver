@@ -29,30 +29,31 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
     const LexicographicReoptType lexicographicReoptType,
     const std::string &lexOptId, const bool saveSolution) {
   LexReoptStatistics<T> lexReoptStats{._optResult = _simplexTableau._result};
+  const auto initialIsFixedBitset = getIsFixedBitset();
   int curVarIdxToBeOptimized = 0;
-  // FIXME should varsFixedCount count already fixed variables
-  int varsFixedCount = 0;
+  int varsFixedCount = initialIsFixedBitset.count();
   int optimizedVarCount = 0;
+  fixNonBasicVariables(varsFixedCount);
   while (curVarIdxToBeOptimized < _simplexTableau._variableInfos.size() &&
          varsFixedCount < _simplexTableau._variableInfos.size()) {
-    fixNonBasicVariables(varsFixedCount);
     if (!_simplexTableau._variableInfos[curVarIdxToBeOptimized]._isFixed) {
       _simplexTableau.setObjective(
           singleVarObjective(curVarIdxToBeOptimized, lexicographicReoptType));
       auto lpStatisticsFromSingleVarOpt = primalSimplex().runImpl(
           fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized,
-                      (lexicographicReoptType == LexicographicReoptType::MIN
-                           ? "MIN"
-                           : "MAX")),
+                      lexicographicReoptTypeToStr(lexicographicReoptType)),
           false);
       lexReoptStats._lexLPReoptStatsVec.push_back(
           std::move(lpStatisticsFromSingleVarOpt));
+      fixNonBasicVariables(varsFixedCount);
       ++optimizedVarCount;
     }
     ++curVarIdxToBeOptimized;
   }
-  SPDLOG_INFO("FIXED VAR COUNT {} ALL VAR COUNT {}", varsFixedCount,
-              _simplexTableau._variableInfos.size());
+  SPDLOG_INFO("AFTER LEXICOGRAPHIC {} OPTIMIZATION - FIXED VAR COUNT {} ALL "
+              "VAR COUNT {}",
+              lexicographicReoptTypeToStr(lexicographicReoptType),
+              varsFixedCount, _simplexTableau._variableInfos.size());
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
   lexReoptStats._objectiveValueAfterLexReopt = _simplexTableau._objectiveValue;
   if (saveSolution) {
@@ -64,7 +65,7 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
             _simplexTableau._initialProgram.getOriginalVariablesCount());
   }
 
-  unfixAllVariables();
+  unfixVariables(initialIsFixedBitset);
 
   SPDLOG_INFO("LEXICOGRAPHIC {} REOPTIMIZATION RAN {} VARIABLE-SUBPROGRAMS "
               "(OUT OF {} ALL VARIABLES)",
@@ -73,6 +74,18 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
 
   return lexReoptStats;
 }
+
+template <typename T, typename SimplexTraitsT>
+boost::dynamic_bitset<>
+LexicographicOptimizer<T, SimplexTraitsT>::getIsFixedBitset() const {
+  boost::dynamic_bitset<> result(_simplexTableau._variableInfos.size());
+  for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
+       ++varIdx) {
+    result[varIdx] = _simplexTableau._variableInfos[varIdx]._isFixed;
+  }
+  return result;
+}
+
 template <typename T, typename SimplexTraitsT>
 std::vector<T> LexicographicOptimizer<T, SimplexTraitsT>::singleVarObjective(
     const int varIdx, const LexicographicReoptType lexicographicReoptType) {
@@ -95,16 +108,12 @@ void LexicographicOptimizer<T, SimplexTraitsT>::fixNonBasicVariables(
   }
 }
 template <typename T, typename SimplexTraitsT>
-void LexicographicOptimizer<T, SimplexTraitsT>::unfixAllVariables() {
+void LexicographicOptimizer<T, SimplexTraitsT>::unfixVariables(
+    const boost::dynamic_bitset<> &initialIsFixedBitset) {
   for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
        ++varIdx) {
-    if (_simplexTableau._variableLowerBounds[varIdx].has_value() &&
-        _simplexTableau._variableLowerBounds[varIdx] ==
-            _simplexTableau._variableUpperBounds[varIdx])
-      continue;
-
     _simplexTableau._variableInfos[varIdx]._isFixed =
-        false; // FIXME this unfixes fixed vars?
+        initialIsFixedBitset[varIdx];
   }
 }
 

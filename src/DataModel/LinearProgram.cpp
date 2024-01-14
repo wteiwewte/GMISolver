@@ -65,8 +65,6 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
       continue;
 
     switch (_rowInfos[rowIdx]._type) {
-    // TODO - check variable type integer or continuous
-    // TODO - fix slack labeling
     case RowType::LESS_THAN_OR_EQUAL: {
       _constraintMatrix[rowIdx][newVariableIdx] = 1;
       break;

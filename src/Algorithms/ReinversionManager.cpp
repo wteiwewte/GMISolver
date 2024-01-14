@@ -48,7 +48,6 @@ std::optional<bool> ReinversionManager<T, SimplexTraitsT>::reinverseBasis() {
 
 template <typename T, typename SimplexTraitsT>
 void ReinversionManager<T, SimplexTraitsT>::updateTableau() {
-  // FIXME
   _simplexTableau.calculateRHS();
   _simplexTableau.calculateDual();
   _simplexTableau.calculateReducedCostsBasedOnDual();
@@ -107,7 +106,6 @@ bool ReinversionManager<T, SimplexTraitsT>::reinverseBasisExplicit() {
 
 template <typename T, typename SimplexTraitsT>
 bool ReinversionManager<T, SimplexTraitsT>::reinverseBasisPFI() {
-  // TODO - opt it by storing columns in vectors
   const auto basisSize = _simplexTableau._rowInfos.size();
   std::vector<int> columnIndexesMapping =
       _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap;

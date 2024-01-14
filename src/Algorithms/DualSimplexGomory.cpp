@@ -16,12 +16,14 @@ DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
     const DualSimplexRowPivotRule dualSimplexRowPivotRule,
     const int32_t objValueLoggingFrequency,
-    const ValidateSimplexOption validateSimplexOption)
+    const ValidateSimplexOption validateSimplexOption,
+    const bool removeOnlyPositiveSlackCuts)
     : _simplexTableau(simplexTableau), _reinversionManager(reinversionManager),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
-      _validateSimplexOption(validateSimplexOption) {}
+      _validateSimplexOption(validateSimplexOption),
+      _removeOnlyPositiveSlackCuts(removeOnlyPositiveSlackCuts) {}
 
 template <typename T, typename SimplexTraitsT>
 std::string DualSimplexGomory<T, SimplexTraitsT>::type() const {
@@ -294,23 +296,19 @@ bool DualSimplexGomory<T, SimplexTraitsT>::removeCutsInBasis() const {
       const auto basicVarIdx = _simplexTableau.basicColumnIdx(rowIdx);
       const auto cutRowIdx =
           _simplexTableau._variableInfos[basicVarIdx]._cutRowIdx;
-      // FIXME check if slack value == 0 ?
-      //              if
-      //              (NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx],
-      //              0.0))
-      if (NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx], 0.0) &&
-          cutRowIdx.has_value()) {
+
+      if (cutRowIdx.has_value() &&
+          (!_removeOnlyPositiveSlackCuts ||
+           NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx], 0.0))) {
         SPDLOG_INFO(
             "FOUND BASIC CUT VAR IDX {} LABEL {} (CUT ROW IDX {} LABEL {})",
             basicVarIdx, _simplexTableau._variableInfos[basicVarIdx]._label,
             *cutRowIdx, _simplexTableau._rowInfos[*cutRowIdx]._label);
         removeCutFromBasis(rowIdx, basicVarIdx, *cutRowIdx);
         atleastOneCutRemoved = true;
-        // FIXME continue instead of return
-        return true;
+        continue;
       }
     }
-
     break;
   }
   return atleastOneCutRemoved;

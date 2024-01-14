@@ -373,7 +373,6 @@ MpsReader<T>::read(const std::string &filePath) {
       const auto &coefficientValueStr = lineParts[3];
 
       switch (*readBoundType) {
-      // TODO: optimize handling bounds
       case BoundType::LOWER_BOUND: {
         linearProgram._variableLowerBounds[variableIdx] =
             convert(coefficientValueStr);
@@ -409,7 +408,6 @@ MpsReader<T>::read(const std::string &filePath) {
         break;
       }
       case BoundType::FIXED_VARIABLE: {
-        // TODO - maybe opt it
         linearProgram._variableInfos[variableIdx]._isFixed = true;
         linearProgram._variableLowerBounds[variableIdx] =
             linearProgram._variableUpperBounds[variableIdx] =
@@ -486,7 +484,6 @@ MpsReader<T>::read(const std::string &filePath) {
   }
   linearProgram.logGeneralInformation();
 
-  // TODO - add more integrity checks
   return linearProgram;
 }
 
@@ -498,11 +495,9 @@ bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
         !linearProgram._variableUpperBounds[varIdx].has_value()) {
       linearProgram._variableLowerBounds[varIdx] = 0.0;
 
-      //      if (linearProgram._variableInfos[varIdx]._type ==
-      //      VariableType::INTEGER)
-      //      {
-      //        linearProgram._variableUpperBounds[varIdx] = 1.0;
-      //      }
+      if (linearProgram._variableInfos[varIdx]._type == VariableType::INTEGER) {
+        linearProgram._variableUpperBounds[varIdx] = 1.0;
+      }
     }
   }
 

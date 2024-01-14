@@ -22,7 +22,8 @@ public:
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
       const DualSimplexRowPivotRule dualSimplexRowPivotRule,
       const int32_t objValueLoggingFrequency,
-      const ValidateSimplexOption validateSimplexOption);
+      const ValidateSimplexOption validateSimplexOption,
+      const bool removeOnlyPositiveSlackCuts);
 
   std::string type() const;
 
@@ -69,6 +70,7 @@ private:
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;
   const int32_t _objValueLoggingFrequency;
   const ValidateSimplexOption _validateSimplexOption;
+  const bool _removeOnlyPositiveSlackCuts;
   const bool _defineCutsInTermsOfOriginalVariables{true};
 };
 

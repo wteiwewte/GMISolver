@@ -314,12 +314,6 @@ void SimplexTableau<T, SimplexTraitsT>::calculateReducedCostsBasedOnDual() {
 
     _reducedCosts[columnIdx] = yAn;
   }
-
-  //  _reducedCosts.resize(_variableInfos.size()); // FIXME why this doesnt work
-  //  for (int columnIdx = 0; columnIdx < _variableInfos.size(); ++columnIdx)
-  //    _reducedCosts[columnIdx] = _objectiveRow[columnIdx]
-  //                                                   -SimplexTraitsT::dotProduct(_y,
-  //                                                   _constraintMatrixSparseForm._columns[columnIdx]);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -539,9 +533,6 @@ SimplexTableau<T, SimplexTraitsT>::computeTableauColumnPFISparse(
     const int colIdx) {
   SparseVector<T> tableauColumn = _constraintMatrixSparseForm._columns[colIdx];
   multiplyByBasisMatrixLeftInverseUsingPFISparse(tableauColumn);
-  //  SPDLOG_INFO("COLUMN NONZEROS BEFORE {} AFTER {}",
-  //  _constraintMatrixSparseForm._columns[colIdx]._indexedValues.size(),
-  //              tableauColumn._indexedValues.size());
   return tableauColumn;
 }
 
@@ -633,26 +624,6 @@ SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFISparse(
       result->_normalVec[j] = 1.0;
       result->_indexedValues.push_back({1.0, j});
     } else if (!_simplexBasisData._isBasicColumnIndexBitset[j]) {
-      //      const auto product = SimplexTraitsT::dotProductSparse(eRowIdx,
-      //      _constraintMatrixSparseForm._columns[j]); if (std::fabs(product) <
-      //      1e-10 && std::fabs(product) > 0.0)
-      //      {
-      //        SPDLOG_INFO("DOT PRODUCT SPARSE {} {} {} {} {}", product,
-      //                    SimplexTraitsT::template
-      //                    dotProductSparse<SimpleAdderSafe>(eRowIdx,
-      //                    _constraintMatrixSparseForm._columns[j]),
-      //                    SimplexTraitsT::template
-      //                    dotProductSparse<PositiveNegativeAdderSafe>(eRowIdx,
-      //                    _constraintMatrixSparseForm._columns[j]),
-      //                    SimplexTraitsT::template
-      //                    dotProductSparse<KahanAdderSafe>(eRowIdx,
-      //                    _constraintMatrixSparseForm._columns[j]),
-      //                    SimplexTraitsT::template
-      //                    dotProductSparse<KahanAdderNormal>(eRowIdx,
-      //                    _constraintMatrixSparseForm._columns[j])
-      //                    );
-      //
-      //      }
       const auto product =
           SimplexTraitsT::template dotProduct<PositiveNegativeAdderSafe>(
               eRowIdx, _constraintMatrixSparseForm._columns[j]);
@@ -662,10 +633,6 @@ SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFISparse(
       }
     }
   }
-
-  //  SPDLOG_INFO("ROW NONZEROS BEFORE {} AFTER {}",
-  //  _constraintMatrixSparseForm._rows[rowIdx]._indexedValues.size(),
-  //              result._indexedValues.size());
 
   return result;
 }
@@ -826,19 +793,6 @@ void SimplexTableau<T, SimplexTraitsT>::initMatrixRepresentations() {
             {currentValue, i});
       }
     }
-
-  //  int rowNonzeros = 0;
-  //  for (int i = 0; i < _rowInfos.size(); ++i)
-  //    SPDLOG_INFO("{} ROW NONZEROS COUNT {}", i,
-  //                (rowNonzeros +=
-  //                _constraintMatrixSparseForm._rows[i]._indexedValues.size(),
-  //                _constraintMatrixSparseForm._rows[i]._indexedValues.size()));
-  //
-  //  SPDLOG_INFO("TOTAL NONZEROS COUNT {}", rowNonzeros);
-  //
-  //  for (int j = 0; j < _variableInfos.size(); ++j)
-  //    SPDLOG_INFO("{} COLUMN NONZEROS COUNT {}", j,
-  //    _constraintMatrixSparseForm._columns[j]._indexedValues.size());
 }
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::setObjective(

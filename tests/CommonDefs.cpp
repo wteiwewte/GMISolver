@@ -12,3 +12,6 @@ ABSL_FLAG(std::vector<SimplexTableauType>, simplex_tableau_types,
 ABSL_FLAG(ValidateSimplexOption, validate_simplex_option,
           ValidateSimplexOption::DONT_VALIDATE,
           "Validate simplex implementations");
+ABSL_FLAG(bool, dual_gomory_remove_only_slack_cuts_with_positive_value, false,
+          "Dual Gomory - remove slack cuts only when its corresponding "
+          "variable has value greater than 0");

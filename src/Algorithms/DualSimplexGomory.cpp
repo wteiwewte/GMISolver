@@ -222,7 +222,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::addCutRows(
                ._isBasicColumnIndexBitset[varIdx]) {
         if (_simplexTableau._simplexBasisData
                 ._isColumnAtLowerBoundBitset[varIdx] ||
-            _simplexTableau._isVariableFreeBitset[varIdx]) {
+            _simplexTableau._variableInfos[varIdx]._isFree) {
           newCutRow[varIdx] =
               std::floor(tableauRow[varIdx]) - tableauRow[varIdx];
         } else {
@@ -252,7 +252,6 @@ void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
   _simplexTableau._objectiveRow.resize(newVarCount, 0.0);
   _simplexTableau._reducedCosts.resize(newVarCount, 0.0);
   _simplexTableau._variableInfos.reserve(newVarCount);
-  _simplexTableau._isVariableFreeBitset.resize(newVarCount);
   _simplexTableau._variableLowerBounds.reserve(newVarCount);
   _simplexTableau._variableUpperBounds.reserve(newVarCount);
   _simplexTableau._simplexBasisData.resizeVarCount(newVarCount);

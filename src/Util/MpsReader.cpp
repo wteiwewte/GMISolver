@@ -93,8 +93,6 @@ MpsReader<T>::read(const std::string &filePath) {
           VariableInfo{variableLabelStr, currentSectionIsInteger
                                              ? VariableType::INTEGER
                                              : VariableType::CONTINUOUS});
-      linearProgram._isVariableFreeBitset.resize(
-          linearProgram._variableInfos.size());
       linearProgram._variableLabelSet.insert(variableLabelStr);
       linearProgram._variableLowerBounds.resize(
           linearProgram._variableInfos.size());
@@ -420,7 +418,7 @@ MpsReader<T>::read(const std::string &filePath) {
       }
       case BoundType::FREE_VARIABLE: {
         linearProgram._variableInfos[variableIdx]._isFree = true;
-        linearProgram._isVariableFreeBitset[variableIdx] = true;
+        linearProgram._variableInfos[variableIdx]._isFree = true;
         break;
       }
       case BoundType::LOWER_BOUND_MINUS_INF: {

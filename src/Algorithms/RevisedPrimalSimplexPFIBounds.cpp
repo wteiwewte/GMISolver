@@ -362,7 +362,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
       _simplexTableau._simplexBasisData._isColumnAtLowerBoundBitset;
   auto &isColumnAtUpperBoundBitset =
       _simplexTableau._simplexBasisData._isColumnAtUpperBoundBitset;
-  if (_simplexTableau._isVariableFreeBitset[enteringColumnIdx]) {
+  if (_simplexTableau._variableInfos[enteringColumnIdx]._isFree) {
     SPDLOG_ERROR("FREE VAR {} SHOULDN'T BE MOVED FROM ONE BOUND TO ANOTHER",
                  enteringColumnIdx);
   }

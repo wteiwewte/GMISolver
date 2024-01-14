@@ -142,7 +142,6 @@ template <typename T, typename SimplexTraitsT>
 void SimplexTableauResizer<T, SimplexTraitsT>::removeVariables(
     const std::vector<bool> &shouldVarBeRemoved) {
   removeElements(_simplexTableau._variableInfos, shouldVarBeRemoved);
-  removeElements(_simplexTableau._isVariableFreeBitset, shouldVarBeRemoved);
   removeElements(_simplexTableau._variableLowerBounds, shouldVarBeRemoved);
   removeElements(_simplexTableau._variableUpperBounds, shouldVarBeRemoved);
 

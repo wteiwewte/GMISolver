@@ -222,6 +222,7 @@ private:
       }
       return {};
     };
+    const auto isVariableFreeBitset = _simplexTableau.getIsVariableFreeBitset();
     return checkIfAllDistinctBitsetPairsAreDisjoint(
                {simplexBasisData._isBasicColumnIndexBitset,
                 simplexBasisData._isColumnAtLowerBoundBitset,
@@ -230,13 +231,13 @@ private:
           return checkIfAllDistinctBitsetPairsAreDisjoint(
               {simplexBasisData._isColumnAtLowerBoundBitset,
                simplexBasisData._isColumnAtUpperBoundBitset,
-               _simplexTableau._isVariableFreeBitset});
+               isVariableFreeBitset});
         })
         .and_then([&]() -> ExpectedT {
           if (!(simplexBasisData._isBasicColumnIndexBitset |
                 simplexBasisData._isColumnAtLowerBoundBitset |
                 simplexBasisData._isColumnAtUpperBoundBitset |
-                _simplexTableau._isVariableFreeBitset)
+                isVariableFreeBitset)
                    .all()) {
             return tl::unexpected{fmt::format(
                 "Some variables aren't assigned to any state in basis")};
@@ -316,10 +317,6 @@ private:
         _simplexTableau._variableUpperBounds.size() != expectedNumberOfVars)
       return tl::unexpected{fmt::format(
           "Number of lower/upper bounds doesn't match number of variables")};
-
-    if (_simplexTableau._isVariableFreeBitset.size() != expectedNumberOfVars)
-      return tl::unexpected{fmt::format(
-          "Size of isFreeVar bitset doesn't match number of variables")};
 
     for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
          ++varIdx) {

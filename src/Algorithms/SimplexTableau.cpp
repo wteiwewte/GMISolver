@@ -10,7 +10,6 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
     const SimplexTableauType simplexTableauType)
     : _initialProgram(linearProgram),
       _variableInfos(linearProgram._variableInfos),
-      _isVariableFreeBitset(linearProgram._isVariableFreeBitset),
       _variableLowerBounds(linearProgram._variableLowerBounds),
       _variableUpperBounds(linearProgram._variableUpperBounds),
       _variableLabelSet(linearProgram._variableLabelSet),
@@ -60,7 +59,6 @@ void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables() {
   };
 
   _constraintMatrix[0].resize(newVariableCount);
-  _isVariableFreeBitset.resize(newVariableCount);
   const int firstRowIdx = ((int)isFirstVarObjective);
   for (int rowIdx = firstRowIdx; rowIdx < _rowInfos.size(); ++rowIdx) {
     _constraintMatrix[rowIdx].resize(newVariableCount);
@@ -739,7 +737,7 @@ void SimplexTableau<T, SimplexTraitsT>::pivotImplicitBoundsGeneric(
       "PIVOT - ENTERING COLUMN IDX {}, ROW IDX {} LEAVING COLUMN IDX {}",
       enteringColumnIdx, pivotRowIdx, leavingBasicColumnIdx);
 
-  if (_isVariableFreeBitset[leavingBasicColumnIdx]) {
+  if (_variableInfos[leavingBasicColumnIdx]._isFree) {
     SPDLOG_ERROR("FREE VAR {} SHOULDN'T LEAVE BASIS", leavingBasicColumnIdx);
   }
 
@@ -785,7 +783,7 @@ SimplexTableau<T, SimplexTraitsT>::curSatisfiedBound(const int varIdx) {
   if (_simplexBasisData._isColumnAtUpperBoundBitset[varIdx])
     return *_variableUpperBounds[varIdx];
 
-  if (_isVariableFreeBitset[varIdx]) {
+  if (_variableInfos[varIdx]._isFree) {
     return 0.0;
   }
 
@@ -908,6 +906,16 @@ void SimplexTableau<T, SimplexTraitsT>::
   for (int i = 0; i < _sparsePfiEtms.size(); ++i)
     SimplexTraitsT::template multiplyByETMFromRight<PositiveNegativeAdderSafe>(
         vec, _sparsePfiEtms[_sparsePfiEtms.size() - 1 - i]);
+}
+
+template <typename T, typename SimplexTraitsT>
+boost::dynamic_bitset<>
+SimplexTableau<T, SimplexTraitsT>::getIsVariableFreeBitset() const {
+  boost::dynamic_bitset<> result(_variableInfos.size());
+  for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
+    result[varIdx] = _variableInfos[varIdx]._isFree;
+  }
+  return result;
 }
 
 template class SimplexTableau<

@@ -51,7 +51,6 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
   const int variableCountAtTheStart = _variableInfos.size();
   const int newVariableCount = variableCountAtTheStart + nonEqualityRows;
   int newVariableIdx = variableCountAtTheStart;
-  _isVariableFreeBitset.resize(newVariableCount);
 
   const auto newSlackLabel = [&]() {
     const std::string firstPattern = "S" + std::to_string(newVariableIdx);
@@ -177,7 +176,6 @@ LinearProgram<T>::dualProgram(const bool addObjValueFirstVar) const {
   }
 
   dualProgram._variableInfos.resize(dualVarCount);
-  dualProgram._isVariableFreeBitset.resize(dualVarCount);
 
   const auto dualVarLabel = [&](const int dualVarIdx) -> std::string {
     if (addObjValueFirstVar && dualVarIdx == 0) {
@@ -203,7 +201,7 @@ LinearProgram<T>::dualProgram(const bool addObjValueFirstVar) const {
         ._type = VariableType::CONTINUOUS,
         ._isObjectiveVar = (addObjValueFirstVar && dualVarIdx == 0),
         ._isFree = isDualVarFree};
-    dualProgram._isVariableFreeBitset[dualVarIdx] = isDualVarFree;
+    dualProgram._variableInfos[dualVarIdx]._isFree = isDualVarFree;
   }
 
   dualProgram._variableLowerBounds.resize(dualVarCount);

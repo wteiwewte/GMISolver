@@ -128,9 +128,10 @@ private:
   void
   multiplyByBasisMatrixRightInverseUsingPFISparseNormal(std::vector<T> &vec);
 
+  boost::dynamic_bitset<> getIsVariableFreeBitset() const;
+
   const LinearProgram<T> &_initialProgram;
   std::vector<VariableInfo> _variableInfos;
-  boost::dynamic_bitset<> _isVariableFreeBitset;
   std::vector<std::optional<T>> _variableLowerBounds;
   std::vector<std::optional<T>> _variableUpperBounds;
   std::set<std::string> _variableLabelSet;

@@ -1,12 +1,13 @@
 #ifndef GMISOLVER_LPTESTBASE_H
 #define GMISOLVER_LPTESTBASE_H
 
-#include "Util/OptStatisticsPrinter.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/DataModel/EnumTypes.h"
 #include "src/Util/IPOptStatistics.h"
 #include "src/Util/LPOptStatistics.h"
+#include "src/Util/OptStatisticsPrinter.h"
 #include "src/Util/SpdlogHeader.h"
+#include "tests/CommonDefs.h"
 
 #include <tuple>
 
@@ -149,13 +150,15 @@ template <typename T> struct LPTestBase {
                       instanceSetStats._modelsWithNoAllNonnegativeVariables);
       }
     }
+    const bool extendedStatistics = absl::GetFlag(FLAGS_extended_statistics);
     if (!optimizationStatsVec.empty()) {
       OptStatisticsPrinter optStatisticsPrinter;
       optStatisticsPrinter.printFirstLine(
           optimizationStatsVec.front()._optimizationStats);
       for (const auto &optStats : optimizationStatsVec) {
-        optStatisticsPrinter.print(optStats._optimizationStats);
-        optStatisticsPrinter.print(optStats._gurobiStats);
+        optStatisticsPrinter.print(optStats._optimizationStats,
+                                   extendedStatistics);
+        optStatisticsPrinter.print(optStats._gurobiStats, false);
       }
       SPDLOG_INFO(optStatisticsPrinter.toString());
     }

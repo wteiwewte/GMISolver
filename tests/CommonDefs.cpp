@@ -15,3 +15,5 @@ ABSL_FLAG(ValidateSimplexOption, validate_simplex_option,
 ABSL_FLAG(bool, dual_gomory_remove_only_slack_cuts_with_positive_value, false,
           "Dual Gomory - remove slack cuts only when its corresponding "
           "variable has value greater than 0");
+ABSL_FLAG(bool, extended_statistics, false,
+          "Print extended statistics about particular type of optimization");

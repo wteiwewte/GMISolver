@@ -13,6 +13,7 @@ ABSL_DECLARE_FLAG(int32_t, reinversion_frequency);
 ABSL_DECLARE_FLAG(std::vector<SimplexTableauType>, simplex_tableau_types);
 ABSL_DECLARE_FLAG(ValidateSimplexOption, validate_simplex_option);
 ABSL_DECLARE_FLAG(bool, dual_gomory_remove_only_slack_cuts_with_positive_value);
+ABSL_DECLARE_FLAG(bool, extended_statistics);
 
 template <typename... Ts> struct TypeTuple {
   using types = std::tuple<Ts...>;

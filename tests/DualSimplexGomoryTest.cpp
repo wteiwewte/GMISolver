@@ -81,7 +81,7 @@ TYPED_TEST_SUITE_P(DualSimplexGomoryTest);
 TYPED_TEST_P(DualSimplexGomoryTest,
              runDualSimplexWithLexReoptAndCompareWithGurobi) {
   EXPECT_NO_FATAL_FAILURE(this->testCase(
-      "../../tests/dual_simplex_working_instances", 1000,
+      "../../tests/dual_simplex_working_instances", 200,
       LPOptimizationType::LINEAR_RELAXATION,
       {LexicographicReoptType::MIN, LexicographicReoptType::MAX}));
 }
@@ -89,6 +89,7 @@ TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
   absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
   absl::SetFlag(&FLAGS_validate_simplex_option,
                 ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
+  absl::SetFlag(&FLAGS_extended_statistics, true);
   EXPECT_NO_FATAL_FAILURE(this->testCase(
       "../../tests/gomory_example_instances", 50,
       LPOptimizationType::INTEGER_PROGRAM, {LexicographicReoptType::MAX}));

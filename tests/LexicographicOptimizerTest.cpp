@@ -131,6 +131,7 @@ TYPED_TEST_P(LexicographicOptimizerTest,
              runPrimalSimplexWithLexReoptAndCompareWithGurobi) {
   using FloatingPointT = std::tuple_element_t<0, typename TypeParam::types>;
   using SimplexTraitsT = std::tuple_element_t<1, typename TypeParam::types>;
+  absl::SetFlag(&FLAGS_extended_statistics, false);
   EXPECT_NO_FATAL_FAILURE(this->testCase(
       "../../tests/primal_simplex_working_instances", 500,
       [](const auto &linearProgram, const SimplexTableauType simplexTableauType,

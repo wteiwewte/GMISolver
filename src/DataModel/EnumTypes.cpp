@@ -170,9 +170,9 @@ simplexTableauTypeToStr(const SimplexTableauType simplexTableauType) {
   case SimplexTableauType::FULL:
     return "FULL";
   case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE:
-    return "REVISED_BASIS_MATRIX_INVERSE";
+    return "REVISED_BASIS_INVERSE";
   case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE:
-    return "REVISED_PRODUCT_FORM_OF_INVERSE";
+    return "REVISED_PFI";
   }
 
   return "";

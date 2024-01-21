@@ -7,8 +7,10 @@
 #include <vector>
 
 template <typename T> struct LPOptStatistics {
+  using Type = T;
+
   std::string _lpName;
-  std::string _simplexAlgorithmType;
+  std::string _algorithmType;
   std::vector<T> _consecutiveObjectiveValues;
   LPOptimizationResult _optResult;
   T _optimalValue{};
@@ -21,11 +23,11 @@ template <typename T> struct LPOptStatistics {
 template <typename T>
 using LPOptStatisticsVec = std::vector<LPOptStatistics<T>>;
 
-template <typename T> struct LexReoptStatistics {
-  std::vector<LPOptStatistics<T>> _lexLPReoptStatsVec;
-  std::vector<T> _solution;
-  T _objectiveValueAfterLexReopt;
-  LPOptimizationResult _optResult;
+template <typename T> struct PrimalSimplexOutput {
+  using Type = T;
+
+  LPOptStatistics<T> _phaseOneLpOptStats;
+  std::optional<LPOptStatistics<T>> _phaseTwoLpOptStats;
 };
 
 #endif // GMISOLVER_LPOPTSTATISTICS_H

@@ -16,8 +16,9 @@ add_library(CommonDefs CommonDefs.cpp CommonDefs.h)
 target_link_libraries(CommonDefs EnumTypes absl::flags gtest)
 
 add_library(LPTestBase INTERFACE LPTestBase.h)
-target_link_libraries(LPTestBase INTERFACE EnumTypes LPOptStatistics
-                                           IPOptStatistics SimplexTableau gtest)
+target_link_libraries(
+  LPTestBase INTERFACE EnumTypes LPOptStatistics IPOptStatistics
+                       OptStatisticsPrinter SimplexTableau gtest)
 
 add_executable(
   UnitTests DualSimplexTest.cpp PrimalSimplexTest.cpp DualSimplexGomoryTest.cpp

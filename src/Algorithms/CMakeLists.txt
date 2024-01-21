@@ -29,7 +29,7 @@ target_link_libraries(
 add_library(LexicographicOptimizer LexicographicOptimizer.cpp
                                    LexicographicOptimizer.h)
 target_link_libraries(
-  LexicographicOptimizer CommonTypes LPOptStatistics SimplexTraits
+  LexicographicOptimizer CommonTypes LexReoptStatistics SimplexTraits
   SimplexTableau RevisedPrimalSimplexPFIBounds)
 
 add_library(DualSimplexGomory DualSimplexGomory.h DualSimplexGomory.cpp)

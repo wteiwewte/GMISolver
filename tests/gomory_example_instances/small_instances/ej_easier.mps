@@ -1,4 +1,4 @@
-NAME
+NAME    EJ_EASIER
 ROWS
  N  obj      
  E  c1      

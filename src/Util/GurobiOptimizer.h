@@ -37,7 +37,7 @@ public:
     adjustModelToOptType(lpOptimizationType);
     LPOptStatistics<T> lpOptStatistics{
         ._lpName = _grbModel.get(GRB_StringAttr_ModelName),
-        ._simplexAlgorithmType = "GUROBI"};
+        ._algorithmType = "GUROBI"};
     lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
       try {
         _grbModel.optimize();

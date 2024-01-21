@@ -13,15 +13,20 @@ target_link_libraries(SimplexTraits INTERFACE EnumTypes MatrixTypes
 add_library(SpdlogHeader INTERFACE SpdlogHeader.h)
 target_link_libraries(SpdlogHeader INTERFACE spdlog::spdlog)
 
+add_library(LexReoptStatistics INTERFACE LexReoptStatistics.h)
+target_link_libraries(LexReoptStatistics INTERFACE EnumTypes LPOptStatistics)
+
 add_library(LPOptStatistics INTERFACE LPOptStatistics.h)
 target_link_libraries(LPOptStatistics INTERFACE EnumTypes)
 
 add_library(IPOptStatistics INTERFACE IPOptStatistics.h)
-target_link_libraries(IPOptStatistics INTERFACE LPOptStatistics)
+target_link_libraries(IPOptStatistics INTERFACE LexReoptStatistics
+                                                LPOptStatistics)
 
-add_library(LPOptStatisticsPrinter INTERFACE LPOptStatisticsPrinter.h)
-target_link_libraries(LPOptStatisticsPrinter INTERFACE LPOptStatistics
-                                                       fmt::fmt-header-only)
+add_library(OptStatisticsPrinter INTERFACE OptStatisticsPrinter.h)
+target_link_libraries(
+  OptStatisticsPrinter INTERFACE LPOptStatistics LexReoptStatistics
+                                 IPOptStatistics fmt::fmt-header-only)
 
 add_library(GurobiOptimizer INTERFACE GurobiOptimizer.h)
 target_link_libraries(
@@ -37,6 +42,6 @@ set_target_properties(
   SpdlogHeader
   LPOptStatistics
   IPOptStatistics
-  LPOptStatisticsPrinter
+  OptStatisticsPrinter
   GurobiOptimizer
   PROPERTIES LINKER_LANGUAGE CXX)

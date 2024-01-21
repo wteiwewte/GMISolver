@@ -23,7 +23,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::RevisedDualSimplexPFIBounds(
 template <typename T, typename SimplexTraitsT>
 std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::type() const {
   return fmt::format(
-      "REVISED DUAL SIMPLEX ({}, {})",
+      "DUAL SIMPLEX ({}, {})",
       simplexTableauTypeToStr(_simplexTableau._simplexTableauType),
       matrixRepresentationTypeToStr(SimplexTraitsT::matrixRepresentationType));
 }
@@ -40,7 +40,7 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
   LPOptStatistics<T> lpOptStatistics{
       ._lpName = _simplexTableau.getName() +
                  (!lpNameSuffix.empty() ? "_" + lpNameSuffix : ""),
-      ._simplexAlgorithmType = type(),
+      ._algorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   [[maybe_unused]] int iterCount = 1;
   lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {

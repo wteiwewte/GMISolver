@@ -1,7 +1,7 @@
 #ifndef GMISOLVER_LPTESTBASE_H
 #define GMISOLVER_LPTESTBASE_H
 
-#include "Util/LPOptStatisticsPrinter.h"
+#include "Util/OptStatisticsPrinter.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/DataModel/EnumTypes.h"
 #include "src/Util/IPOptStatistics.h"
@@ -20,6 +20,12 @@ struct InstanceSetStats {
   int _modelsWithNoAllIntegerCoeffs = 0;
   int _modelsWithNoAllNonnegativeVariables = 0;
   int _totalModelsCount = 0;
+};
+
+template <typename UnderlyingStatsT> struct OptimizationStats {
+  using T = UnderlyingStatsT::Type;
+  UnderlyingStatsT _optimizationStats;
+  LPOptStatistics<T> _gurobiStats;
 };
 
 template <typename T> struct LPTestBase {
@@ -81,12 +87,13 @@ template <typename T> struct LPTestBase {
     return true;
   }
 
-  template <typename LPOptFunc>
+  template <typename UnderlyingStatsT, typename LPOptFunc>
   void solveAndCompareInstancesFromSets(
       const std::string &dirPath, const size_t basisSizeLimit,
       const LPOptimizationType lpOptimizationType, LPOptFunc lpOptFunc,
       const bool allBoundsMustBeSpecified = true) {
-    LPOptStatisticsVec<FloatingPointT> lpOptStatisticsVec;
+    using OptimizationStatsT = OptimizationStats<UnderlyingStatsT>;
+    std::vector<OptimizationStatsT> optimizationStatsVec;
     for (const SimplexTableauType simplexTableauType :
          absl::GetFlag(FLAGS_simplex_tableau_types)) {
       InstanceSetStats instanceSetStats;
@@ -111,7 +118,7 @@ template <typename T> struct LPTestBase {
                                  isRelaxationOptType, allBoundsMustBeSpecified,
                                  instanceSetStats)) {
             lpOptFunc(*linearProgram, simplexTableauType,
-                      lpModelFileEntry.path(), lpOptStatisticsVec);
+                      lpModelFileEntry.path(), optimizationStatsVec);
           }
         }
       }
@@ -142,10 +149,16 @@ template <typename T> struct LPTestBase {
                       instanceSetStats._modelsWithNoAllNonnegativeVariables);
       }
     }
-    LPOptStatisticsPrinter<FloatingPointT> lpOptStatisticsPrinter(
-        lpOptStatisticsVec);
-    lpOptStatisticsPrinter.print();
-    SPDLOG_INFO(lpOptStatisticsPrinter.toString());
+    if (!optimizationStatsVec.empty()) {
+      OptStatisticsPrinter optStatisticsPrinter;
+      optStatisticsPrinter.printFirstLine(
+          optimizationStatsVec.front()._optimizationStats);
+      for (const auto &optStats : optimizationStatsVec) {
+        optStatisticsPrinter.print(optStats._optimizationStats);
+        optStatisticsPrinter.print(optStats._gurobiStats);
+      }
+      SPDLOG_INFO(optStatisticsPrinter.toString());
+    }
   }
 
   void compare(const LPOptimizationType lpOptimizationType,
@@ -204,8 +217,7 @@ template <typename T> struct LPTestBase {
                   NumericalTraitsT::OPTIMALITY_TOLERANCE);
 
       const auto &optimalValueAfterFirstLexReopt =
-          lpRelaxationStatistics._lexicographicReoptStats
-              ._objectiveValueAfterLexReopt;
+          lpRelaxationStatistics._lexicographicReoptStats._optimalValue;
       SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC {} REOPT {}",
                   lexicographicReoptTypeToStr(lexicographicReoptType),
                   optimalValueAfterFirstLexReopt);
@@ -268,9 +280,9 @@ template <typename T> struct LPTestBase {
       SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
       SPDLOG_INFO("LEXICOGRAPHIC {} SIMPLEX REOPT {}",
                   lexicographicReoptTypeToStr(lexicographicReoptType),
-                  lexReoptStatistics._objectiveValueAfterLexReopt);
+                  lexReoptStatistics._optimalValue);
       EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                  lexReoptStatistics._objectiveValueAfterLexReopt,
+                  lexReoptStatistics._optimalValue,
                   NumericalTraitsT::OPTIMALITY_TOLERANCE);
     }
   }

@@ -23,21 +23,19 @@ public:
       const DualSimplexRowPivotRule dualSimplexRowPivotRule,
       const int32_t objValueLoggingFrequency,
       const ValidateSimplexOption validateSimplexOption,
-      const bool removeOnlyPositiveSlackCuts);
+      const bool removeOnlyPositiveSlackCuts,
+      const LexicographicReoptType lexicographicReoptType);
 
   std::string type() const;
 
-  IPOptStatistics<T> run(const LexicographicReoptType lexicographicReoptType,
-                         const LPOptimizationType lpOptimizationType,
+  IPOptStatistics<T> run(const LPOptimizationType lpOptimizationType,
                          const GomoryCutChoosingRule gomoryCutChoosingRule);
 
 private:
   using VectorT = typename SimplexTraitsT::VectorT;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  LPRelaxationStatistics<T>
-  runImpl(const int relaxationNo,
-          const LexicographicReoptType lexicographicReoptType);
+  LPRelaxationStatistics<T> runImpl(const int relaxationNo);
 
   RevisedDualSimplexPFIBounds<T, SimplexTraitsT> dualSimplex() const;
   LexicographicOptimizer<T, SimplexTraitsT> lexicographicOptimizer() const;
@@ -71,7 +69,7 @@ private:
   const int32_t _objValueLoggingFrequency;
   const ValidateSimplexOption _validateSimplexOption;
   const bool _removeOnlyPositiveSlackCuts;
-  const bool _defineCutsInTermsOfOriginalVariables{true};
+  const LexicographicReoptType _lexicographicReoptType;
 };
 
 #endif // GMISOLVER_DUALSIMPLEXGOMORY_H

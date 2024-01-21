@@ -44,14 +44,15 @@ protected:
                 const size_t basisSizeLimit) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;
     using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
+    using UnderlyingOptStatsT = LPOptStatistics<FloatingPointT>;
     const LPOptimizationType lpOptimizationType{
         LPOptimizationType::LINEAR_RELAXATION};
-    this->solveAndCompareInstancesFromSets(
+    this->template solveAndCompareInstancesFromSets<UnderlyingOptStatsT>(
         dualSimplexTestDirPath, basisSizeLimit, lpOptimizationType,
         [&](const auto &linearProgram,
             const SimplexTableauType simplexTableauType,
             const std::filesystem::path &modelFileMpsPath,
-            LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
+            std::vector<OptimizationStats<UnderlyingOptStatsT>> &optStatsVec) {
           const auto dualSimplexLpOptStats =
               runDualSimplexWithImplicitBounds<FloatingPointT, SimplexTraitsT>(
                   linearProgram, simplexTableauType);
@@ -60,8 +61,7 @@ protected:
                   .optimize<FloatingPointT>(
                       LPOptimizationType::LINEAR_RELAXATION);
           this->compareWithGurobi(dualSimplexLpOptStats, gurobiLPOptStats);
-          lpOptStatisticsVec.push_back(dualSimplexLpOptStats);
-          lpOptStatisticsVec.push_back(gurobiLPOptStats);
+          optStatsVec.push_back({dualSimplexLpOptStats, gurobiLPOptStats});
         });
   }
 };

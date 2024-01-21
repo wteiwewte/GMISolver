@@ -12,11 +12,6 @@
 
 #include <gtest/gtest.h>
 
-template <typename T> struct PrimalSimplexOutput {
-  LPOptStatistics<T> _phaseOneLpOptStats;
-  std::optional<LPOptStatistics<T>> _phaseTwoLpOptStats;
-};
-
 template <typename T, typename SimplexTraitsT>
 PrimalSimplexOutput<T> runPrimalSimplexWithImplicitBounds(
     const LinearProgram<T> &linearProgram,
@@ -59,14 +54,15 @@ protected:
                         const size_t basisSizeLimit) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;
     using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
+    using UnderlyingOptStatsT = PrimalSimplexOutput<FloatingPointT>;
     const LPOptimizationType lpOptimizationType{
         LPOptimizationType::LINEAR_RELAXATION};
-    this->solveAndCompareInstancesFromSets(
+    this->template solveAndCompareInstancesFromSets<UnderlyingOptStatsT>(
         primalSimplexTestDirPath, basisSizeLimit, lpOptimizationType,
         [&](const auto &primalProgram,
             const SimplexTableauType simplexTableauType,
             const std::filesystem::path &modelFileMpsPath,
-            LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
+            std::vector<OptimizationStats<UnderlyingOptStatsT>> &optStatsVec) {
           const auto primalProgramSimplexOutput =
               runPrimalSimplexWithImplicitBounds<FloatingPointT,
                                                  SimplexTraitsT>(
@@ -81,11 +77,13 @@ protected:
               GurobiOptimizer("", modelFileMpsPath)
                   .optimize<FloatingPointT>(lpOptimizationType);
 
-          lpOptStatisticsVec.push_back(gurobiLPOptStats);
-          lpOptStatisticsVec.push_back(
-              primalProgramSimplexOutput._phaseOneLpOptStats);
-          lpOptStatisticsVec.push_back(
-              dualProgramSimplexOutput._phaseOneLpOptStats);
+          optStatsVec.push_back(
+              {{primalProgramSimplexOutput._phaseOneLpOptStats,
+                primalProgramSimplexOutput._phaseTwoLpOptStats},
+               gurobiLPOptStats});
+          optStatsVec.push_back({{dualProgramSimplexOutput._phaseOneLpOptStats,
+                                  dualProgramSimplexOutput._phaseTwoLpOptStats},
+                                 gurobiLPOptStats});
           ASSERT_EQ(LPOptimizationResult::BOUNDED_AND_FEASIBLE,
                     primalProgramSimplexOutput._phaseOneLpOptStats._optResult);
           const bool isPrimalProgramInfeasible =
@@ -107,8 +105,6 @@ protected:
           } else {
             ASSERT_TRUE(
                 primalProgramSimplexOutput._phaseTwoLpOptStats.has_value());
-            lpOptStatisticsVec.push_back(
-                *primalProgramSimplexOutput._phaseTwoLpOptStats);
             switch (
                 primalProgramSimplexOutput._phaseTwoLpOptStats->_optResult) {
             case LPOptimizationResult::UNBOUNDED: {
@@ -130,8 +126,6 @@ protected:
                   dualProgramSimplexOutput._phaseOneLpOptStats._optResult);
               ASSERT_TRUE(
                   dualProgramSimplexOutput._phaseTwoLpOptStats.has_value());
-              lpOptStatisticsVec.push_back(
-                  *dualProgramSimplexOutput._phaseTwoLpOptStats);
               EXPECT_EQ(
                   LPOptimizationResult::BOUNDED_AND_FEASIBLE,
                   dualProgramSimplexOutput._phaseTwoLpOptStats->_optResult);
@@ -160,14 +154,15 @@ protected:
                 const size_t basisSizeLimit) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;
     using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
+    using UnderlyingOptStatsT = PrimalSimplexOutput<FloatingPointT>;
     const LPOptimizationType lpOptimizationType{
         LPOptimizationType::LINEAR_RELAXATION};
-    this->solveAndCompareInstancesFromSets(
+    this->template solveAndCompareInstancesFromSets<UnderlyingOptStatsT>(
         primalSimplexTestDirPath, basisSizeLimit, lpOptimizationType,
         [&](const auto &primalProgram,
             const SimplexTableauType simplexTableauType,
             const std::filesystem::path &modelFileMpsPath,
-            LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
+            std::vector<OptimizationStats<UnderlyingOptStatsT>> &optStatsVec) {
           const auto primalProgramSimplexOutput =
               runPrimalSimplexWithImplicitBounds<FloatingPointT,
                                                  SimplexTraitsT>(
@@ -176,9 +171,11 @@ protected:
               GurobiOptimizer("", modelFileMpsPath)
                   .optimize<FloatingPointT>(lpOptimizationType);
 
-          lpOptStatisticsVec.push_back(gurobiLPOptStats);
-          lpOptStatisticsVec.push_back(
-              primalProgramSimplexOutput._phaseOneLpOptStats);
+          optStatsVec.push_back(
+              {{primalProgramSimplexOutput._phaseOneLpOptStats,
+                primalProgramSimplexOutput._phaseTwoLpOptStats},
+               gurobiLPOptStats});
+
           ASSERT_EQ(LPOptimizationResult::BOUNDED_AND_FEASIBLE,
                     primalProgramSimplexOutput._phaseOneLpOptStats._optResult);
           const bool isPrimalProgramInfeasible =
@@ -194,8 +191,6 @@ protected:
           } else {
             ASSERT_TRUE(
                 primalProgramSimplexOutput._phaseTwoLpOptStats.has_value());
-            lpOptStatisticsVec.push_back(
-                *primalProgramSimplexOutput._phaseTwoLpOptStats);
             switch (
                 primalProgramSimplexOutput._phaseTwoLpOptStats->_optResult) {
             case LPOptimizationResult::UNBOUNDED: {

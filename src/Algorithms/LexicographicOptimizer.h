@@ -2,7 +2,7 @@
 #define GMISOLVER_LEXICOGRAPHICOPTIMIZER_H
 
 #include "src/DataModel/CommonTypes.h"
-#include "src/Util/LPOptStatistics.h"
+#include "src/Util/LexReoptStatistics.h"
 #include "src/Util/SimplexTraits.h"
 
 #include <boost/dynamic_bitset.hpp>
@@ -20,12 +20,12 @@ public:
       ReinversionManager<T, SimplexTraitsT> &reinversionManager,
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
       const int32_t objValueLoggingFrequency,
-      const ValidateSimplexOption validateSimplexOption);
+      const ValidateSimplexOption validateSimplexOption,
+      const LexicographicReoptType lexicographicReoptType);
 
   std::string type() const;
 
-  LexReoptStatistics<T> run(const LexicographicReoptType lexicographicReoptType,
-                            const std::string &lexOptId,
+  LexReoptStatistics<T> run(const std::string &lexOptId,
                             const bool saveSolution = false);
 
 private:
@@ -34,9 +34,7 @@ private:
   RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> primalSimplex() const;
 
   boost::dynamic_bitset<> getIsFixedBitset() const;
-  std::vector<T>
-  singleVarObjective(const int varIdx,
-                     const LexicographicReoptType lexicographicReoptType);
+  std::vector<T> singleVarObjective(const int varIdx);
   void fixNonBasicVariables(int &varsFixedCount);
   void unfixVariables(const boost::dynamic_bitset<> &initialIsFixedBitset);
 
@@ -45,6 +43,7 @@ private:
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
   const int32_t _objValueLoggingFrequency;
   const ValidateSimplexOption _validateSimplexOption;
+  const LexicographicReoptType _lexicographicReoptType;
 };
 
 #endif // GMISOLVER_LEXICOGRAPHICOPTIMIZER_H

@@ -32,8 +32,9 @@ LexReoptStatistics<T> runDualSimplexWithLexReopt(
              simplexTableau, reinversionManager,
              PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
              absl::GetFlag(FLAGS_obj_value_logging_frequency),
-             absl::GetFlag(FLAGS_validate_simplex_option))
-      .run(lexicographicReoptType, "", true);
+             absl::GetFlag(FLAGS_validate_simplex_option),
+             lexicographicReoptType)
+      .run("", true);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -62,8 +63,9 @@ LexReoptStatistics<T> runPrimalSimplexWithLexReopt(
              simplexTableau, reinversionManager,
              PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
              absl::GetFlag(FLAGS_obj_value_logging_frequency),
-             absl::GetFlag(FLAGS_validate_simplex_option))
-      .run(lexicographicReoptType, "", true);
+             absl::GetFlag(FLAGS_validate_simplex_option),
+             lexicographicReoptType)
+      .run("", true);
 }
 
 template <typename T>
@@ -83,14 +85,15 @@ protected:
   void testCase(const std::string &testDirPath, const size_t basisSizeLimit,
                 SimplexFunc simplexFunc) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;
+    using UnderlyingOptStatsT = LexReoptStatistics<FloatingPointT>;
     const LPOptimizationType lpOptimizationType{
         LPOptimizationType::LINEAR_RELAXATION};
-    this->solveAndCompareInstancesFromSets(
+    this->template solveAndCompareInstancesFromSets<UnderlyingOptStatsT>(
         testDirPath, basisSizeLimit, lpOptimizationType,
         [&](const auto &linearProgram,
             const SimplexTableauType simplexTableauType,
             const std::filesystem::path &modelFileMpsPath,
-            LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
+            std::vector<OptimizationStats<UnderlyingOptStatsT>> &optStatsVec) {
           for (const auto lexicographicReoptType :
                {LexicographicReoptType::MIN, LexicographicReoptType::MAX}) {
             LexReoptStatistics<FloatingPointT> lexReoptStatistics = simplexFunc(
@@ -104,11 +107,7 @@ protected:
             this->compareWithGurobi(
                 lexicographicReoptType, lexReoptStatistics, gurobiLPOptStats,
                 gurobiOptimizer.getSolutionVector<FloatingPointT>());
-            //            lpOptStatisticsVec.push_back(gurobiLPOptStats);
-            //            for (const auto &lexLPReoptStats :
-            //                 lexReoptStatistics._lexLPReoptStatsVec) {
-            //              lpOptStatisticsVec.push_back(lexLPReoptStats);
-            //            }
+            optStatsVec.push_back({lexReoptStatistics, gurobiLPOptStats});
           }
         });
   }

@@ -1,4 +1,4 @@
-NAME
+NAME    EJ
 ROWS
  N  obj      
  E  c1      

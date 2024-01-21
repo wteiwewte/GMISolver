@@ -17,13 +17,15 @@ DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
     const DualSimplexRowPivotRule dualSimplexRowPivotRule,
     const int32_t objValueLoggingFrequency,
     const ValidateSimplexOption validateSimplexOption,
-    const bool removeOnlyPositiveSlackCuts)
+    const bool removeOnlyPositiveSlackCuts,
+    const LexicographicReoptType lexicographicReoptType)
     : _simplexTableau(simplexTableau), _reinversionManager(reinversionManager),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _validateSimplexOption(validateSimplexOption),
-      _removeOnlyPositiveSlackCuts(removeOnlyPositiveSlackCuts) {}
+      _removeOnlyPositiveSlackCuts(removeOnlyPositiveSlackCuts),
+      _lexicographicReoptType(lexicographicReoptType) {}
 
 template <typename T, typename SimplexTraitsT>
 std::string DualSimplexGomory<T, SimplexTraitsT>::type() const {
@@ -35,11 +37,10 @@ std::string DualSimplexGomory<T, SimplexTraitsT>::type() const {
 
 template <typename T, typename SimplexTraitsT>
 IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
-    const LexicographicReoptType lexicographicReoptType,
     const LPOptimizationType lpOptimizationType,
     const GomoryCutChoosingRule gomoryCutChoosingRule) {
   SPDLOG_INFO("GOMORY WITH {} LEXICOGRAPHIC REOPTIMIZATION",
-              lexicographicReoptTypeToStr(lexicographicReoptType));
+              lexicographicReoptTypeToStr(_lexicographicReoptType));
   IPOptStatistics<T> ipOptStatistics{
       ._lpName = _simplexTableau.getName(),
       ._algorithmType = type(),
@@ -47,8 +48,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
   ipOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
     int relaxationNo = 1;
-    ipOptStatistics._lpRelaxationStats.emplace_back() =
-        runImpl(relaxationNo, lexicographicReoptType);
+    ipOptStatistics._lpRelaxationStats.emplace_back() = runImpl(relaxationNo);
 
     if (lpOptimizationType == LPOptimizationType::LINEAR_RELAXATION)
       return;
@@ -84,8 +84,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
       SPDLOG_INFO(_simplexTableau.toStringSolution());
 
-      ipOptStatistics._lpRelaxationStats.emplace_back() =
-          runImpl(relaxationNo, lexicographicReoptType);
+      ipOptStatistics._lpRelaxationStats.emplace_back() = runImpl(relaxationNo);
 
       if (removeCutsInBasis()) {
         SPDLOG_INFO("AFTER CUT REMOVAL");
@@ -93,23 +92,22 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
         SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
         SPDLOG_INFO(_simplexTableau.toStringSolution());
         ipOptStatistics._lpRelaxationStats.emplace_back() =
-            runImpl(relaxationNo, lexicographicReoptType);
+            runImpl(relaxationNo);
       }
     }
   });
 
-  ipOptStatistics._optimalValue =
-      ipOptStatistics._lpRelaxationStats.back()
-          ._lexicographicReoptStats._objectiveValueAfterLexReopt;
+  ipOptStatistics._optimalValue = ipOptStatistics._lpRelaxationStats.back()
+                                      ._lexicographicReoptStats._optimalValue;
   ipOptStatistics._optimalSolution = _simplexTableau._x;
+  ipOptStatistics._optResult = _simplexTableau._result;
 
   return ipOptStatistics;
 }
 
 template <typename T, typename SimplexTraitsT>
-LPRelaxationStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::runImpl(
-    const int relaxationNo,
-    const LexicographicReoptType lexicographicReoptType) {
+LPRelaxationStatistics<T>
+DualSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
   const auto relaxationId = [&relaxationNo] {
     return fmt::format("{}TH_RELAX", relaxationNo);
   };
@@ -120,7 +118,7 @@ LPRelaxationStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::runImpl(
   //  SPDLOG_INFO(_simplexTableau.toStringSolution());
 
   relaxationStats._lexicographicReoptStats =
-      lexicographicOptimizer().run(lexicographicReoptType, relaxationId());
+      lexicographicOptimizer().run(relaxationId());
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
   SPDLOG_INFO(_simplexTableau.toStringSolution());
   return relaxationStats;
@@ -139,7 +137,8 @@ LexicographicOptimizer<T, SimplexTraitsT>
 DualSimplexGomory<T, SimplexTraitsT>::lexicographicOptimizer() const {
   return LexicographicOptimizer<T, SimplexTraitsT>(
       _simplexTableau, _reinversionManager, _primalSimplexColumnPivotRule,
-      _objValueLoggingFrequency, _validateSimplexOption);
+      _objValueLoggingFrequency, _validateSimplexOption,
+      _lexicographicReoptType);
 }
 
 template <typename T, typename SimplexTraitsT>

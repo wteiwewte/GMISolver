@@ -29,9 +29,10 @@ IPOptStatistics<T> runDualSimplexGomoryWithPrimalCuts(
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option),
       absl::GetFlag(
-          FLAGS_dual_gomory_remove_only_slack_cuts_with_positive_value));
-  return dualSimplexGomoryWithPrimalCuts.run(
-      lexicographicReoptType, lpOptimizationType, gomoryCutChoosingRule);
+          FLAGS_dual_gomory_remove_only_slack_cuts_with_positive_value),
+      lexicographicReoptType);
+  return dualSimplexGomoryWithPrimalCuts.run(lpOptimizationType,
+                                             gomoryCutChoosingRule);
 }
 
 template <typename T>
@@ -51,14 +52,14 @@ protected:
            const std::vector<LexicographicReoptType> lexicographicReoptTypes) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;
     using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
-    this->solveAndCompareInstancesFromSets(
+    using UnderlyingOptStatsT = IPOptStatistics<FloatingPointT>;
+    this->template solveAndCompareInstancesFromSets<UnderlyingOptStatsT>(
         dualSimplexGomoryTestDirPath, basisSizeLimit, lpOptimizationType,
         [&](const auto &linearProgram,
             const SimplexTableauType simplexTableauType,
             const std::filesystem::path &modelFileMpsPath,
-            LPOptStatisticsVec<FloatingPointT> &lpOptStatisticsVec) {
+            std::vector<OptimizationStats<UnderlyingOptStatsT>> &optStatsVec) {
           for (const auto lexicographicReoptType : lexicographicReoptTypes) {
-            // FIXME add support for ipOptStatsVec
             IPOptStatistics<FloatingPointT> ipOptStatistics =
                 runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
                                                    SimplexTraitsT>(
@@ -69,6 +70,7 @@ protected:
                     .optimize<FloatingPointT>(lpOptimizationType);
             this->compare(lpOptimizationType, lexicographicReoptType,
                           ipOptStatistics, gurobiLPOptStats);
+            optStatsVec.push_back({ipOptStatistics, gurobiLPOptStats});
           }
         });
   }

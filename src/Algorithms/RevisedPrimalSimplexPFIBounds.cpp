@@ -23,7 +23,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
 template <typename T, typename SimplexTraitsT>
 std::string RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::type() const {
   return fmt::format(
-      "REVISED PRIMAL SIMPLEX ({}, {})",
+      "PRIMAL SIMPLEX ({}, {})",
       simplexTableauTypeToStr(_simplexTableau._simplexTableauType),
       matrixRepresentationTypeToStr(SimplexTraitsT::matrixRepresentationType));
 }
@@ -69,7 +69,7 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
   LPOptStatistics<T> lpOptStatistics{
       ._lpName = (_simplexTableau.getName() +
                   (!lpNameSuffix.empty() ? "_" + lpNameSuffix : "")),
-      ._simplexAlgorithmType = type(),
+      ._algorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
     while (true) {

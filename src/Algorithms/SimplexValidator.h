@@ -17,27 +17,25 @@ public:
       : _simplexTableau(_simplexTableau),
         _simplexLpOptStats(simplexLpOptStats) {}
 
-  ExpectedT validatePrimalIteration(const bool isPhaseOne) const {
+  ExpectedT validatePrimalIteration(const PrimalPhase primalPhase) const {
     return validateTableau()
-        .and_then([&] { return validateBasis(); })
-        .and_then([&] { return validatePrimalFeasibility(isPhaseOne); })
+        .and_then([&] { return validatePrimalFeasibility(primalPhase); })
         .and_then(
             [&] { return validateObjectiveMonotonicity(SimplexType::PRIMAL); });
   }
 
   ExpectedT validateDualIteration() const {
     return validateTableau()
-        .and_then([&] { return validateBasis(); })
         .and_then([&] { return validateDualFeasibility(); })
         .and_then(
             [&] { return validateObjectiveMonotonicity(SimplexType::DUAL); });
   }
 
-  ExpectedT validateOptimality(const SimplexType simplexType,
-                               const bool isPhaseOne = false) const {
+  ExpectedT
+  validateOptimality(const SimplexType simplexType,
+                     const PrimalPhase primalPhase = PrimalPhase::TWO) const {
     return validateTableau()
-        .and_then([&] { return validateBasis(); })
-        .and_then([&] { return validatePrimalFeasibility(isPhaseOne); })
+        .and_then([&] { return validatePrimalFeasibility(primalPhase); })
         .and_then([&] { return validateDualFeasibility(); })
         .and_then([&] { return validateObjectiveMonotonicity(simplexType); });
   }
@@ -45,18 +43,18 @@ public:
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  ExpectedT validatePrimalFeasibility(const bool isPhaseOne) const {
-    return validateConstraints(isPhaseOne).and_then([&] {
+  ExpectedT validatePrimalFeasibility(const PrimalPhase primalPhase) const {
+    return validateConstraints(primalPhase).and_then([&] {
       return validateVariableBounds();
     });
   }
 
-  ExpectedT validateConstraints(const bool isPhaseOne) const {
+  ExpectedT validateConstraints(const PrimalPhase primalPhase) const {
     return validateConstraints(
                "initial_simplex", _simplexTableau._constraintMatrix,
                _simplexTableau._initialRightHandSides, _simplexTableau._x)
         .and_then([&]() -> ExpectedT {
-          if (isPhaseOne)
+          if (primalPhase == PrimalPhase::ONE)
             return {};
 
           return validateConstraints(
@@ -200,7 +198,8 @@ private:
   }
 
   ExpectedT validateBasis() const {
-    return validateCorrectBasisDistribution()
+    return validateBasisIntegrity()
+        .and_then([&] { return validateCorrectBasisDistribution(); })
         .and_then([&] { return validateBoundExistence(); })
         .and_then([&] { return validateRowToColumnMapping(); });
   }
@@ -302,15 +301,15 @@ private:
   }
 
   ExpectedT validateTableau() const {
-    return validateSingleVarBounds()
-        .and_then([&] { return validateMatrixRepresentations(); })
-        .and_then([&] { return validateRHS(); })
-        .and_then([&] { return validateObjectiveRelatedThings(); })
-        .and_then([&] { return validateSolutionSize(); })
-        .and_then([&] { return validateBasisIntegrity(); });
+    return validateBasis()
+        .and_then([&] { return validateSingleVarBoundsSizes(); })
+        .and_then([&] { return validateMatrixRepresentationSizes(); })
+        .and_then([&] { return validateRHSSize(); })
+        .and_then([&] { return validateObjectiveRelatedThingsSizes(); })
+        .and_then([&] { return validateSolutionSize(); });
   }
 
-  ExpectedT validateSingleVarBounds() const {
+  ExpectedT validateSingleVarBoundsSizes() const {
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
 
     if (_simplexTableau._variableLowerBounds.size() != expectedNumberOfVars ||
@@ -338,7 +337,7 @@ private:
     return {};
   }
 
-  ExpectedT validateMatrixRepresentations() const {
+  ExpectedT validateMatrixRepresentationSizes() const {
     if (_simplexTableau._simplexTableauType == SimplexTableauType::FULL) {
       return validateFullTableau();
     } else {
@@ -479,7 +478,7 @@ private:
     return {};
   }
 
-  ExpectedT validateRHS() const {
+  ExpectedT validateRHSSize() const {
     const auto expectedNumberOfRows = _simplexTableau._rowInfos.size();
     if (_simplexTableau._rightHandSides.size() != expectedNumberOfRows)
       return tl::unexpected{
@@ -494,7 +493,7 @@ private:
     return {};
   }
 
-  ExpectedT validateObjectiveRelatedThings() const {
+  ExpectedT validateObjectiveRelatedThingsSizes() const {
     const auto expectedNumberOfVars = _simplexTableau._variableInfos.size();
     if (_simplexTableau._objectiveRow.size() == expectedNumberOfVars &&
         _simplexTableau._reducedCosts.size() == expectedNumberOfVars)

@@ -28,9 +28,7 @@ IPOptStatistics<T> runDualSimplexGomoryWithPrimalCuts(
       DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option),
-      absl::GetFlag(
-          FLAGS_dual_gomory_remove_only_slack_cuts_with_positive_value),
-      lexicographicReoptType);
+      absl::GetFlag(FLAGS_slack_cut_removal_condition), lexicographicReoptType);
   return dualSimplexGomoryWithPrimalCuts.run(lpOptimizationType,
                                              gomoryCutChoosingRule);
 }

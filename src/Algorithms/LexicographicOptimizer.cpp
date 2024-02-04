@@ -1,7 +1,7 @@
 #include "src/Algorithms/LexicographicOptimizer.h"
 
+#include "src/Algorithms/PrimalSimplex.h"
 #include "src/Algorithms/ReinversionManager.h"
-#include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/SpdlogHeader.h"
 #include "src/Util/Time.h"
@@ -28,17 +28,16 @@ std::string LexicographicOptimizer<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
+PrimalSimplex<T, SimplexTraitsT>
 LexicographicOptimizer<T, SimplexTraitsT>::primalSimplex() const {
-  return RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>(
+  return PrimalSimplex<T, SimplexTraitsT>(
       _simplexTableau, _reinversionManager, _primalSimplexColumnPivotRule,
       _objValueLoggingFrequency, _validateSimplexOption);
 }
 
 template <typename T, typename SimplexTraitsT>
-LexReoptStatistics<T>
-LexicographicOptimizer<T, SimplexTraitsT>::run(const std::string &lexOptId,
-                                               const bool saveSolution) {
+LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
+    const std::string &lexOptId, const SaveLexSolution saveLexSolution) {
   LexReoptStatistics<T> lexReoptStats{
       ._lpName =
           _simplexTableau.getName() + (!lexOptId.empty() ? "_" + lexOptId : ""),
@@ -60,7 +59,7 @@ LexicographicOptimizer<T, SimplexTraitsT>::run(const std::string &lexOptId,
         auto lpStatisticsFromSingleVarOpt = primalSimplex().runImpl(
             fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized,
                         lexicographicReoptTypeToStr(_lexicographicReoptType)),
-            false);
+            PrintSimplexOptSummary::NO);
         lexReoptStats.addLpOptStats(std::move(lpStatisticsFromSingleVarOpt));
         fixNonBasicVariables(varsFixedCount);
         ++optimizedVarCount;
@@ -74,7 +73,7 @@ LexicographicOptimizer<T, SimplexTraitsT>::run(const std::string &lexOptId,
     _simplexTableau.setObjective(
         _simplexTableau._initialProgram.getObjective());
     lexReoptStats._optimalValue = _simplexTableau._objectiveValue;
-    if (saveSolution) {
+    if (saveLexSolution == SaveLexSolution::YES) {
       const bool isFirstVarObjective =
           _simplexTableau._variableInfos[0]._isObjectiveVar;
       lexReoptStats._solution.assign(

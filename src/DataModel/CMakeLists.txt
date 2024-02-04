@@ -1,5 +1,5 @@
 add_library(LinearProgram LinearProgram.cpp LinearProgram.h)
-target_link_libraries(LinearProgram CommonConstants CommonTypes EnumTypes
+target_link_libraries(LinearProgram CommonConstants CommonFunctions CommonTypes EnumTypes
                       MatrixTypes LPPrinter)
 
 add_library(EnumTypes EnumTypes.h EnumTypes.cpp)

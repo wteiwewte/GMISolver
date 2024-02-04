@@ -14,7 +14,8 @@ public:
   static std::optional<LinearProgram<T>> read(const std::string &filePath);
 
 private:
-  static bool finalizeBounds(LinearProgram<T> &linearProgram);
+  static void setBoundsForNonFreeVars(LinearProgram<T> &linearProgram);
+  static void roundBoundsForIntegerVars(LinearProgram<T> &linearProgram);
 };
 
 #endif // GMISOLVER_MPSREADER_H

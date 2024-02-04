@@ -1,6 +1,6 @@
+#include "Algorithms/DualSimplex.h"
+#include "Algorithms/PrimalSimplex.h"
 #include "Algorithms/ReinversionManager.h"
-#include "Algorithms/RevisedDualSimplexPFIBounds.h"
-#include "Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
 #include "src/Util/LPOptStatistics.h"
@@ -20,7 +20,7 @@ runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram,
       linearProgram, SimplexType::DUAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
-  return RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
+  return DualSimplex<T, SimplexTraitsT>(
              simplexTableau, reinversionManager,
              DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
              absl::GetFlag(FLAGS_obj_value_logging_frequency),

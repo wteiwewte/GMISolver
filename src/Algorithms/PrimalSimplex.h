@@ -1,5 +1,5 @@
-#ifndef GMISOLVER_REVISEDPRIMALSIMPLEXPFIBOUNDS_H
-#define GMISOLVER_REVISEDPRIMALSIMPLEXPFIBOUNDS_H
+#ifndef GMISOLVER_PRIMALSIMPLEX_H
+#define GMISOLVER_PRIMALSIMPLEX_H
 
 #include "src/DataModel/CommonTypes.h"
 #include "src/Util/LPOptStatistics.h"
@@ -11,22 +11,23 @@ template <typename T, typename SimplexTraitsT> class SimplexTableau;
 template <typename T, typename SimplexTraitsT> class ReinversionManager;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
-class RevisedPrimalSimplexPFIBounds {
+class PrimalSimplex {
 public:
-  RevisedPrimalSimplexPFIBounds(
-      SimplexTableau<T, SimplexTraitsT> &simplexTableau,
-      ReinversionManager<T, SimplexTraitsT> &reinversionManager,
-      const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
-      const int32_t objValueLoggingFrequency,
-      const ValidateSimplexOption validateSimplexOption);
+  PrimalSimplex(SimplexTableau<T, SimplexTraitsT> &simplexTableau,
+                ReinversionManager<T, SimplexTraitsT> &reinversionManager,
+                const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
+                const int32_t objValueLoggingFrequency,
+                const ValidateSimplexOption validateSimplexOption);
 
   std::string type() const;
 
   LPOptStatistics<T> runPhaseOne();
   LPOptStatistics<T> runPhaseTwo();
-  LPOptStatistics<T> runImpl(const std::string &lpNameSuffix,
-                             const bool printSummary = true,
-                             const bool isPhaseOne = false);
+  LPOptStatistics<T>
+  runImpl(const std::string &lpNameSuffix,
+          const PrintSimplexOptSummary printSimplexOptSummary =
+              PrintSimplexOptSummary::YES,
+          const PrimalPhase primalPhase = PrimalPhase::TWO);
 
 private:
   using VectorT = typename SimplexTraitsT::VectorT;
@@ -35,14 +36,14 @@ private:
   void tryLogObjValue(const int iterCount);
   bool tryReinversion(const int iterCount,
                       const LPOptStatistics<T> &lpOptStatistics,
-                      const bool isPhaseOne);
+                      const PrimalPhase primalPhase);
   bool checkIterationLimit(const int iterCount);
   bool checkObjectiveProgress(const LPOptStatistics<T> &lpOptStatistics);
   bool tryValidateIteration(const int iterCount,
                             const LPOptStatistics<T> &lpOptStatistics,
-                            const bool isPhaseOne);
+                            const PrimalPhase primalPhase);
   void tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics,
-                                   const bool isPhaseOne);
+                                   const PrimalPhase primalPhase);
   bool runOneIteration();
 
   std::optional<int> chooseEnteringColumn();
@@ -66,4 +67,4 @@ private:
   const ValidateSimplexOption _validateSimplexOption;
 };
 
-#endif // GMISOLVER_REVISEDPRIMALSIMPLEXPFIBOUNDS_H
+#endif // GMISOLVER_PRIMALSIMPLEX_H

@@ -17,7 +17,7 @@ struct InstanceSetStats {
   int _processedModelsCount = 0;
   int _tooBigModelsCount = 0;
   int _modelsWithNoBoundsCount = 0;
-  int _modelsWithNoAllIntegerVariables = 0;
+  int _modelsWithNotAllIntegerVariables = 0;
   int _modelsWithNoAllIntegerCoeffs = 0;
   int _modelsWithNoAllNonnegativeVariables = 0;
   int _totalModelsCount = 0;
@@ -48,6 +48,7 @@ template <typename T> struct LPTestBase {
     if (linearProgram.getRowInfos().size() > basisSizeLimit ||
         linearProgram.getVariableInfos().size() > 2 * basisSizeLimit) {
       ++instanceSetStats._tooBigModelsCount;
+      SPDLOG_INFO("SKIPPING MODEL {} BECAUSE OF TOO BIG SIZE", modelName);
       return false;
     }
 
@@ -62,7 +63,7 @@ template <typename T> struct LPTestBase {
 
     if (!isRelaxationOptType) {
       if (!linearProgram.isPureIP()) {
-        ++instanceSetStats._modelsWithNoAllIntegerVariables;
+        ++instanceSetStats._modelsWithNotAllIntegerVariables;
         SPDLOG_INFO("SKIPPING MODEL {} BECAUSE NOT ALL VARIABLES ARE INTEGER",
                     modelName);
         return false;
@@ -136,7 +137,7 @@ template <typename T> struct LPTestBase {
                       instanceSetStats._modelsWithNoBoundsCount);
       } else {
         SPDLOG_INFO("{} NOT PURE IP",
-                    instanceSetStats._modelsWithNoAllIntegerVariables);
+                    instanceSetStats._modelsWithNotAllIntegerVariables);
         SPDLOG_INFO("{} NOT ALL COEFFS INTEGER",
                     instanceSetStats._modelsWithNoAllIntegerCoeffs);
         SPDLOG_INFO("{} NOT ALL VARIABLES ARE NONNEGATIVE",
@@ -145,7 +146,7 @@ template <typename T> struct LPTestBase {
                   instanceSetStats._processedModelsCount +
                       instanceSetStats._tooBigModelsCount +
                       instanceSetStats._modelsWithNoBoundsCount +
-                      instanceSetStats._modelsWithNoAllIntegerVariables +
+                      instanceSetStats._modelsWithNotAllIntegerVariables +
                       instanceSetStats._modelsWithNoAllIntegerCoeffs +
                       instanceSetStats._modelsWithNoAllNonnegativeVariables);
       }

@@ -1,8 +1,8 @@
 #include "src/Algorithms/DualSimplexGomory.h"
 
+#include "src/Algorithms/DualSimplex.h"
 #include "src/Algorithms/LexicographicOptimizer.h"
 #include "src/Algorithms/ReinversionManager.h"
-#include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Algorithms/SimplexTableauResizer.h"
 #include "src/Util/Time.h"
@@ -17,14 +17,14 @@ DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
     const DualSimplexRowPivotRule dualSimplexRowPivotRule,
     const int32_t objValueLoggingFrequency,
     const ValidateSimplexOption validateSimplexOption,
-    const bool removeOnlyPositiveSlackCuts,
+    const SlackCutRemovalCondition slackCutRemovalCondition,
     const LexicographicReoptType lexicographicReoptType)
     : _simplexTableau(simplexTableau), _reinversionManager(reinversionManager),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _validateSimplexOption(validateSimplexOption),
-      _removeOnlyPositiveSlackCuts(removeOnlyPositiveSlackCuts),
+      _slackCutRemovalCondition(slackCutRemovalCondition),
       _lexicographicReoptType(lexicographicReoptType) {}
 
 template <typename T, typename SimplexTraitsT>
@@ -125,9 +125,9 @@ DualSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
 }
 
 template <typename T, typename SimplexTraitsT>
-RevisedDualSimplexPFIBounds<T, SimplexTraitsT>
+DualSimplex<T, SimplexTraitsT>
 DualSimplexGomory<T, SimplexTraitsT>::dualSimplex() const {
-  return RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
+  return DualSimplex<T, SimplexTraitsT>(
       _simplexTableau, _reinversionManager, _dualSimplexRowPivotRule,
       _objValueLoggingFrequency, _validateSimplexOption);
 }
@@ -296,9 +296,11 @@ bool DualSimplexGomory<T, SimplexTraitsT>::removeCutsInBasis() const {
       const auto cutRowIdx =
           _simplexTableau._variableInfos[basicVarIdx]._cutRowIdx;
 
-      if (cutRowIdx.has_value() &&
-          (!_removeOnlyPositiveSlackCuts ||
-           NumericalTraitsT::greater(_simplexTableau._x[basicVarIdx], 0.0))) {
+      if (!cutRowIdx.has_value()) {
+        continue;
+      }
+
+      if (shouldCutBeRemoved(basicVarIdx)) {
         SPDLOG_INFO(
             "FOUND BASIC CUT VAR IDX {} LABEL {} (CUT ROW IDX {} LABEL {})",
             basicVarIdx, _simplexTableau._variableInfos[basicVarIdx]._label,
@@ -311,6 +313,22 @@ bool DualSimplexGomory<T, SimplexTraitsT>::removeCutsInBasis() const {
     break;
   }
   return atleastOneCutRemoved;
+}
+
+template <typename T, typename SimplexTraitsT>
+bool DualSimplexGomory<T, SimplexTraitsT>::shouldCutBeRemoved(
+    const int slackVarIdx) const {
+  switch (_slackCutRemovalCondition) {
+  case SlackCutRemovalCondition::ALWAYS: {
+    return true;
+  }
+  case SlackCutRemovalCondition::ONLY_WHEN_SLACK_VAR_IS_POSITIVE: {
+    return NumericalTraitsT::greater(_simplexTableau._x[slackVarIdx], 0.0);
+  }
+  default: {
+    return false;
+  }
+  }
 }
 
 template <typename T, typename SimplexTraitsT>

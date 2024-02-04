@@ -1,7 +1,7 @@
 #include "Algorithms/LexicographicOptimizer.h"
+#include "Algorithms/DualSimplex.h"
+#include "Algorithms/PrimalSimplex.h"
 #include "Algorithms/ReinversionManager.h"
-#include "Algorithms/RevisedDualSimplexPFIBounds.h"
-#include "Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
 #include "src/Util/LPOptStatistics.h"
@@ -22,7 +22,7 @@ LexReoptStatistics<T> runDualSimplexWithLexReopt(
       linearProgram, SimplexType::DUAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
-  RevisedDualSimplexPFIBounds<T, SimplexTraitsT>(
+  DualSimplex<T, SimplexTraitsT>(
       simplexTableau, reinversionManager,
       DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
@@ -34,7 +34,7 @@ LexReoptStatistics<T> runDualSimplexWithLexReopt(
              absl::GetFlag(FLAGS_obj_value_logging_frequency),
              absl::GetFlag(FLAGS_validate_simplex_option),
              lexicographicReoptType)
-      .run("", true);
+      .run("", SaveLexSolution::YES);
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -46,7 +46,7 @@ LexReoptStatistics<T> runPrimalSimplexWithLexReopt(
       linearProgram, SimplexType::PRIMAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
-  RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> primalSimplex(
+  PrimalSimplex<T, SimplexTraitsT> primalSimplex(
       simplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
@@ -65,7 +65,7 @@ LexReoptStatistics<T> runPrimalSimplexWithLexReopt(
              absl::GetFlag(FLAGS_obj_value_logging_frequency),
              absl::GetFlag(FLAGS_validate_simplex_option),
              lexicographicReoptType)
-      .run("", true);
+      .run("", SaveLexSolution::YES);
 }
 
 template <typename T>

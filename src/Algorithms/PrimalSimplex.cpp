@@ -1,4 +1,4 @@
-#include "src/Algorithms/RevisedPrimalSimplexPFIBounds.h"
+#include "src/Algorithms/PrimalSimplex.h"
 
 #include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/SimplexTableau.h"
@@ -9,7 +9,7 @@
 #include "src/Util/Time.h"
 
 template <typename T, typename SimplexTraitsT>
-RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
+PrimalSimplex<T, SimplexTraitsT>::PrimalSimplex(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
     ReinversionManager<T, SimplexTraitsT> &reinversionManager,
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
@@ -21,7 +21,7 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::RevisedPrimalSimplexPFIBounds(
       _validateSimplexOption(validateSimplexOption) {}
 
 template <typename T, typename SimplexTraitsT>
-std::string RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::type() const {
+std::string PrimalSimplex<T, SimplexTraitsT>::type() const {
   return fmt::format(
       "PRIMAL SIMPLEX ({}, {})",
       simplexTableauTypeToStr(_simplexTableau._simplexTableauType),
@@ -29,13 +29,13 @@ std::string RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T>
-RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
+LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runPhaseOne() {
   SPDLOG_INFO("LP NAME {} BASIS SIZE {}, COLUMN PIVOT RULE {}",
               _simplexTableau._initialProgram.getName(),
               _simplexTableau._rowInfos.size(),
               primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
-  auto artLpOptStats = runImpl("PHASE_ONE", true, true);
+  auto artLpOptStats =
+      runImpl("PHASE_ONE", PrintSimplexOptSummary::YES, PrimalPhase::ONE);
 
   if (_simplexTableau._objectiveValue >
       NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE) {
@@ -54,16 +54,16 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseOne() {
   return artLpOptStats;
 }
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T>
-RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runPhaseTwo() {
+LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runPhaseTwo() {
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
   return runImpl("PHASE_TWO");
 }
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
-    const std::string &lpNameSuffix, const bool printSummary,
-    const bool isPhaseOne) {
+LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runImpl(
+    const std::string &lpNameSuffix,
+    const PrintSimplexOptSummary printSimplexOptSummary,
+    const PrimalPhase primalPhase) {
   [[maybe_unused]] int iterCount = 1;
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
   LPOptStatistics<T> lpOptStatistics{
@@ -86,10 +86,10 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
       ++iterCount;
       tryLogObjValue(iterCount);
 
-      if (!tryValidateIteration(iterCount, lpOptStatistics, isPhaseOne))
+      if (!tryValidateIteration(iterCount, lpOptStatistics, primalPhase))
         break;
 
-      if (!tryReinversion(iterCount, lpOptStatistics, isPhaseOne))
+      if (!tryReinversion(iterCount, lpOptStatistics, primalPhase))
         break;
 
       if (!checkObjectiveProgress(lpOptStatistics))
@@ -103,9 +103,9 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
   });
 
   if (_simplexTableau._result == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
-    tryValidateOptimalSolutions(lpOptStatistics, isPhaseOne);
+    tryValidateOptimalSolutions(lpOptStatistics, primalPhase);
 
-  if (printSummary) {
+  if (printSimplexOptSummary == PrintSimplexOptSummary::YES) {
     SPDLOG_INFO("{} ENDED", type());
     SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
                 lpOptimizationResultToStr(_simplexTableau._result),
@@ -122,8 +122,7 @@ LPOptStatistics<T> RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runImpl(
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(
-    const int iterCount) {
+void PrimalSimplex<T, SimplexTraitsT>::tryLogObjValue(const int iterCount) {
   if (_objValueLoggingFrequency &&
       (iterCount % _objValueLoggingFrequency == 0)) {
     SPDLOG_INFO("ITERATION {}", iterCount);
@@ -132,27 +131,27 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
+bool PrimalSimplex<T, SimplexTraitsT>::tryReinversion(
     const int iterCount, const LPOptStatistics<T> &lpOptStatistics,
-    const bool isPhaseOne) {
+    const PrimalPhase primalPhase) {
   if (!_reinversionManager.tryReinverse()) {
     SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
     _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
     return false;
   }
 
-  return tryValidateIteration(iterCount, lpOptStatistics, isPhaseOne);
+  return tryValidateIteration(iterCount, lpOptStatistics, primalPhase);
 }
 template <typename T, typename SimplexTraitsT>
-bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
+bool PrimalSimplex<T, SimplexTraitsT>::tryValidateIteration(
     const int iterCount, const LPOptStatistics<T> &lpOptStatistics,
-    const bool isPhaseOne) {
+    const PrimalPhase primalPhase) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return true;
 
   const auto validationResult =
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-          .validatePrimalIteration(isPhaseOne);
+          .validatePrimalIteration(primalPhase);
   if (!validationResult) {
     SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
                  validationResult.error());
@@ -168,15 +167,14 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
-    tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics,
-                                const bool isPhaseOne) {
+void PrimalSimplex<T, SimplexTraitsT>::tryValidateOptimalSolutions(
+    const LPOptStatistics<T> &lpOptStatistics, const PrimalPhase primalPhase) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return;
 
   const auto validationResult =
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-          .validateOptimality(SimplexType::PRIMAL, isPhaseOne);
+          .validateOptimality(SimplexType::PRIMAL, primalPhase);
   if (!validationResult) {
     SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}", validationResult.error());
     if (_validateSimplexOption ==
@@ -187,7 +185,7 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
+bool PrimalSimplex<T, SimplexTraitsT>::checkIterationLimit(
     const int iterCount) {
   constexpr size_t HARD_ITERATION_LIMIT = 100000;
   if (iterCount > HARD_ITERATION_LIMIT) {
@@ -198,7 +196,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkObjectiveProgress(
+bool PrimalSimplex<T, SimplexTraitsT>::checkObjectiveProgress(
     const LPOptStatistics<T> &lpOptStatistics) {
   constexpr size_t ITERATION_WINDOW_SIZE = 10000;
   if (lpOptStatistics._consecutiveObjectiveValues.size() >=
@@ -220,7 +218,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::checkObjectiveProgress(
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
+bool PrimalSimplex<T, SimplexTraitsT>::runOneIteration() {
   const std::optional<int> enteringColumnIdx = chooseEnteringColumn();
   if (!enteringColumnIdx.has_value()) {
     _simplexTableau._result = LPOptimizationResult::BOUNDED_AND_FEASIBLE;
@@ -244,8 +242,7 @@ bool RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
 }
 
 template <typename T, typename SimplexTraitsT>
-std::optional<int>
-RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumn() {
+std::optional<int> PrimalSimplex<T, SimplexTraitsT>::chooseEnteringColumn() {
   switch (_primalSimplexColumnPivotRule) {
   case PrimalSimplexColumnPivotRule::FIRST_ELIGIBLE:
     return chooseEnteringColumnFirstEligible();
@@ -255,8 +252,8 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumn() {
 }
 
 template <typename T, typename SimplexTraitsT>
-std::optional<int> RevisedPrimalSimplexPFIBounds<
-    T, SimplexTraitsT>::chooseEnteringColumnFirstEligible() {
+std::optional<int>
+PrimalSimplex<T, SimplexTraitsT>::chooseEnteringColumnFirstEligible() {
   for (int columnIdx = 0; columnIdx < _simplexTableau._variableInfos.size();
        ++columnIdx) {
     SPDLOG_TRACE(
@@ -298,8 +295,8 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
 }
 
 template <typename T, typename SimplexTraitsT>
-std::optional<int> RevisedPrimalSimplexPFIBounds<
-    T, SimplexTraitsT>::chooseEnteringColumnBiggestAbsReducedCost() {
+std::optional<int>
+PrimalSimplex<T, SimplexTraitsT>::chooseEnteringColumnBiggestAbsReducedCost() {
   std::optional<int> bestColumnIdx;
   std::optional<T> biggestAbsReducedCost;
 
@@ -334,7 +331,7 @@ std::optional<int> RevisedPrimalSimplexPFIBounds<
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::changeTableau(
+void PrimalSimplex<T, SimplexTraitsT>::changeTableau(
     const PivotRowData<T> &pivotRowData, const int enteringColumnIdx,
     const VectorT &enteringColumn) {
   if (pivotRowData._noBasisChangeNeeded)
@@ -351,10 +348,9 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::changeTableau(
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
-    moveVarFromOneBoundToAnother(const PivotRowData<T> &pivotRowData,
-                                 const int enteringColumnIdx,
-                                 const VectorT &enteringColumn) {
+void PrimalSimplex<T, SimplexTraitsT>::moveVarFromOneBoundToAnother(
+    const PivotRowData<T> &pivotRowData, const int enteringColumnIdx,
+    const VectorT &enteringColumn) {
   SPDLOG_DEBUG("NO BASIS CHANGE NEEDED, ENTERING COLUMN IDX {}",
                enteringColumnIdx);
 
@@ -385,8 +381,8 @@ void RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::
 
 template <typename T, typename SimplexTraitsT>
 std::optional<PivotRowData<T>>
-RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::chooseRowIdx(
-    const int enteringColumnIdx, const VectorT &enteringColumn) {
+PrimalSimplex<T, SimplexTraitsT>::chooseRowIdx(const int enteringColumnIdx,
+                                               const VectorT &enteringColumn) {
   std::optional<int> rowIdxMostRestrictiveLowerBound;
   std::optional<T> mostRestrictiveLowerBound;
 
@@ -499,11 +495,11 @@ RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>::chooseRowIdx(
                                             : std::nullopt;
 }
 
-template class RevisedPrimalSimplexPFIBounds<
+template class PrimalSimplex<
     double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
-template class RevisedPrimalSimplexPFIBounds<
+template class PrimalSimplex<
     double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
-template class RevisedPrimalSimplexPFIBounds<
+template class PrimalSimplex<
     long double, SimplexTraits<long double, MatrixRepresentationType::SPARSE>>;
-template class RevisedPrimalSimplexPFIBounds<
+template class PrimalSimplex<
     long double, SimplexTraits<long double, MatrixRepresentationType::NORMAL>>;

@@ -1,4 +1,4 @@
-#include "src/Algorithms/RevisedDualSimplexPFIBounds.h"
+#include "src/Algorithms/DualSimplex.h"
 
 #include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/SimplexTableau.h"
@@ -9,7 +9,7 @@
 #include <fmt/format.h>
 
 template <typename T, typename SimplexTraitsT>
-RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::RevisedDualSimplexPFIBounds(
+DualSimplex<T, SimplexTraitsT>::DualSimplex(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
     ReinversionManager<T, SimplexTraitsT> &reinversionManager,
     const DualSimplexRowPivotRule dualSimplexRowPivotRule,
@@ -21,7 +21,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::RevisedDualSimplexPFIBounds(
       _validateSimplexOption(validateSimplexOption) {}
 
 template <typename T, typename SimplexTraitsT>
-std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::type() const {
+std::string DualSimplex<T, SimplexTraitsT>::type() const {
   return fmt::format(
       "DUAL SIMPLEX ({}, {})",
       simplexTableauTypeToStr(_simplexTableau._simplexTableauType),
@@ -29,8 +29,8 @@ std::string RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
-    const std::string &lpNameSuffix) {
+LPOptStatistics<T>
+DualSimplex<T, SimplexTraitsT>::run(const std::string &lpNameSuffix) {
   SPDLOG_INFO("LP NAME {} BASIS SIZE {}, ROW PIVOT RULE {}",
               _simplexTableau._initialProgram.getName(),
               _simplexTableau._rowInfos.size(),
@@ -92,8 +92,7 @@ LPOptStatistics<T> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::run(
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(
-    const int iterCount) {
+void DualSimplex<T, SimplexTraitsT>::tryLogObjValue(const int iterCount) {
   if (_objValueLoggingFrequency &&
       (iterCount % _objValueLoggingFrequency == 0)) {
     SPDLOG_INFO("ITERATION {}", iterCount);
@@ -102,7 +101,7 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryLogObjValue(
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
+bool DualSimplex<T, SimplexTraitsT>::tryReinversion(
     const int iterCount, const LPOptStatistics<T> &lpOptStatistics) {
   if (!_reinversionManager.tryReinverse()) {
     SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
@@ -114,7 +113,7 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryReinversion(
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
+bool DualSimplex<T, SimplexTraitsT>::tryValidateIteration(
     const int iterCount, const LPOptStatistics<T> &lpOptStatistics) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return true;
@@ -137,8 +136,8 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::tryValidateIteration(
 }
 
 template <typename T, typename SimplexTraitsT>
-void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::
-    tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics) {
+void DualSimplex<T, SimplexTraitsT>::tryValidateOptimalSolutions(
+    const LPOptStatistics<T> &lpOptStatistics) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return;
 
@@ -155,8 +154,7 @@ void RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
-    const int iterCount) {
+bool DualSimplex<T, SimplexTraitsT>::checkIterationLimit(const int iterCount) {
   constexpr size_t HARD_ITERATION_LIMIT = 500000;
   if (iterCount > HARD_ITERATION_LIMIT) {
     _simplexTableau._result = LPOptimizationResult::REACHED_ITERATION_LIMIT;
@@ -166,7 +164,7 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkIterationLimit(
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkObjectiveProgress(
+bool DualSimplex<T, SimplexTraitsT>::checkObjectiveProgress(
     const LPOptStatistics<T> &lpOptStatistics) {
   constexpr size_t ITERATION_WINDOW_SIZE = 10000;
   if (lpOptStatistics._consecutiveObjectiveValues.size() >=
@@ -188,7 +186,7 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::checkObjectiveProgress(
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
+bool DualSimplex<T, SimplexTraitsT>::runOneIteration() {
   const std::optional<int> pivotRowIdx = chooseRow();
   if (!pivotRowIdx.has_value()) {
     _simplexTableau._result = LPOptimizationResult::BOUNDED_AND_FEASIBLE;
@@ -207,7 +205,7 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::runOneIteration() {
 }
 
 template <typename T, typename SimplexTraitsT>
-bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::pivot(
+bool DualSimplex<T, SimplexTraitsT>::pivot(
     const int pivotRowIdx, const std::optional<int> customEnteringColumnIdx,
     const bool isPivotRowUnderLowerBound) {
   const auto pivotRowSharedPtr =
@@ -233,7 +231,7 @@ bool RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::pivot(
 }
 
 template <typename T, typename SimplexTraitsT>
-std::optional<int> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRow() {
+std::optional<int> DualSimplex<T, SimplexTraitsT>::chooseRow() {
   switch (_dualSimplexRowPivotRule) {
   case DualSimplexRowPivotRule::FIRST_ELIGIBLE:
     return chooseRowFirstEligible();
@@ -243,8 +241,7 @@ std::optional<int> RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRow() {
 }
 
 template <typename T, typename SimplexTraitsT>
-std::optional<int>
-RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowFirstEligible() {
+std::optional<int> DualSimplex<T, SimplexTraitsT>::chooseRowFirstEligible() {
   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
     const auto basicColumnIdx =
         _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
@@ -266,8 +263,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowFirstEligible() {
 }
 
 template <typename T, typename SimplexTraitsT>
-std::optional<int>
-RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowBiggestViolation() {
+std::optional<int> DualSimplex<T, SimplexTraitsT>::chooseRowBiggestViolation() {
   std::optional<int> bestRowIdx;
   std::optional<T> biggestViolation;
 
@@ -302,8 +298,7 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseRowBiggestViolation() {
 }
 
 template <typename T, typename SimplexTraitsT>
-std::optional<int>
-RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumnIdx(
+std::optional<int> DualSimplex<T, SimplexTraitsT>::chooseEnteringColumnIdx(
     const int pivotRowIdx, const VectorT &pivotRow,
     const bool isPivotRowUnderLowerBound) {
   std::optional<int> mostRestrictiveColumnIdx;
@@ -357,11 +352,11 @@ RevisedDualSimplexPFIBounds<T, SimplexTraitsT>::chooseEnteringColumnIdx(
   return mostRestrictiveColumnIdx;
 }
 
-template class RevisedDualSimplexPFIBounds<
+template class DualSimplex<
     double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
-template class RevisedDualSimplexPFIBounds<
+template class DualSimplex<
     double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;
-template class RevisedDualSimplexPFIBounds<
+template class DualSimplex<
     long double, SimplexTraits<long double, MatrixRepresentationType::SPARSE>>;
-template class RevisedDualSimplexPFIBounds<
+template class DualSimplex<
     long double, SimplexTraits<long double, MatrixRepresentationType::NORMAL>>;

@@ -1,5 +1,6 @@
 #include "src/DataModel/LinearProgram.h"
 
+#include "src/Util/CommonFunctions.h"
 #include "src/Util/LPPrinter.h"
 #include "src/Util/SpdlogHeader.h"
 
@@ -35,11 +36,6 @@ int countFixedVariables(const std::vector<VariableInfo> &variableInfos) {
       variableInfos.begin(), variableInfos.end(),
       [](const VariableInfo &variableInfo) { return variableInfo._isFixed; });
 }
-
-const auto isInteger = [](const auto val) {
-  double integerPart;
-  return std::modf(val, &integerPart) == 0.0;
-};
 } // namespace
 
 template <typename T> void LinearProgram<T>::convertToStandardForm() {

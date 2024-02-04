@@ -1,6 +1,6 @@
+#include "Algorithms/PrimalSimplex.h"
+#include "Algorithms/DualSimplex.h"
 #include "Algorithms/ReinversionManager.h"
-#include "Algorithms/RevisedDualSimplexPFIBounds.h"
-#include "Algorithms/RevisedPrimalSimplexPFIBounds.h"
 #include "Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
 #include "src/Util/LPOptStatistics.h"
@@ -20,12 +20,11 @@ PrimalSimplexOutput<T> runPrimalSimplexWithImplicitBounds(
       linearProgram, SimplexType::PRIMAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
-  RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT>
-      revisedPrimalSimplexPfiBounds(
-          simplexTableau, reinversionManager,
-          PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
-          absl::GetFlag(FLAGS_obj_value_logging_frequency),
-          absl::GetFlag(FLAGS_validate_simplex_option));
+  PrimalSimplex<T, SimplexTraitsT> revisedPrimalSimplexPfiBounds(
+      simplexTableau, reinversionManager,
+      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_validate_simplex_option));
   auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
     SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED",

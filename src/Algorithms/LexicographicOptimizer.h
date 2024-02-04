@@ -9,8 +9,7 @@
 
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
 template <typename T, typename SimplexTraitsT> class ReinversionManager;
-template <typename T, typename SimplexTraitsT>
-class RevisedPrimalSimplexPFIBounds;
+template <typename T, typename SimplexTraitsT> class PrimalSimplex;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class LexicographicOptimizer {
@@ -25,13 +24,14 @@ public:
 
   std::string type() const;
 
-  LexReoptStatistics<T> run(const std::string &lexOptId,
-                            const bool saveSolution = false);
+  LexReoptStatistics<T>
+  run(const std::string &lexOptId,
+      const SaveLexSolution saveLexSolution = SaveLexSolution::NO);
 
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  RevisedPrimalSimplexPFIBounds<T, SimplexTraitsT> primalSimplex() const;
+  PrimalSimplex<T, SimplexTraitsT> primalSimplex() const;
 
   boost::dynamic_bitset<> getIsFixedBitset() const;
   std::vector<T> singleVarObjective(const int varIdx);

@@ -8,10 +8,8 @@
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
 template <typename T, typename SimplexTraitsT> class LexicographicOptimizer;
 template <typename T, typename SimplexTraitsT> class ReinversionManager;
-template <typename T, typename SimplexTraitsT>
-class RevisedDualSimplexPFIBounds;
-template <typename T, typename SimplexTraitsT>
-class RevisedPrimalSimplexPFIBounds;
+template <typename T, typename SimplexTraitsT> class DualSimplex;
+template <typename T, typename SimplexTraitsT> class PrimalSimplex;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class DualSimplexGomory {
@@ -23,7 +21,7 @@ public:
       const DualSimplexRowPivotRule dualSimplexRowPivotRule,
       const int32_t objValueLoggingFrequency,
       const ValidateSimplexOption validateSimplexOption,
-      const bool removeOnlyPositiveSlackCuts,
+      const SlackCutRemovalCondition slackCutRemovalCondition,
       const LexicographicReoptType lexicographicReoptType);
 
   std::string type() const;
@@ -37,7 +35,7 @@ private:
 
   LPRelaxationStatistics<T> runImpl(const int relaxationNo);
 
-  RevisedDualSimplexPFIBounds<T, SimplexTraitsT> dualSimplex() const;
+  DualSimplex<T, SimplexTraitsT> dualSimplex() const;
   LexicographicOptimizer<T, SimplexTraitsT> lexicographicOptimizer() const;
 
   void checkIfNonBasicVarsAreIntegral() const;
@@ -51,6 +49,7 @@ private:
                const std::vector<int> &fractionalBasisVarsRowIndices) const;
 
   bool removeCutsInBasis() const;
+  bool shouldCutBeRemoved(const int slackVarIdx) const;
   void removeCutFromBasis(const int basisRowIdxMappedToCutVar,
                           const int cutVarIdx, const int cutRowIdx) const;
 
@@ -68,7 +67,7 @@ private:
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;
   const int32_t _objValueLoggingFrequency;
   const ValidateSimplexOption _validateSimplexOption;
-  const bool _removeOnlyPositiveSlackCuts;
+  const SlackCutRemovalCondition _slackCutRemovalCondition;
   const LexicographicReoptType _lexicographicReoptType;
 };
 

@@ -1,5 +1,6 @@
 #include "src/Util/MpsReader.h"
 
+#include "src/Util/CommonFunctions.h"
 #include "src/Util/SpdlogHeader.h"
 
 #include <fstream>
@@ -416,7 +417,6 @@ MpsReader<T>::read(const std::string &filePath) {
       }
       case BoundType::FREE_VARIABLE: {
         linearProgram._variableInfos[variableIdx]._isFree = true;
-        linearProgram._variableInfos[variableIdx]._isFree = true;
         break;
       }
       case BoundType::LOWER_BOUND_MINUS_INF: {
@@ -471,11 +471,8 @@ MpsReader<T>::read(const std::string &filePath) {
     return std::nullopt;
   }
   linearProgram.convertToStandardForm();
-
-  if (!finalizeBounds(linearProgram)) {
-    SPDLOG_WARN("Cannot finalize bounds");
-    return std::nullopt;
-  }
+  setBoundsForNonFreeVars(linearProgram);
+  roundBoundsForIntegerVars(linearProgram);
 
   if (linearProgram.isPureIP(false) &&
       linearProgram.allCoefficientsAreIntegers()) {
@@ -488,7 +485,7 @@ MpsReader<T>::read(const std::string &filePath) {
 }
 
 template <typename T>
-bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
+void MpsReader<T>::setBoundsForNonFreeVars(LinearProgram<T> &linearProgram) {
   for (int varIdx = 0; varIdx < linearProgram._variableInfos.size(); ++varIdx) {
     if (!linearProgram._variableInfos[varIdx]._isFree &&
         !linearProgram._variableLowerBounds[varIdx].has_value() &&
@@ -500,8 +497,32 @@ bool MpsReader<T>::finalizeBounds(LinearProgram<T> &linearProgram) {
       }
     }
   }
+}
+template <typename T>
+void MpsReader<T>::roundBoundsForIntegerVars(LinearProgram<T> &linearProgram) {
+  for (int varIdx = 0; varIdx < linearProgram._variableInfos.size(); ++varIdx) {
+    if (linearProgram._variableInfos[varIdx]._type == VariableType::INTEGER) {
+      if (linearProgram._variableLowerBounds[varIdx].has_value()) {
+        const auto varLowerBound = *linearProgram._variableLowerBounds[varIdx];
+        if (!isInteger(varLowerBound)) {
+          SPDLOG_WARN(
+              "INTEGER VAR IDX {} HAS NON-INTEGER LOWER BOUND {}, ROUNDING UP",
+              varIdx, varLowerBound);
+        }
+        linearProgram._variableLowerBounds[varIdx] = std::ceil(varLowerBound);
+      }
 
-  return true;
+      if (linearProgram._variableUpperBounds[varIdx].has_value()) {
+        const auto varUpperBound = *linearProgram._variableUpperBounds[varIdx];
+        if (!isInteger(varUpperBound)) {
+          SPDLOG_WARN("INTEGER VAR IDX {} HAS NON-INTEGER UPPER BOUND {}, "
+                      "ROUNDING DOWN",
+                      varIdx, varUpperBound);
+        }
+        linearProgram._variableUpperBounds[varIdx] = std::floor(varUpperBound);
+      }
+    }
+  }
 }
 
 template struct MpsReader<double>;

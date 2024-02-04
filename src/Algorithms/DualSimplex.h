@@ -1,5 +1,5 @@
-#ifndef GMISOLVER_REVISEDDUALSIMPLEXPFIBOUNDS_H
-#define GMISOLVER_REVISEDDUALSIMPLEXPFIBOUNDS_H
+#ifndef GMISOLVER_DUALSIMPLEX_H
+#define GMISOLVER_DUALSIMPLEX_H
 
 #include "src/DataModel/CommonTypes.h"
 #include "src/Util/LPOptStatistics.h"
@@ -11,17 +11,16 @@ template <typename T, typename SimplexTraitsT> class SimplexTableau;
 template <typename T, typename SimplexTraitsT> class ReinversionManager;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
-class RevisedDualSimplexPFIBounds {
+class DualSimplex {
 public:
   using VectorT = typename SimplexTraitsT::VectorT;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  RevisedDualSimplexPFIBounds(
-      SimplexTableau<T, SimplexTraitsT> &simplexTableau,
-      ReinversionManager<T, SimplexTraitsT> &reinversionManager,
-      const DualSimplexRowPivotRule dualSimplexRowPivotRule,
-      const int32_t objValueLoggingFrequency,
-      const ValidateSimplexOption validateSimplexOption);
+  DualSimplex(SimplexTableau<T, SimplexTraitsT> &simplexTableau,
+              ReinversionManager<T, SimplexTraitsT> &reinversionManager,
+              const DualSimplexRowPivotRule dualSimplexRowPivotRule,
+              const int32_t objValueLoggingFrequency,
+              const ValidateSimplexOption validateSimplexOption);
 
   std::string type() const;
 
@@ -55,4 +54,4 @@ private:
   const ValidateSimplexOption _validateSimplexOption;
 };
 
-#endif // GMISOLVER_REVISEDDUALSIMPLEXPFIBOUNDS_H
+#endif // GMISOLVER_DUALSIMPLEX_H

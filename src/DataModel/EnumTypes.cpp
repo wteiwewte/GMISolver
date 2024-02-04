@@ -254,6 +254,33 @@ std::string AbslUnparseFlag(SimplexTableauType simplexTableauType) {
 }
 
 bool AbslParseFlag(absl::string_view text,
+                   SlackCutRemovalCondition *slackCutRemovalCondition,
+                   std::string *error) {
+  if (text == "always") {
+    *slackCutRemovalCondition = SlackCutRemovalCondition::ALWAYS;
+    return true;
+  }
+  if (text == "only_when_slack_var_is_positive") {
+    *slackCutRemovalCondition =
+        SlackCutRemovalCondition::ONLY_WHEN_SLACK_VAR_IS_POSITIVE;
+    return true;
+  }
+  *error = "unknown value for enumeration";
+  return false;
+}
+
+std::string AbslUnparseFlag(SlackCutRemovalCondition slackCutRemovalCondition) {
+  switch (slackCutRemovalCondition) {
+  case SlackCutRemovalCondition::ALWAYS:
+    return "always";
+  case SlackCutRemovalCondition::ONLY_WHEN_SLACK_VAR_IS_POSITIVE:
+    return "only_when_slack_var_is_positive";
+  default:
+    return "unknown";
+  }
+}
+
+bool AbslParseFlag(absl::string_view text,
                    std::vector<SimplexTableauType> *simplexTableauTypes,
                    std::string *error) {
   std::vector<absl::string_view> tokens = absl::StrSplit(text, ',');

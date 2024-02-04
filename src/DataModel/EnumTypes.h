@@ -103,6 +103,17 @@ enum class ValidateSimplexOption : int8_t {
   UNKNOWN
 };
 
+enum class SlackCutRemovalCondition : int8_t {
+  ALWAYS = 0,
+  ONLY_WHEN_SLACK_VAR_IS_POSITIVE
+};
+
+enum class SaveLexSolution : int8_t { YES = 0, NO };
+
+enum class PrimalPhase : int8_t { ONE = 0, TWO };
+
+enum class PrintSimplexOptSummary : int8_t { YES = 0, NO };
+
 bool AbslParseFlag(absl::string_view text,
                    ValidateSimplexOption *validateSimplexOption,
                    std::string *error);
@@ -110,6 +121,10 @@ std::string AbslUnparseFlag(ValidateSimplexOption validateSimplexOption);
 bool AbslParseFlag(absl::string_view text,
                    SimplexTableauType *simplexTableauType, std::string *error);
 std::string AbslUnparseFlag(SimplexTableauType simplexTableauType);
+bool AbslParseFlag(absl::string_view text,
+                   SlackCutRemovalCondition *slackCutRemovalCondition,
+                   std::string *error);
+std::string AbslUnparseFlag(SlackCutRemovalCondition slackCutRemovalCondition);
 bool AbslParseFlag(absl::string_view text,
                    std::vector<SimplexTableauType> *simplexTableauTypes,
                    std::string *error);

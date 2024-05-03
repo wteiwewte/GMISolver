@@ -131,7 +131,7 @@ void readLPModelAndProcess(const std::filesystem::path &modelFileMpsPath,
                            LPOptStatisticsVec<T> &lpOptStatisticsVec) {
   SPDLOG_INFO("Processing lp model from file {}",
               std::string{modelFileMpsPath});
-  auto linearProgram = MpsReader<T>::read(modelFileMpsPath);
+  auto linearProgram = MpsReader<T>().read(modelFileMpsPath);
   if (!linearProgram.has_value()) {
     spdlog::warn("Could not read properly lp from {} file",
                  std::string{modelFileMpsPath});

@@ -8,9 +8,7 @@ double executeAndMeasureTime(Func f) {
   auto start = std::chrono::steady_clock::now();
   f();
   auto end = std::chrono::steady_clock::now();
-  return std::chrono::duration_cast<std::chrono::microseconds>(end - start)
-             .count() /
-         1000000.0;
+  return std::chrono::duration_cast<TimeRep>(end - start).count() / 1000000.0;
 }
 
 #endif // GMISOLVER_TIME_H

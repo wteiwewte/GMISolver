@@ -113,7 +113,7 @@ template <typename T> struct LPTestBase {
           const std::string modelName = lpModelFileEntry.path().filename();
           SPDLOG_INFO("MODEL {}", modelName);
           auto linearProgram =
-              MpsReader<FloatingPointT>::read(lpModelFileEntry.path());
+              MpsReader<FloatingPointT>().read(lpModelFileEntry.path());
           ASSERT_TRUE(linearProgram.has_value());
 
           if (isInstanceSuitable(basisSizeLimit, *linearProgram, modelName,

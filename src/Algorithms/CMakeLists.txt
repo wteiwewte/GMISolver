@@ -1,5 +1,4 @@
-add_library(RevisedDualSimplexPFIBounds DualSimplex.cpp
-        DualSimplex.h)
+add_library(RevisedDualSimplexPFIBounds DualSimplex.cpp DualSimplex.h)
 target_link_libraries(
   RevisedDualSimplexPFIBounds
   CommonTypes
@@ -11,8 +10,7 @@ target_link_libraries(
   SpdlogHeader
   Time)
 
-add_library(RevisedPrimalSimplexPFIBounds PrimalSimplex.cpp
-        PrimalSimplex.h)
+add_library(RevisedPrimalSimplexPFIBounds PrimalSimplex.cpp PrimalSimplex.h)
 target_link_libraries(
   RevisedPrimalSimplexPFIBounds
   CommonTypes

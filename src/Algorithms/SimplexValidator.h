@@ -51,14 +51,14 @@ private:
 
   ExpectedT validateConstraints(const PrimalPhase primalPhase) const {
     return validateConstraints(
-               "initial_simplex", _simplexTableau._constraintMatrix,
+               "initial simplex", _simplexTableau._constraintMatrix,
                _simplexTableau._initialRightHandSides, _simplexTableau._x)
         .and_then([&]() -> ExpectedT {
           if (primalPhase == PrimalPhase::ONE)
             return {};
 
           return validateConstraints(
-              "initial_lp", _simplexTableau._initialProgram._constraintMatrix,
+              "initial lp", _simplexTableau._initialProgram._constraintMatrix,
               _simplexTableau._initialProgram._rightHandSides,
               _simplexTableau._x);
         });

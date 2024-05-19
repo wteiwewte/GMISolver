@@ -112,6 +112,8 @@ void SimplexTableauResizer<T, SimplexTraitsT>::removeRows(
   removeElements(_simplexTableau._rightHandSides, shouldRowBeRemoved);
   removeElements(_simplexTableau._simplexBasisData._rowToBasisColumnIdxMap,
                  shouldRowBeRemoved);
+  removeElements(_simplexTableau._constraintMatrix, shouldRowBeRemoved);
+  removeElements(_simplexTableau._initialRightHandSides, shouldRowBeRemoved);
 
   switch (_simplexTableau._simplexTableauType) {
   case SimplexTableauType::FULL: {
@@ -119,8 +121,6 @@ void SimplexTableauResizer<T, SimplexTraitsT>::removeRows(
     break;
   }
   case SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE: {
-    removeElements(_simplexTableau._constraintMatrix, shouldRowBeRemoved);
-    removeElements(_simplexTableau._initialRightHandSides, shouldRowBeRemoved);
     for (int i = 0; i < _simplexTableau._basisMatrixInverse.size(); ++i) {
       removeElements(_simplexTableau._basisMatrixInverse[i],
                      shouldRowBeRemoved);
@@ -129,8 +129,6 @@ void SimplexTableauResizer<T, SimplexTraitsT>::removeRows(
     break;
   }
   case SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE: {
-    removeElements(_simplexTableau._constraintMatrix, shouldRowBeRemoved);
-    removeElements(_simplexTableau._initialRightHandSides, shouldRowBeRemoved);
     break;
   }
   default:

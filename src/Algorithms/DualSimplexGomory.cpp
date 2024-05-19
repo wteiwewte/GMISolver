@@ -8,6 +8,16 @@
 #include "src/Util/Time.h"
 
 #include <fmt/format.h>
+#include <random>
+
+namespace {
+std::vector<int> getRandomElement(const std::vector<int> &vec) {
+  std::vector<int> out;
+  std::sample(vec.begin(), vec.end(), std::back_inserter(out), 1,
+              std::mt19937{std::random_device{}()});
+  return out;
+}
+} // namespace
 
 template <typename T, typename SimplexTraitsT>
 DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
@@ -18,14 +28,16 @@ DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
     const int32_t objValueLoggingFrequency,
     const ValidateSimplexOption validateSimplexOption,
     const SlackCutRemovalCondition slackCutRemovalCondition,
-    const LexicographicReoptType lexicographicReoptType)
+    const LexicographicReoptType lexicographicReoptType,
+    const int cutRoundLimit)
     : _simplexTableau(simplexTableau), _reinversionManager(reinversionManager),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _validateSimplexOption(validateSimplexOption),
       _slackCutRemovalCondition(slackCutRemovalCondition),
-      _lexicographicReoptType(lexicographicReoptType) {}
+      _lexicographicReoptType(lexicographicReoptType),
+      _cutRoundLimit(cutRoundLimit) {}
 
 template <typename T, typename SimplexTraitsT>
 std::string DualSimplexGomory<T, SimplexTraitsT>::type() const {
@@ -62,7 +74,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
     while (true) {
       ++relaxationNo;
-      if (relaxationNo > 50)
+      if (relaxationNo > _cutRoundLimit)
         break;
       SPDLOG_INFO("{}TH GOMORY ROUND", relaxationNo);
       checkIfNonBasicVarsAreIntegral();
@@ -80,7 +92,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       _simplexTableau.calculateCurrentObjectiveValue();
 
       SPDLOG_INFO("AFTER ADDITION OF NEW CUTS");
-      SPDLOG_INFO(_simplexTableau.toString());
+      //      SPDLOG_INFO(_simplexTableau.toString());
       SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
       SPDLOG_INFO(_simplexTableau.toStringSolution());
 
@@ -88,7 +100,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
       if (removeCutsInBasis()) {
         SPDLOG_INFO("AFTER CUT REMOVAL");
-        SPDLOG_INFO(_simplexTableau.toString());
+        //        SPDLOG_INFO(_simplexTableau.toString());
         SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
         SPDLOG_INFO(_simplexTableau.toStringSolution());
         ipOptStatistics._lpRelaxationStats.emplace_back() =
@@ -182,12 +194,19 @@ DualSimplexGomory<T, SimplexTraitsT>::collectFractionalBasisRowIndices(
       }
 
       fractionalBasisVarsRowIndices.push_back(rowIdx);
-
-      if (gomoryCutChoosingRule == GomoryCutChoosingRule::FIRST)
-        return fractionalBasisVarsRowIndices;
     }
   }
-  return fractionalBasisVarsRowIndices;
+
+  switch (gomoryCutChoosingRule) {
+  case GomoryCutChoosingRule::FIRST:
+    return !fractionalBasisVarsRowIndices.empty()
+               ? std::vector<int>{fractionalBasisVarsRowIndices[0]}
+               : std::vector<int>{};
+  case GomoryCutChoosingRule::ALL:
+    return fractionalBasisVarsRowIndices;
+  case GomoryCutChoosingRule::RANDOM:
+    return getRandomElement(fractionalBasisVarsRowIndices);
+  }
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -323,7 +342,8 @@ bool DualSimplexGomory<T, SimplexTraitsT>::shouldCutBeRemoved(
     return true;
   }
   case SlackCutRemovalCondition::ONLY_WHEN_SLACK_VAR_IS_POSITIVE: {
-    return NumericalTraitsT::greater(_simplexTableau._x[slackVarIdx], 0.0);
+    return _simplexTableau._x[slackVarIdx] >
+           NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE;
   }
   default: {
     return false;
@@ -335,24 +355,11 @@ template <typename T, typename SimplexTraitsT>
 void DualSimplexGomory<T, SimplexTraitsT>::removeCutFromBasis(
     const int basisRowIdxMappedToCutVar, const int cutVarIdx,
     const int cutRowIdx) const {
-  if (basisRowIdxMappedToCutVar != cutRowIdx) {
-    //    SPDLOG_INFO(_simplexTableau.toString());
-    //    SPDLOG_INFO(_simplexTableau.toStringSolution());
-    dualSimplex().pivot(basisRowIdxMappedToCutVar, std::nullopt, true);
-    dualSimplex().pivot(cutRowIdx, cutVarIdx, true);
-    //    SPDLOG_INFO(_simplexTableau.toString());
-    //    SPDLOG_INFO(_simplexTableau.toStringSolution());
-    if (cutVarIdx != _simplexTableau.basicColumnIdx(cutRowIdx)) {
-      SPDLOG_ERROR("CUT VAR IDX {} IS STILL NOT MAPPED TO CUT ROW IDX {}",
-                   cutVarIdx, cutRowIdx);
-    }
-  }
-
   std::vector<bool> shouldVarBeRemoved(_simplexTableau._variableInfos.size(),
                                        false);
   std::vector<bool> shouldRowBeRemoved(_simplexTableau._rowInfos.size(), false);
   shouldVarBeRemoved[cutVarIdx] = true;
-  shouldRowBeRemoved[cutRowIdx] = true;
+  shouldRowBeRemoved[basisRowIdxMappedToCutVar] = true;
   removeCuts(shouldVarBeRemoved, shouldRowBeRemoved);
 }
 

@@ -14,6 +14,7 @@ ABSL_DECLARE_FLAG(std::vector<SimplexTableauType>, simplex_tableau_types);
 ABSL_DECLARE_FLAG(ValidateSimplexOption, validate_simplex_option);
 ABSL_DECLARE_FLAG(SlackCutRemovalCondition, slack_cut_removal_condition);
 ABSL_DECLARE_FLAG(bool, extended_statistics);
+ABSL_DECLARE_FLAG(int, cut_round_limit);
 
 template <typename... Ts> struct TypeTuple {
   using types = std::tuple<Ts...>;

@@ -1,7 +1,8 @@
 add_library(CommonFunctions INTERFACE CommonFunctions.h)
 
 add_library(MpsReader MpsReader.cpp MpsReader.h)
-target_link_libraries(MpsReader CommonFunctions EnumTypes LinearProgram SpdlogHeader)
+target_link_libraries(MpsReader CommonFunctions EnumTypes LinearProgram
+                      SpdlogHeader)
 
 add_library(LPPrinter INTERFACE LPPrinter.h)
 target_link_libraries(

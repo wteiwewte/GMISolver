@@ -17,3 +17,5 @@ ABSL_FLAG(SlackCutRemovalCondition, slack_cut_removal_condition,
           "Condition for removing slack cuts");
 ABSL_FLAG(bool, extended_statistics, false,
           "Print extended statistics about particular type of optimization");
+ABSL_FLAG(int, cut_round_limit, 10,
+          "Number of cut rounds during Gomory algorithm");

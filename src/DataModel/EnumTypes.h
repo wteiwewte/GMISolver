@@ -91,10 +91,7 @@ enum class LexicographicReoptType : int8_t {
   MAX,
 };
 
-enum class GomoryCutChoosingRule : int8_t {
-  FIRST = 0,
-  ALL,
-};
+enum class GomoryCutChoosingRule : int8_t { FIRST = 0, ALL, RANDOM };
 
 enum class ValidateSimplexOption : int8_t {
   DONT_VALIDATE = 0,

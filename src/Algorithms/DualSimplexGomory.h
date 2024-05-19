@@ -22,7 +22,8 @@ public:
       const int32_t objValueLoggingFrequency,
       const ValidateSimplexOption validateSimplexOption,
       const SlackCutRemovalCondition slackCutRemovalCondition,
-      const LexicographicReoptType lexicographicReoptType);
+      const LexicographicReoptType lexicographicReoptType,
+      const int cutRoundLimit);
 
   std::string type() const;
 
@@ -69,6 +70,7 @@ private:
   const ValidateSimplexOption _validateSimplexOption;
   const SlackCutRemovalCondition _slackCutRemovalCondition;
   const LexicographicReoptType _lexicographicReoptType;
+  const int _cutRoundLimit;
 };
 
 #endif // GMISOLVER_DUALSIMPLEXGOMORY_H

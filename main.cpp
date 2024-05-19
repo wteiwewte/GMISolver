@@ -1,6 +1,7 @@
 #include "src/Algorithms/DualSimplex.h"
 #include "src/Algorithms/DualSimplexGomory.h"
 #include "src/Algorithms/PrimalSimplex.h"
+#include "src/Algorithms/PrimalSimplexPhaseOne.h"
 #include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
@@ -54,19 +55,23 @@ void runPrimalSimplexWithImplicitBounds(
       linearProgram, SimplexType::PRIMAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
-  PrimalSimplex<T, SimplexTraitsT> revisedPrimalSimplexPfiBounds(
+  PrimalSimplex<T, SimplexTraitsT> primalSimplex(
       simplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option));
-  auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
+  PrimalSimplexPhaseOne<T, SimplexTraitsT> primalSimplexPhaseOne(
+      simplexTableau, reinversionManager,
+      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_validate_simplex_option));
+  auto phaseOneLpOptStats = primalSimplexPhaseOne.run();
   lpOptStatisticsVec.push_back(phaseOneLpOptStats);
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
-    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED",
-                revisedPrimalSimplexPfiBounds.type());
+    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", primalSimplex.type());
     return;
   }
-  lpOptStatisticsVec.push_back(revisedPrimalSimplexPfiBounds.runPhaseTwo());
+  lpOptStatisticsVec.push_back(primalSimplex.runPhaseTwo());
 
   SPDLOG_INFO(simplexTableau.toStringObjectiveValue());
 }

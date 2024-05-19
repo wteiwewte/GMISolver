@@ -14,7 +14,9 @@
 template <typename T, typename SimplexTraitsT> class DualSimplexGomory;
 template <typename T, typename SimplexTraitsT> class LexicographicOptimizer;
 template <typename T, typename SimplexTraitsT> class PrimalSimplex;
+template <typename T, typename SimplexTraitsT> class PrimalSimplexPhaseOne;
 template <typename T, typename SimplexTraitsT> class DualSimplex;
+template <typename T, typename SimplexTraitsT> class DualSimplexPhaseOne;
 template <typename T, typename SimplexTraitsT> class ReinversionManager;
 template <typename T, typename SimplexTraitsT> class SimplexTableauResizer;
 template <typename T, typename SimplexTraitsT> class SimplexValidator;
@@ -47,7 +49,9 @@ private:
   friend class DualSimplexGomory<T, SimplexTraitsT>;
   friend class LexicographicOptimizer<T, SimplexTraitsT>;
   friend class PrimalSimplex<T, SimplexTraitsT>;
+  friend class PrimalSimplexPhaseOne<T, SimplexTraitsT>;
   friend class DualSimplex<T, SimplexTraitsT>;
+  friend class DualSimplexPhaseOne<T, SimplexTraitsT>;
   friend class ReinversionManager<T, SimplexTraitsT>;
   friend class SimplexTableauResizer<T, SimplexTraitsT>;
   friend class SimplexValidator<T, SimplexTraitsT>;

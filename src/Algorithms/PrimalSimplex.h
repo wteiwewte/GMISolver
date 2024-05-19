@@ -21,7 +21,6 @@ public:
 
   std::string type() const;
 
-  LPOptStatistics<T> runPhaseOne();
   LPOptStatistics<T> runPhaseTwo();
   LPOptStatistics<T>
   runImpl(const std::string &lpNameSuffix,

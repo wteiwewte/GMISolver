@@ -2,9 +2,7 @@
 
 #include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/SimplexTableau.h"
-#include "src/Algorithms/SimplexTableauResizer.h"
 #include "src/Algorithms/SimplexValidator.h"
-#include "src/DataModel/LinearProgram.h"
 #include "src/Util/SpdlogHeader.h"
 #include "src/Util/Time.h"
 
@@ -28,31 +26,6 @@ std::string PrimalSimplex<T, SimplexTraitsT>::type() const {
       matrixRepresentationTypeToStr(SimplexTraitsT::matrixRepresentationType));
 }
 
-template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runPhaseOne() {
-  SPDLOG_INFO("LP NAME {} BASIS SIZE {}, COLUMN PIVOT RULE {}",
-              _simplexTableau._initialProgram.getName(),
-              _simplexTableau._rowInfos.size(),
-              primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
-  auto artLpOptStats =
-      runImpl("PHASE_ONE", PrintSimplexOptSummary::YES, PrimalPhase::ONE);
-
-  if (_simplexTableau._objectiveValue >
-      NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE) {
-    SPDLOG_WARN(
-        "PROGRAM WITH ARTIFICIAL VARIABLE HAS OPTIMUM {} GREATER THAN 0 - "
-        "INITIAL PROGRAM IS INFEASIBLE",
-        _simplexTableau._objectiveValue);
-    artLpOptStats._phaseOneSucceeded = false;
-    return artLpOptStats;
-  }
-
-  SimplexTableauResizer simplexTableauResizer(_simplexTableau,
-                                              _reinversionManager);
-  artLpOptStats._phaseOneSucceeded =
-      simplexTableauResizer.removeArtificialVariablesFromProgram();
-  return artLpOptStats;
-}
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runPhaseTwo() {
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());

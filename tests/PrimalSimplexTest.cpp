@@ -1,5 +1,5 @@
 #include "Algorithms/PrimalSimplex.h"
-#include "Algorithms/DualSimplex.h"
+#include "Algorithms/PrimalSimplexPhaseOne.h"
 #include "Algorithms/ReinversionManager.h"
 #include "Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
@@ -13,27 +13,31 @@
 #include <gtest/gtest.h>
 
 template <typename T, typename SimplexTraitsT>
-PrimalSimplexOutput<T> runPrimalSimplexWithImplicitBounds(
+SimplexOptimizationOutput<T> runPrimalSimplexWithImplicitBounds(
     const LinearProgram<T> &linearProgram,
     const SimplexTableauType simplexTableauType) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::PRIMAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
-  PrimalSimplex<T, SimplexTraitsT> revisedPrimalSimplexPfiBounds(
+  PrimalSimplex<T, SimplexTraitsT> primalSimplex(
       simplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option));
-  auto phaseOneLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseOne();
+  PrimalSimplexPhaseOne<T, SimplexTraitsT> primalSimplexPhaseOne(
+      simplexTableau, reinversionManager,
+      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_validate_simplex_option));
+  auto phaseOneLpOptStats = primalSimplexPhaseOne.run();
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
-    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED",
-                revisedPrimalSimplexPfiBounds.type());
+    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", primalSimplex.type());
     return {._phaseOneLpOptStats = phaseOneLpOptStats,
             ._phaseTwoLpOptStats = std::nullopt};
   }
   return {._phaseOneLpOptStats = phaseOneLpOptStats,
-          ._phaseTwoLpOptStats = revisedPrimalSimplexPfiBounds.runPhaseTwo()};
+          ._phaseTwoLpOptStats = primalSimplex.runPhaseTwo()};
 }
 
 template <typename T>
@@ -53,7 +57,7 @@ protected:
                         const size_t basisSizeLimit) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;
     using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
-    using UnderlyingOptStatsT = PrimalSimplexOutput<FloatingPointT>;
+    using UnderlyingOptStatsT = SimplexOptimizationOutput<FloatingPointT>;
     const LPOptimizationType lpOptimizationType{
         LPOptimizationType::LINEAR_RELAXATION};
     this->template solveAndCompareInstancesFromSets<UnderlyingOptStatsT>(
@@ -153,7 +157,7 @@ protected:
                 const size_t basisSizeLimit) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;
     using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
-    using UnderlyingOptStatsT = PrimalSimplexOutput<FloatingPointT>;
+    using UnderlyingOptStatsT = SimplexOptimizationOutput<FloatingPointT>;
     const LPOptimizationType lpOptimizationType{
         LPOptimizationType::LINEAR_RELAXATION};
     this->template solveAndCompareInstancesFromSets<UnderlyingOptStatsT>(

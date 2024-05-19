@@ -37,8 +37,10 @@ target_link_libraries(
   gmock
   CommonDefs
   DualSimplexGomory
-  RevisedDualSimplexPFIBounds
-  RevisedPrimalSimplexPFIBounds
+  DualSimplex
+  DualSimplexPhaseOne
+  PrimalSimplex
+  PrimalSimplexPhaseOne
   SimplexTableau
   GurobiOptimizer
   LPOptStatistics

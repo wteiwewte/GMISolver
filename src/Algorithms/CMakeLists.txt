@@ -1,6 +1,6 @@
-add_library(RevisedDualSimplexPFIBounds DualSimplex.cpp DualSimplex.h)
+add_library(DualSimplex DualSimplex.cpp DualSimplex.h)
 target_link_libraries(
-  RevisedDualSimplexPFIBounds
+  DualSimplex
   CommonTypes
   LPOptStatistics
   ReinversionManager
@@ -10,12 +10,38 @@ target_link_libraries(
   SpdlogHeader
   Time)
 
-add_library(RevisedPrimalSimplexPFIBounds PrimalSimplex.cpp PrimalSimplex.h)
+add_library(DualSimplexPhaseOne DualSimplexPhaseOne.cpp DualSimplexPhaseOne.h)
 target_link_libraries(
-  RevisedPrimalSimplexPFIBounds
+  DualSimplexPhaseOne
+  CommonTypes
+  DualSimplex
+  LPOptStatistics
+  ReinversionManager
+  SimplexTraits
+  SimplexTableau
+  SimplexValidator
+  SpdlogHeader
+  Time)
+
+add_library(PrimalSimplex PrimalSimplex.cpp PrimalSimplex.h)
+target_link_libraries(
+  PrimalSimplex
+  CommonTypes
+  LPOptStatistics
+  ReinversionManager
+  SimplexTraits
+  SimplexTableau
+  SimplexValidator
+  SpdlogHeader
+  Time)
+add_library(PrimalSimplexPhaseOne PrimalSimplexPhaseOne.cpp
+                                  PrimalSimplexPhaseOne.h)
+target_link_libraries(
+  PrimalSimplexPhaseOne
   CommonTypes
   LinearProgram
   LPOptStatistics
+  PrimalSimplex
   ReinversionManager
   SimplexTraits
   SimplexTableau
@@ -26,9 +52,8 @@ target_link_libraries(
 
 add_library(LexicographicOptimizer LexicographicOptimizer.cpp
                                    LexicographicOptimizer.h)
-target_link_libraries(
-  LexicographicOptimizer CommonTypes LexReoptStatistics SimplexTraits
-  SimplexTableau RevisedPrimalSimplexPFIBounds)
+target_link_libraries(LexicographicOptimizer CommonTypes LexReoptStatistics
+                      SimplexTraits SimplexTableau PrimalSimplex)
 
 add_library(DualSimplexGomory DualSimplexGomory.h DualSimplexGomory.cpp)
 target_link_libraries(
@@ -40,7 +65,7 @@ target_link_libraries(
   SimplexTraits
   SimplexTableau
   SimplexTableauResizer
-  RevisedDualSimplexPFIBounds
+  DualSimplex
   Time)
 
 add_library(SimplexTableauResizer SimplexTableauResizer.cpp

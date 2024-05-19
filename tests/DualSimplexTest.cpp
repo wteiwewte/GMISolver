@@ -1,4 +1,5 @@
 #include "Algorithms/DualSimplex.h"
+#include "Algorithms/DualSimplexPhaseOne.h"
 #include "Algorithms/PrimalSimplex.h"
 #include "Algorithms/ReinversionManager.h"
 #include "Algorithms/SimplexTableau.h"
@@ -13,19 +14,34 @@
 #include <gtest/gtest.h>
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T>
+SimplexOptimizationOutput<T>
 runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram,
                                  const SimplexTableauType simplexTableauType) {
   SimplexTableau<T, SimplexTraitsT> simplexTableau(
       linearProgram, SimplexType::DUAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
-  return DualSimplex<T, SimplexTraitsT>(
-             simplexTableau, reinversionManager,
-             DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
-             absl::GetFlag(FLAGS_obj_value_logging_frequency),
-             absl::GetFlag(FLAGS_validate_simplex_option))
-      .run("");
+
+  DualSimplex<T, SimplexTraitsT> dualSimplex(
+      simplexTableau, reinversionManager,
+      DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_validate_simplex_option));
+
+  DualSimplexPhaseOne<T, SimplexTraitsT> dualSimplexPhaseOne(
+      simplexTableau, reinversionManager,
+      DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_validate_simplex_option));
+
+  auto phaseOneLpOptStats = dualSimplexPhaseOne.run();
+  if (!phaseOneLpOptStats._phaseOneSucceeded) {
+    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", dualSimplex.type());
+    return {._phaseOneLpOptStats = phaseOneLpOptStats,
+            ._phaseTwoLpOptStats = std::nullopt};
+  }
+  return {._phaseOneLpOptStats = phaseOneLpOptStats,
+          ._phaseTwoLpOptStats = dualSimplex.run("")};
 }
 
 template <typename T>
@@ -60,8 +76,17 @@ protected:
               GurobiOptimizer("", modelFileMpsPath)
                   .optimize<FloatingPointT>(
                       LPOptimizationType::LINEAR_RELAXATION);
-          this->compareWithGurobi(dualSimplexLpOptStats, gurobiLPOptStats);
-          optStatsVec.push_back({dualSimplexLpOptStats, gurobiLPOptStats});
+          const bool isPrimalProgramDualInfeasible =
+              dualSimplexLpOptStats._phaseOneLpOptStats._phaseOneSucceeded;
+          if (isPrimalProgramDualInfeasible) {
+            this->compareWithGurobi(*dualSimplexLpOptStats._phaseTwoLpOptStats,
+                                    gurobiLPOptStats);
+            optStatsVec.push_back(
+                {*dualSimplexLpOptStats._phaseTwoLpOptStats, gurobiLPOptStats});
+          } else {
+            SPDLOG_ERROR("PROMAL PROGRAM DUAL INFEASIBLE, TODO");
+            ASSERT_FALSE(true);
+          }
         });
   }
 };

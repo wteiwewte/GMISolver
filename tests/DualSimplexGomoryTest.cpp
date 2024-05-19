@@ -1,4 +1,5 @@
 #include "src/Algorithms/DualSimplexGomory.h"
+#include "src/Algorithms/DualSimplexPhaseOne.h"
 #include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
@@ -22,6 +23,18 @@ IPOptStatistics<T> runDualSimplexGomoryWithPrimalCuts(
       linearProgram, SimplexType::DUAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
+
+  DualSimplexPhaseOne<T, SimplexTraitsT> dualSimplexPhaseOne(
+      simplexTableau, reinversionManager,
+      DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_validate_simplex_option));
+  auto phaseOneLpOptStats = dualSimplexPhaseOne.run();
+  if (!phaseOneLpOptStats._phaseOneSucceeded) {
+    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", dualSimplexPhaseOne.type());
+    return {};
+  }
+
   DualSimplexGomory<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(
       simplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,

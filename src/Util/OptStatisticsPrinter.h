@@ -134,12 +134,12 @@ struct OptStatisticsPrinter {
   }
 
   template <typename T>
-  void printFirstLine(const PrimalSimplexOutput<T> &primalSimplexOutput) {
+  void printFirstLine(const SimplexOptimizationOutput<T> &primalSimplexOutput) {
     printFirstLine(primalSimplexOutput._phaseOneLpOptStats);
   }
 
   template <typename T>
-  void print(const PrimalSimplexOutput<T> &primalSimplexOutput,
+  void print(const SimplexOptimizationOutput<T> &primalSimplexOutput,
              const bool extended) {
     print(primalSimplexOutput._phaseOneLpOptStats, extended);
     if (primalSimplexOutput._phaseTwoLpOptStats.has_value()) {

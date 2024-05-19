@@ -1,6 +1,8 @@
 #include "Algorithms/LexicographicOptimizer.h"
 #include "Algorithms/DualSimplex.h"
+#include "Algorithms/DualSimplexPhaseOne.h"
 #include "Algorithms/PrimalSimplex.h"
+#include "Algorithms/PrimalSimplexPhaseOne.h"
 #include "Algorithms/ReinversionManager.h"
 #include "Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
@@ -22,12 +24,24 @@ LexReoptStatistics<T> runDualSimplexWithLexReopt(
       linearProgram, SimplexType::DUAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
+  DualSimplexPhaseOne<T, SimplexTraitsT> dualSimplexPhaseOne(
+      simplexTableau, reinversionManager,
+      DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_validate_simplex_option));
+
+  auto phaseOneLpOptStats = dualSimplexPhaseOne.run();
+  if (!phaseOneLpOptStats._phaseOneSucceeded) {
+    SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", dualSimplexPhaseOne.type());
+    return {};
+  }
   DualSimplex<T, SimplexTraitsT>(
       simplexTableau, reinversionManager,
       DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option))
       .run("");
+
   return LexicographicOptimizer<T, SimplexTraitsT>(
              simplexTableau, reinversionManager,
              PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
@@ -52,7 +66,12 @@ LexReoptStatistics<T> runPrimalSimplexWithLexReopt(
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option));
 
-  auto phaseOneLpOptStats = primalSimplex.runPhaseOne();
+  PrimalSimplexPhaseOne<T, SimplexTraitsT> primalSimplexPhaseOne(
+      simplexTableau, reinversionManager,
+      PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
+      absl::GetFlag(FLAGS_obj_value_logging_frequency),
+      absl::GetFlag(FLAGS_validate_simplex_option));
+  auto phaseOneLpOptStats = primalSimplexPhaseOne.run();
   if (!phaseOneLpOptStats._phaseOneSucceeded) {
     SPDLOG_WARN("PHASE ONE OF {} ALGORITHM FAILED", primalSimplex.type());
     return {};

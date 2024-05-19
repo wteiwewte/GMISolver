@@ -23,7 +23,7 @@ template <typename T> struct LPOptStatistics {
 template <typename T>
 using LPOptStatisticsVec = std::vector<LPOptStatistics<T>>;
 
-template <typename T> struct PrimalSimplexOutput {
+template <typename T> struct SimplexOptimizationOutput {
   using Type = T;
 
   LPOptStatistics<T> _phaseOneLpOptStats;

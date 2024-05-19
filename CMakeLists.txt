@@ -39,8 +39,8 @@ add_executable(GMISolver main.cpp)
 target_link_libraries(
   GMISolver
   DualSimplexGomory
-  RevisedDualSimplexPFIBounds
-  RevisedPrimalSimplexPFIBounds
+  DualSimplex
+  PrimalSimplex
   SimplexTableau
   GurobiOptimizer
   LPOptStatisticsPrinter

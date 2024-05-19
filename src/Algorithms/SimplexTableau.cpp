@@ -19,24 +19,6 @@ SimplexTableau<T, SimplexTraitsT>::SimplexTableau(
       _initialRightHandSides(linearProgram._rightHandSides),
       _simplexTableauType(simplexTableauType),
       _result(LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
-  if (simplexType == SimplexType::PRIMAL) {
-    SPDLOG_INFO("Making RHS non-negative");
-    makeRightHandSidesNonNegative();
-    SPDLOG_TRACE(toString());
-  }
-
-  SPDLOG_INFO("Adding artificial variables");
-  addArtificialVariables();
-  initMatrixRepresentations();
-  init(simplexType);
-
-  calculateRHS();
-  calculateSolution();
-  calculateCurrentObjectiveValue();
-  SPDLOG_TRACE("Simplex tableau with artificial variables");
-  SPDLOG_TRACE(toString());
-  SPDLOG_TRACE(toStringLpSolveFormat());
-
   if constexpr (SimplexTraitsT::useSparseRepresentationValue) {
     if (_simplexTableauType !=
         SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE) {

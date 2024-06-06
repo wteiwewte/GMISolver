@@ -30,7 +30,8 @@ std::string DualSimplex<T, SimplexTraitsT>::type() const {
 
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T>
-DualSimplex<T, SimplexTraitsT>::run(const std::string &lpNameSuffix) {
+DualSimplex<T, SimplexTraitsT>::run(const std::string &lpNameSuffix,
+                                    const DualPhase dualPhase) {
   SPDLOG_INFO("LP NAME {} BASIS SIZE {}, ROW PIVOT RULE {}",
               _simplexTableau._initialProgram.getName(),
               _simplexTableau._rowInfos.size(),
@@ -75,7 +76,7 @@ DualSimplex<T, SimplexTraitsT>::run(const std::string &lpNameSuffix) {
   });
 
   if (_simplexTableau._result == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
-    tryValidateOptimalSolutions(lpOptStatistics);
+    tryValidateOptimalSolutions(lpOptStatistics, dualPhase);
 
   SPDLOG_INFO("{} ENDED", type());
   SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
@@ -137,13 +138,13 @@ bool DualSimplex<T, SimplexTraitsT>::tryValidateIteration(
 
 template <typename T, typename SimplexTraitsT>
 void DualSimplex<T, SimplexTraitsT>::tryValidateOptimalSolutions(
-    const LPOptStatistics<T> &lpOptStatistics) {
+    const LPOptStatistics<T> &lpOptStatistics, const DualPhase dualPhase) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return;
 
   const auto validationResult =
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-          .validateOptimality(SimplexType::DUAL);
+          .validateOptimality(SimplexType::DUAL, dualPhase);
   if (!validationResult) {
     SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}", validationResult.error());
     if (_validateSimplexOption ==
@@ -166,7 +167,7 @@ bool DualSimplex<T, SimplexTraitsT>::checkIterationLimit(const int iterCount) {
 template <typename T, typename SimplexTraitsT>
 bool DualSimplex<T, SimplexTraitsT>::checkObjectiveProgress(
     const LPOptStatistics<T> &lpOptStatistics) {
-  constexpr size_t ITERATION_WINDOW_SIZE = 10000;
+  constexpr size_t ITERATION_WINDOW_SIZE = 30000;
   if (lpOptStatistics._consecutiveObjectiveValues.size() >=
       ITERATION_WINDOW_SIZE) {
     const auto currentObjValue =

@@ -30,7 +30,7 @@ public:
 
   void makeRightHandSidesNonNegative();
   void addSingleVarBoundsToMatrix();
-  void addArtificialVariables();
+  void addArtificialVariables(const SimplexType simplexType);
   void init(const SimplexType simplexType);
 
   std::vector<T> artificialObjective() const;

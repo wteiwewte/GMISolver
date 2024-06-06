@@ -61,6 +61,7 @@ struct SimplexBasisData {
   boost::dynamic_bitset<> _isBasicColumnIndexBitset;
   boost::dynamic_bitset<> _isColumnAtLowerBoundBitset;
   boost::dynamic_bitset<> _isColumnAtUpperBoundBitset;
+  std::optional<boost::dynamic_bitset<>> _isColumnEligibleBitset;
 };
 
 #endif // GMISOLVER_SIMPLEXBASISDATA_H

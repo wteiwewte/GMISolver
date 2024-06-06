@@ -44,7 +44,6 @@ template <typename T> struct LPTestBase {
     //          return false;
     //        }
     ++instanceSetStats._totalModelsCount;
-
     if (linearProgram.getRowInfos().size() > basisSizeLimit ||
         linearProgram.getVariableInfos().size() > 2 * basisSizeLimit) {
       ++instanceSetStats._tooBigModelsCount;
@@ -151,6 +150,7 @@ template <typename T> struct LPTestBase {
                       instanceSetStats._modelsWithNoAllNonnegativeVariables);
       }
     }
+    SPDLOG_INFO("HALO");
     const bool extendedStatistics = absl::GetFlag(FLAGS_extended_statistics);
     if (!optimizationStatsVec.empty()) {
       OptStatisticsPrinter optStatisticsPrinter;

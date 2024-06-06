@@ -77,7 +77,8 @@ add_library(ReinversionManager ReinversionManager.cpp ReinversionManager.h)
 target_link_libraries(ReinversionManager SimplexTraits SimplexTableau)
 
 add_library(SimplexValidator SimplexValidator.cpp SimplexValidator.h)
-target_link_libraries(SimplexValidator SimplexTableau LPOptStatistics expected)
+target_link_libraries(SimplexValidator SimplexTableau LPOptStatistics
+                      Overloaded expected)
 
 add_library(SimplexTableau SimplexTableau.cpp SimplexTableau.h)
 target_link_libraries(SimplexTableau CommonTypes LinearProgram MatrixTypes

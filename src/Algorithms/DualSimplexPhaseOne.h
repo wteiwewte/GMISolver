@@ -28,6 +28,12 @@ private:
   using VectorT = typename SimplexTraitsT::VectorT;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
+  void markBoxedVariablesAsNotEligible();
+  void unmarkBoxedVariablesAsNotEligible();
+  void changeBoundsAndRHS();
+  void restoreBoundsAndRHS();
+  void recalculateRHS();
+
   DualSimplex<T, SimplexTraitsT> dualSimplex() const;
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
@@ -36,6 +42,11 @@ private:
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;
   const int32_t _objValueLoggingFrequency;
   const ValidateSimplexOption _validateSimplexOption;
+
+  std::vector<VariableInfo> _originalVariableInfos;
+  std::vector<std::optional<T>> _originalVariableLowerBounds;
+  std::vector<std::optional<T>> _originalVariableUpperBounds;
+  std::vector<T> _originalInitialRightHandSides;
 };
 
 #endif // GMISOLVER_DUALSIMPLEXPHASEONE_H

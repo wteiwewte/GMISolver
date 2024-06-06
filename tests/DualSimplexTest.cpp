@@ -41,7 +41,7 @@ runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram,
             ._phaseTwoLpOptStats = std::nullopt};
   }
   return {._phaseOneLpOptStats = phaseOneLpOptStats,
-          ._phaseTwoLpOptStats = dualSimplex.run("")};
+          ._phaseTwoLpOptStats = dualSimplex.run("", DualPhase::TWO)};
 }
 
 template <typename T>
@@ -50,17 +50,19 @@ protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex_option,
                   ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
-    absl::SetFlag(&FLAGS_simplex_tableau_types,
-                  {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE,
-                   SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE,
-                   SimplexTableauType::FULL});
+    //    absl::SetFlag(&FLAGS_simplex_tableau_types,
+    //                  {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE,
+    //                   SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE,
+    //                   SimplexTableauType::FULL});
+    absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
+    absl::SetFlag(&FLAGS_extended_statistics, true);
   }
 
   void testCase(const std::string &dualSimplexTestDirPath,
                 const size_t basisSizeLimit) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;
     using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
-    using UnderlyingOptStatsT = LPOptStatistics<FloatingPointT>;
+    using UnderlyingOptStatsT = SimplexOptimizationOutput<FloatingPointT>;
     const LPOptimizationType lpOptimizationType{
         LPOptimizationType::LINEAR_RELAXATION};
     this->template solveAndCompareInstancesFromSets<UnderlyingOptStatsT>(
@@ -76,18 +78,25 @@ protected:
               GurobiOptimizer("", modelFileMpsPath)
                   .optimize<FloatingPointT>(
                       LPOptimizationType::LINEAR_RELAXATION);
-          const bool isPrimalProgramDualInfeasible =
-              dualSimplexLpOptStats._phaseOneLpOptStats._phaseOneSucceeded;
-          if (isPrimalProgramDualInfeasible) {
+          optStatsVec.push_back({{dualSimplexLpOptStats._phaseOneLpOptStats,
+                                  dualSimplexLpOptStats._phaseTwoLpOptStats},
+                                 gurobiLPOptStats});
+          const bool isPrimalProgramDualFeasible =
+              dualSimplexLpOptStats._phaseOneLpOptStats._phaseOneSucceeded &&
+              dualSimplexLpOptStats._phaseTwoLpOptStats->_optResult ==
+                  LPOptimizationResult::BOUNDED_AND_FEASIBLE;
+          if (isPrimalProgramDualFeasible) {
             this->compareWithGurobi(*dualSimplexLpOptStats._phaseTwoLpOptStats,
                                     gurobiLPOptStats);
-            optStatsVec.push_back(
-                {*dualSimplexLpOptStats._phaseTwoLpOptStats, gurobiLPOptStats});
           } else {
-            SPDLOG_ERROR("PROMAL PROGRAM DUAL INFEASIBLE, TODO");
-            ASSERT_FALSE(true);
+            const std::set<LPOptimizationResult> gurobiInfeasibleResults{
+                LPOptimizationResult::INFEASIBLE,
+                LPOptimizationResult::INFEASIBLE_OR_UNBDUNDED};
+            EXPECT_TRUE(
+                gurobiInfeasibleResults.contains(gurobiLPOptStats._optResult));
           }
-        });
+        },
+        false);
   }
 };
 

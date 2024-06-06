@@ -3,7 +3,7 @@
 ABSL_FLAG(
     int32_t, obj_value_logging_frequency, 0,
     "Current objective value should be logged every nth iteration of simplex");
-ABSL_FLAG(int32_t, reinversion_frequency, 60,
+ABSL_FLAG(int32_t, reinversion_frequency, 0,
           "Basis matrix should be reinverted every nth iteration of simplex");
 ABSL_FLAG(std::vector<SimplexTableauType>, simplex_tableau_types,
           std::vector<SimplexTableauType>(

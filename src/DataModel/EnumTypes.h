@@ -5,6 +5,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <variant>
 
 #include <absl/strings/string_view.h>
 
@@ -108,6 +109,8 @@ enum class SlackCutRemovalCondition : int8_t {
 enum class SaveLexSolution : int8_t { YES = 0, NO };
 
 enum class PrimalPhase : int8_t { ONE = 0, TWO };
+enum class DualPhase : int8_t { ONE = 0, TWO };
+using SimplexPhase = std::variant<PrimalPhase, DualPhase>;
 
 enum class PrintSimplexOptSummary : int8_t { YES = 0, NO };
 

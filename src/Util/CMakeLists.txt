@@ -30,6 +30,7 @@ add_library(OptStatisticsPrinter INTERFACE OptStatisticsPrinter.h)
 target_link_libraries(
   OptStatisticsPrinter INTERFACE LPOptStatistics LexReoptStatistics
                                  IPOptStatistics fmt::fmt-header-only)
+add_library(Overloaded INTERFACE Overloaded.h)
 
 add_library(GurobiOptimizer INTERFACE GurobiOptimizer.h)
 target_link_libraries(

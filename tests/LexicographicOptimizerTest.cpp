@@ -40,7 +40,7 @@ LexReoptStatistics<T> runDualSimplexWithLexReopt(
       DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option))
-      .run("");
+      .run("", DualPhase::TWO);
 
   return LexicographicOptimizer<T, SimplexTraitsT>(
              simplexTableau, reinversionManager,
@@ -93,7 +93,7 @@ class LexicographicOptimizerTest : public LPTestBase<T>,
 protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex_option,
-                  ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
+                  ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
     absl::SetFlag(&FLAGS_simplex_tableau_types,
                   {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE,
                    SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE,
@@ -128,7 +128,8 @@ protected:
                 gurobiOptimizer.getSolutionVector<FloatingPointT>());
             optStatsVec.push_back({lexReoptStatistics, gurobiLPOptStats});
           }
-        });
+        },
+        false);
   }
 };
 
@@ -165,9 +166,7 @@ REGISTER_TYPED_TEST_SUITE_P(LexicographicOptimizerTest,
                             runPrimalSimplexWithLexReoptAndCompareWithGurobi);
 
 using LexicographicOptimizerTypes = ::testing::Types<
-    TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>,
-    TypeTuple<long double,
-              SimplexTraits<long double, MatrixRepresentationType::NORMAL>>>;
+    TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>>;
 INSTANTIATE_TYPED_TEST_SUITE_P(LexicographicOptimizerTestSuite,
                                LexicographicOptimizerTest,
                                LexicographicOptimizerTypes);

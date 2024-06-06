@@ -20,7 +20,7 @@ PrimalSimplexPhaseOne<T, SimplexTraitsT>::PrimalSimplexPhaseOne(
       _validateSimplexOption(validateSimplexOption) {
   SPDLOG_INFO("Making RHS non-negative");
   _simplexTableau.makeRightHandSidesNonNegative();
-  _simplexTableau.addArtificialVariables();
+  _simplexTableau.addArtificialVariables(SimplexType::PRIMAL);
   _simplexTableau.initMatrixRepresentations();
   _simplexTableau.init(SimplexType::PRIMAL);
 

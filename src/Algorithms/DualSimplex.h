@@ -24,7 +24,8 @@ public:
 
   std::string type() const;
 
-  LPOptStatistics<T> run(const std::string &lpNameSuffix);
+  LPOptStatistics<T> run(const std::string &lpNameSuffix,
+                         const DualPhase dualPhase);
   bool runOneIteration();
   bool pivot(const int pivotRowIdx,
              const std::optional<int> customEnteringColumnIdx,
@@ -36,7 +37,8 @@ private:
                       const LPOptStatistics<T> &lpOptStatistics);
   bool tryValidateIteration(const int iterCount,
                             const LPOptStatistics<T> &lpOptStatistics);
-  void tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics);
+  void tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics,
+                                   const DualPhase dualPhase);
   bool checkIterationLimit(const int iterCount);
   bool checkObjectiveProgress(const LPOptStatistics<T> &lpOptStatistics);
 

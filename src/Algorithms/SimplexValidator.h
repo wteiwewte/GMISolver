@@ -3,6 +3,7 @@
 
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/LPOptStatistics.h"
+#include "src/Util/Overloaded.h"
 
 #include <unordered_set>
 
@@ -31,11 +32,10 @@ public:
             [&] { return validateObjectiveMonotonicity(SimplexType::DUAL); });
   }
 
-  ExpectedT
-  validateOptimality(const SimplexType simplexType,
-                     const PrimalPhase primalPhase = PrimalPhase::TWO) const {
+  ExpectedT validateOptimality(const SimplexType simplexType,
+                               const SimplexPhase simplexPhase) const {
     return validateTableau()
-        .and_then([&] { return validatePrimalFeasibility(primalPhase); })
+        .and_then([&] { return validatePrimalFeasibility(simplexPhase); })
         .and_then([&] { return validateDualFeasibility(); })
         .and_then([&] { return validateObjectiveMonotonicity(simplexType); });
   }
@@ -43,24 +43,41 @@ public:
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  ExpectedT validatePrimalFeasibility(const PrimalPhase primalPhase) const {
-    return validateConstraints(primalPhase).and_then([&] {
+  ExpectedT validatePrimalFeasibility(const SimplexPhase simplexPhase) const {
+    return validateConstraints(simplexPhase).and_then([&] {
       return validateVariableBounds();
     });
   }
 
-  ExpectedT validateConstraints(const PrimalPhase primalPhase) const {
+  ExpectedT validateConstraints(const SimplexPhase simplexPhase) const {
     return validateConstraints(
                "initial simplex", _simplexTableau._constraintMatrix,
                _simplexTableau._initialRightHandSides, _simplexTableau._x)
         .and_then([&]() -> ExpectedT {
-          if (primalPhase == PrimalPhase::ONE)
-            return {};
+          return std::visit(
+              overloaded{
+                  [&](const PrimalPhase primalPhase) -> ExpectedT {
+                    if (primalPhase == PrimalPhase::ONE)
+                      return {};
 
-          return validateConstraints(
-              "initial lp", _simplexTableau._initialProgram._constraintMatrix,
-              _simplexTableau._initialProgram._rightHandSides,
-              _simplexTableau._x);
+                    return validateConstraints(
+                        "initial lp",
+                        _simplexTableau._initialProgram._constraintMatrix,
+                        _simplexTableau._initialProgram._rightHandSides,
+                        _simplexTableau._x);
+                  },
+                  [&](const DualPhase dualPhase) -> ExpectedT {
+                    if (dualPhase == DualPhase::ONE)
+                      return {};
+
+                    return validateConstraints(
+                        "initial lp",
+                        _simplexTableau._initialProgram._constraintMatrix,
+                        _simplexTableau._initialProgram._rightHandSides,
+                        _simplexTableau._x);
+                  },
+              },
+              simplexPhase);
         });
   }
 
@@ -267,12 +284,14 @@ private:
   ExpectedT validateRowToColumnMapping() const {
     const auto &simplexBasisData = _simplexTableau._simplexBasisData;
 
-    if (_simplexTableau._variableInfos[0]._isObjectiveVar &&
-        (simplexBasisData._rowToBasisColumnIdxMap[0] != 0 ||
-         !simplexBasisData._isBasicColumnIndexBitset[0]))
-      return tl::unexpected{
-          fmt::format("Row 0 should be mapped always to column 0 - both are "
-                      "objective related")};
+    // Commented due to dual phase one
+    //    if (_simplexTableau._variableInfos[0]._isObjectiveVar &&
+    //        (simplexBasisData._rowToBasisColumnIdxMap[0] != 0 ||
+    //         !simplexBasisData._isBasicColumnIndexBitset[0]))
+    //      return tl::unexpected{
+    //          fmt::format("Row 0 should be mapped always to column 0 - both
+    //          are "
+    //                      "objective related")};
 
     std::unordered_set<int> uniqueBasicColumnIndices;
     for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
@@ -530,11 +549,20 @@ private:
         simplexBasisData._isColumnAtLowerBoundBitset.size() ==
             expectedNumberOfVars &&
         simplexBasisData._isColumnAtUpperBoundBitset.size() ==
-            expectedNumberOfVars)
+            expectedNumberOfVars &&
+        (!simplexBasisData._isColumnEligibleBitset.has_value() ||
+         simplexBasisData._isColumnEligibleBitset.value().size() ==
+             expectedNumberOfVars))
       return {};
 
-    return tl::unexpected{fmt::format(
-        "Basis state vector sizes don't match number of rows/variables")};
+    return tl::unexpected{
+        fmt::format("Basis state vector sizes ({}, {}, {}, {}) don't match "
+                    "number of rows/variables ({}, {})",
+                    simplexBasisData._rowToBasisColumnIdxMap.size(),
+                    simplexBasisData._isBasicColumnIndexBitset.size(),
+                    simplexBasisData._isColumnAtLowerBoundBitset.size(),
+                    simplexBasisData._isColumnAtUpperBoundBitset.size(),
+                    expectedNumberOfRows, expectedNumberOfVars)};
   }
 
   ExpectedT validateBasisReprSizes() const {

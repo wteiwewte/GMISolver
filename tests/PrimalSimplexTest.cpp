@@ -53,6 +53,8 @@ protected:
     absl::SetFlag(&FLAGS_reinversion_frequency, 60);
   }
 
+  void TearDown() override { absl::SetFlag(&FLAGS_reinversion_frequency, 0); }
+
   void testCaseWithDual(const std::string &primalSimplexTestDirPath,
                         const size_t basisSizeLimit) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;

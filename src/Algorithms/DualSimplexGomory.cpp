@@ -125,7 +125,8 @@ DualSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
   };
 
   LPRelaxationStatistics<T> relaxationStats;
-  relaxationStats._relaxationOptStats = dualSimplex().run(relaxationId());
+  relaxationStats._relaxationOptStats =
+      dualSimplex().run(relaxationId(), DualPhase::TWO);
   SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
   //  SPDLOG_INFO(_simplexTableau.toStringSolution());
 

@@ -41,7 +41,8 @@ runDualSimplexWithImplicitBounds(const LinearProgram<T> &linearProgram,
             ._phaseTwoLpOptStats = std::nullopt};
   }
   return {._phaseOneLpOptStats = phaseOneLpOptStats,
-          ._phaseTwoLpOptStats = dualSimplex.run("", DualPhase::TWO)};
+          ._phaseTwoLpOptStats =
+              dualSimplex.run("", PrintSimplexOptSummary::YES, DualPhase::TWO)};
 }
 
 template <typename T>
@@ -50,10 +51,6 @@ protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex_option,
                   ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
-    //    absl::SetFlag(&FLAGS_simplex_tableau_types,
-    //                  {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE,
-    //                   SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE,
-    //                   SimplexTableauType::FULL});
     absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
     absl::SetFlag(&FLAGS_extended_statistics, true);
   }

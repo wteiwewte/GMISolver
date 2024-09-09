@@ -88,6 +88,9 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runImpl(
   }
 
   lpOptStatistics._optResult = _simplexTableau._result;
+  if (lpOptStatistics._optResult == LPOptimizationResult::FAILED_VALIDATION) {
+    SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED");
+  }
   lpOptStatistics._optimalValue = _simplexTableau._objectiveValue;
   lpOptStatistics._iterationCount = iterCount;
 

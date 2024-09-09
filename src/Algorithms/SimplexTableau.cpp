@@ -61,7 +61,7 @@ void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables(
       _variableLowerBounds.push_back(0.0);
       _variableUpperBounds.push_back(0.0);
       _variableInfos.push_back(VariableInfo{._label = newArtificialLabelStr,
-                                            ._type = VariableType::CONTINUOUS,
+                                            ._type = VariableType::INTEGER,
                                             ._isArtificial = true,
                                             ._isFixed = true});
     }

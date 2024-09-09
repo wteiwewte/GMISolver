@@ -106,8 +106,8 @@ void SimplexTableauResizer<T, SimplexTraitsT>::removeRows(
   if (rowsToBeRemoved.size() == 0)
     return;
 
-  SPDLOG_INFO("{} CONSTRAINTS [{}] TO BE REMOVED", rowsToBeRemoved.size(),
-              fmt::join(rowsToBeRemoved, ", "));
+  SPDLOG_DEBUG("{} CONSTRAINTS [{}] TO BE REMOVED", rowsToBeRemoved.size(),
+               fmt::join(rowsToBeRemoved, ", "));
   removeElements(_simplexTableau._rowInfos, shouldRowBeRemoved);
   removeElements(_simplexTableau._rightHandSides, shouldRowBeRemoved);
   removeElements(_simplexTableau._simplexBasisData._rowToBasisColumnIdxMap,

@@ -57,7 +57,7 @@ protected:
                   {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE});
     absl::SetFlag(&FLAGS_slack_cut_removal_condition,
                   SlackCutRemovalCondition::ONLY_WHEN_SLACK_VAR_IS_POSITIVE);
-    absl::SetFlag(&FLAGS_cut_round_limit, 50);
+    absl::SetFlag(&FLAGS_cut_round_limit, 500);
   }
 
   void
@@ -79,7 +79,7 @@ protected:
                 runDualSimplexGomoryWithPrimalCuts<FloatingPointT,
                                                    SimplexTraitsT>(
                     linearProgram, simplexTableauType, lexicographicReoptType,
-                    lpOptimizationType, GomoryCutChoosingRule::FIRST);
+                    lpOptimizationType, GomoryCutChoosingRule::RANDOM);
             const auto gurobiLPOptStats =
                 GurobiOptimizer("", modelFileMpsPath)
                     .optimize<FloatingPointT>(lpOptimizationType);
@@ -87,7 +87,8 @@ protected:
                           ipOptStatistics, gurobiLPOptStats);
             optStatsVec.push_back({ipOptStatistics, gurobiLPOptStats});
           }
-        });
+        },
+        false);
   }
 };
 
@@ -100,6 +101,7 @@ TYPED_TEST_P(DualSimplexGomoryTest,
       LPOptimizationType::LINEAR_RELAXATION,
       {LexicographicReoptType::MIN, LexicographicReoptType::MAX}));
 }
+
 TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
   absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
   absl::SetFlag(&FLAGS_validate_simplex_option,
@@ -110,21 +112,33 @@ TYPED_TEST_P(DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi) {
       LPOptimizationType::INTEGER_PROGRAM, {LexicographicReoptType::MIN}));
 }
 
-// TYPED_TEST_P(DualSimplexGomoryTest,
-// runDualSimplexGomoryAndCompareWithGurobiSingleInstance) {
-//   absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
-//   absl::SetFlag(&FLAGS_validate_simplex_option,
-//                 ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
-//   absl::SetFlag(&FLAGS_extended_statistics, true);
-//   EXPECT_NO_FATAL_FAILURE(this->testCase(
-//       "../../tests/gomory_single_instance", 1000,
-//       LPOptimizationType::INTEGER_PROGRAM, {LexicographicReoptType::MAX}));
-// }
+TYPED_TEST_P(DualSimplexGomoryTest,
+             runDualSimplexGomoryAndCompareWithGurobiAllInstances) {
+  absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
+  absl::SetFlag(&FLAGS_validate_simplex_option,
+                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
+  absl::SetFlag(&FLAGS_extended_statistics, true);
+  EXPECT_NO_FATAL_FAILURE(this->testCase(
+      "../../tests/dual_simplex_working_instances", 1,
+      LPOptimizationType::INTEGER_PROGRAM,
+      {LexicographicReoptType::MIN, LexicographicReoptType::MAX}));
+}
+TYPED_TEST_P(DualSimplexGomoryTest,
+             runDualSimplexGomoryAndCompareWithGurobiSingleInstance) {
+  absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
+  absl::SetFlag(&FLAGS_validate_simplex_option,
+                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
+  absl::SetFlag(&FLAGS_extended_statistics, true);
+  EXPECT_NO_FATAL_FAILURE(this->testCase("../../tests/gomory_single_instance",
+                                         1, LPOptimizationType::INTEGER_PROGRAM,
+                                         {LexicographicReoptType::MAX}));
+}
 
 REGISTER_TYPED_TEST_SUITE_P(
-    DualSimplexGomoryTest, runDualSimplexGomoryAndCompareWithGurobi,
-    //                            runDualSimplexGomoryAndCompareWithGurobiSingleInstance,
-    runDualSimplexWithLexReoptAndCompareWithGurobi);
+    DualSimplexGomoryTest, runDualSimplexWithLexReoptAndCompareWithGurobi,
+    runDualSimplexGomoryAndCompareWithGurobi,
+    runDualSimplexGomoryAndCompareWithGurobiAllInstances,
+    runDualSimplexGomoryAndCompareWithGurobiSingleInstance);
 
 using DualSimplexGomoryTypes = ::testing::Types<
     TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>>;

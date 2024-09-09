@@ -29,13 +29,16 @@ std::string DualSimplex<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T>
-DualSimplex<T, SimplexTraitsT>::run(const std::string &lpNameSuffix,
-                                    const DualPhase dualPhase) {
-  SPDLOG_INFO("LP NAME {} BASIS SIZE {}, ROW PIVOT RULE {}",
-              _simplexTableau._initialProgram.getName(),
-              _simplexTableau._rowInfos.size(),
-              dualSimplexRowPivotRuleToStr(_dualSimplexRowPivotRule));
+LPOptStatistics<T> DualSimplex<T, SimplexTraitsT>::run(
+    const std::string &lpNameSuffix,
+    const PrintSimplexOptSummary printSimplexOptSummary,
+    const DualPhase dualPhase) {
+  if (printSimplexOptSummary == PrintSimplexOptSummary::YES) {
+    SPDLOG_INFO("LP NAME {} BASIS SIZE {}, ROW PIVOT RULE {}",
+                _simplexTableau._initialProgram.getName(),
+                _simplexTableau._rowInfos.size(),
+                dualSimplexRowPivotRuleToStr(_dualSimplexRowPivotRule));
+  }
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
 
   LPOptStatistics<T> lpOptStatistics{
@@ -78,14 +81,19 @@ DualSimplex<T, SimplexTraitsT>::run(const std::string &lpNameSuffix,
   if (_simplexTableau._result == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
     tryValidateOptimalSolutions(lpOptStatistics, dualPhase);
 
-  SPDLOG_INFO("{} ENDED", type());
-  SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
-              lpOptimizationResultToStr(_simplexTableau._result),
-              _simplexTableau._objectiveValue);
-  SPDLOG_INFO("ELAPSED TIME {} SECONDS, ITERATION COUNT {}",
-              lpOptStatistics._elapsedTimeSec, iterCount);
+  if (printSimplexOptSummary == PrintSimplexOptSummary::YES) {
+    SPDLOG_INFO("{} ENDED", type());
+    SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
+                lpOptimizationResultToStr(_simplexTableau._result),
+                _simplexTableau._objectiveValue);
+    SPDLOG_INFO("ELAPSED TIME {} SECONDS, ITERATION COUNT {}",
+                lpOptStatistics._elapsedTimeSec, iterCount);
+  }
 
   lpOptStatistics._optResult = _simplexTableau._result;
+  if (lpOptStatistics._optResult == LPOptimizationResult::FAILED_VALIDATION) {
+    SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED");
+  }
   lpOptStatistics._optimalValue = _simplexTableau._objectiveValue;
   lpOptStatistics._iterationCount = iterCount;
 

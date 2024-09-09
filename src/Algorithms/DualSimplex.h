@@ -25,6 +25,7 @@ public:
   std::string type() const;
 
   LPOptStatistics<T> run(const std::string &lpNameSuffix,
+                         const PrintSimplexOptSummary printSimplexOptSummary,
                          const DualPhase dualPhase);
   bool runOneIteration();
   bool pivot(const int pivotRowIdx,

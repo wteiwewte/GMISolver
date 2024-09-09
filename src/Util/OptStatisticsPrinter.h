@@ -47,7 +47,7 @@ struct OptStatisticsPrinter {
   }
 
   template <typename T>
-  void print(const LPOptStatistics<T> &lpOptStatistics, const bool) {
+  void print(const LPOptStatistics<T> &lpOptStatistics, const bool, const int) {
     _oss << fmt::format("{:^{}}|", lpOptStatistics._lpName, LP_NAME_WIDTH);
     _oss << fmt::format("{:^{}}|", lpOptStatistics._algorithmType,
                         ALGO_TYPE_WIDTH);
@@ -71,7 +71,20 @@ struct OptStatisticsPrinter {
   }
 
   template <typename T>
-  void print(const IPOptStatistics<T> &ipOptStatistics, const bool extended) {
+  void print(const IPOptStatistics<T> &ipOptStatistics, const bool extended,
+             const int printRelaxationWindow = 1) {
+    if (extended) {
+      int relaxIdx = 0;
+      for (const auto &lpRelaxationStats : ipOptStatistics._lpRelaxationStats) {
+        if ((relaxIdx < 10) ||
+            (relaxIdx == ipOptStatistics._lpRelaxationStats.size() - 1) ||
+            (relaxIdx % printRelaxationWindow == 0)) {
+          print(lpRelaxationStats._relaxationOptStats, false, 1);
+          print(lpRelaxationStats._lexicographicReoptStats, false, 1);
+        }
+        ++relaxIdx;
+      }
+    }
     _oss << fmt::format("{:^{}}|", ipOptStatistics._lpName, LP_NAME_WIDTH);
     _oss << fmt::format("{:^{}}|", ipOptStatistics._algorithmType,
                         ALGO_TYPE_WIDTH);
@@ -89,13 +102,6 @@ struct OptStatisticsPrinter {
                         ipOptStatistics.relaxationOptimizationCount(),
                         OPT_COUNT_WIDTH);
     printLineBreak();
-
-    if (extended) {
-      for (const auto &lpRelaxationStats : ipOptStatistics._lpRelaxationStats) {
-        print(lpRelaxationStats._relaxationOptStats, false);
-        print(lpRelaxationStats._lexicographicReoptStats, false);
-      }
-    }
   }
 
   template <typename T> void printFirstLine(const LexReoptStatistics<T> &) {
@@ -106,7 +112,7 @@ struct OptStatisticsPrinter {
 
   template <typename T>
   void print(const LexReoptStatistics<T> &lexReoptStatistics,
-             const bool extended) {
+             const bool extended, const int printRelaxationWindow = 1) {
     _oss << fmt::format("{:^{}}|", lexReoptStatistics._lpName, LP_NAME_WIDTH);
     _oss << fmt::format("{:^{}}|", lexReoptStatistics._algorithmType,
                         ALGO_TYPE_WIDTH);
@@ -127,9 +133,15 @@ struct OptStatisticsPrinter {
     printLineBreak();
 
     if (extended) {
+      int relaxIdx = 0;
       for (const auto &lpOpt : lexReoptStatistics._lexLPReoptStatsVec) {
-        print(lpOpt, false);
+        if ((relaxIdx == 0) ||
+            (relaxIdx == lexReoptStatistics._lexLPReoptStatsVec.size() - 1) ||
+            (relaxIdx % printRelaxationWindow == 0)) {
+          print(lpOpt, false, 1);
+        }
       }
+      ++relaxIdx;
     }
   }
 
@@ -140,10 +152,12 @@ struct OptStatisticsPrinter {
 
   template <typename T>
   void print(const SimplexOptimizationOutput<T> &primalSimplexOutput,
-             const bool extended) {
-    print(primalSimplexOutput._phaseOneLpOptStats, extended);
+             const bool extended, const int printRelaxationWindow = 1) {
+    print(primalSimplexOutput._phaseOneLpOptStats, extended,
+          printRelaxationWindow);
     if (primalSimplexOutput._phaseTwoLpOptStats.has_value()) {
-      print(primalSimplexOutput._phaseTwoLpOptStats.value(), extended);
+      print(primalSimplexOutput._phaseTwoLpOptStats.value(), extended,
+            printRelaxationWindow);
     }
   }
 

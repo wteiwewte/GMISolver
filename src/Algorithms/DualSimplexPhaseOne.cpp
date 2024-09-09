@@ -169,7 +169,8 @@ DualSimplexPhaseOne<T, SimplexTraitsT>::dualSimplex() const {
 
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T> DualSimplexPhaseOne<T, SimplexTraitsT>::run() {
-  auto phaseOneLPStats = dualSimplex().run("PHASE_ONE", DualPhase::ONE);
+  auto phaseOneLPStats = dualSimplex().run(
+      "PHASE_ONE", PrintSimplexOptSummary::YES, DualPhase::ONE);
   if (_simplexTableau._objectiveValue <
       -NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE) {
     SPDLOG_WARN(

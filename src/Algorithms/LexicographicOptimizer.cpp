@@ -49,7 +49,7 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
     const auto initialIsFixedBitset = getIsFixedBitset();
     int curVarIdxToBeOptimized = 0;
     int varsFixedCount = initialIsFixedBitset.count();
-    int optimizedVarCount = 0;
+    [[maybe_unused]] int optimizedVarCount = 0;
     fixNonBasicVariables(varsFixedCount);
     while (curVarIdxToBeOptimized < _simplexTableau._variableInfos.size() &&
            varsFixedCount < _simplexTableau._variableInfos.size()) {
@@ -66,10 +66,10 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
       }
       ++curVarIdxToBeOptimized;
     }
-    SPDLOG_INFO("AFTER LEXICOGRAPHIC {} OPTIMIZATION - FIXED VAR COUNT {} ALL "
-                "VAR COUNT {}",
-                lexicographicReoptTypeToStr(_lexicographicReoptType),
-                varsFixedCount, _simplexTableau._variableInfos.size());
+    SPDLOG_DEBUG("AFTER LEXICOGRAPHIC {} OPTIMIZATION - FIXED VAR COUNT {} ALL "
+                 "VAR COUNT {}",
+                 lexicographicReoptTypeToStr(_lexicographicReoptType),
+                 varsFixedCount, _simplexTableau._variableInfos.size());
     _simplexTableau.setObjective(
         _simplexTableau._initialProgram.getObjective());
     lexReoptStats._optimalValue = _simplexTableau._objectiveValue;
@@ -84,10 +84,10 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
 
     unfixVariables(initialIsFixedBitset);
 
-    SPDLOG_INFO("LEXICOGRAPHIC {} REOPTIMIZATION RAN {} VARIABLE-SUBPROGRAMS "
-                "(OUT OF {} ALL VARIABLES)",
-                lexicographicReoptTypeToStr(_lexicographicReoptType),
-                optimizedVarCount, _simplexTableau._variableInfos.size());
+    SPDLOG_DEBUG("LEXICOGRAPHIC {} REOPTIMIZATION RAN {} VARIABLE-SUBPROGRAMS "
+                 "(OUT OF {} ALL VARIABLES)",
+                 lexicographicReoptTypeToStr(_lexicographicReoptType),
+                 optimizedVarCount, _simplexTableau._variableInfos.size());
   });
 
   return lexReoptStats;

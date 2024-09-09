@@ -76,13 +76,13 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       ++relaxationNo;
       if (relaxationNo > _cutRoundLimit)
         break;
-      SPDLOG_INFO("{}TH GOMORY ROUND", relaxationNo);
+      SPDLOG_DEBUG("{}TH GOMORY ROUND", relaxationNo);
       checkIfNonBasicVarsAreIntegral();
       const auto fractionalBasisRows =
           collectFractionalBasisRowIndices(gomoryCutChoosingRule);
-      SPDLOG_INFO("FOUND {} FRACTIONAL VARIABLES - ROW IDXS [{}]",
-                  fractionalBasisRows.size(),
-                  fmt::join(fractionalBasisRows, ", "));
+      SPDLOG_DEBUG("FOUND {} FRACTIONAL VARIABLES - ROW IDXS [{}]",
+                   fractionalBasisRows.size(),
+                   fmt::join(fractionalBasisRows, ", "));
       if (fractionalBasisRows.empty())
         break;
       addCutRows(relaxationNo, fractionalBasisRows);
@@ -91,18 +91,18 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       _simplexTableau.calculateSolution();
       _simplexTableau.calculateCurrentObjectiveValue();
 
-      SPDLOG_INFO("AFTER ADDITION OF NEW CUTS");
-      //      SPDLOG_INFO(_simplexTableau.toString());
-      SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-      SPDLOG_INFO(_simplexTableau.toStringSolution());
+      SPDLOG_DEBUG("AFTER ADDITION OF NEW CUTS");
+      SPDLOG_TRACE(_simplexTableau.toString());
+      SPDLOG_DEBUG(_simplexTableau.toStringObjectiveValue());
+      SPDLOG_DEBUG(_simplexTableau.toStringSolution());
 
       ipOptStatistics._lpRelaxationStats.emplace_back() = runImpl(relaxationNo);
 
       if (removeCutsInBasis()) {
-        SPDLOG_INFO("AFTER CUT REMOVAL");
-        //        SPDLOG_INFO(_simplexTableau.toString());
-        SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-        SPDLOG_INFO(_simplexTableau.toStringSolution());
+        SPDLOG_DEBUG("AFTER CUT REMOVAL");
+        SPDLOG_TRACE(_simplexTableau.toString());
+        SPDLOG_DEBUG(_simplexTableau.toStringObjectiveValue());
+        SPDLOG_DEBUG(_simplexTableau.toStringSolution());
         ipOptStatistics._lpRelaxationStats.emplace_back() =
             runImpl(relaxationNo);
       }
@@ -125,15 +125,15 @@ DualSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
   };
 
   LPRelaxationStatistics<T> relaxationStats;
-  relaxationStats._relaxationOptStats =
-      dualSimplex().run(relaxationId(), DualPhase::TWO);
-  SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-  //  SPDLOG_INFO(_simplexTableau.toStringSolution());
+  relaxationStats._relaxationOptStats = dualSimplex().run(
+      relaxationId(), PrintSimplexOptSummary::NO, DualPhase::TWO);
+  SPDLOG_DEBUG(_simplexTableau.toStringObjectiveValue());
+  SPDLOG_DEBUG(_simplexTableau.toStringSolution());
 
   relaxationStats._lexicographicReoptStats =
       lexicographicOptimizer().run(relaxationId());
-  SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-  SPDLOG_INFO(_simplexTableau.toStringSolution());
+  SPDLOG_DEBUG(_simplexTableau.toStringObjectiveValue());
+  SPDLOG_DEBUG(_simplexTableau.toStringSolution());
   return relaxationStats;
 }
 
@@ -321,7 +321,7 @@ bool DualSimplexGomory<T, SimplexTraitsT>::removeCutsInBasis() const {
       }
 
       if (shouldCutBeRemoved(basicVarIdx)) {
-        SPDLOG_INFO(
+        SPDLOG_DEBUG(
             "FOUND BASIC CUT VAR IDX {} LABEL {} (CUT ROW IDX {} LABEL {})",
             basicVarIdx, _simplexTableau._variableInfos[basicVarIdx]._label,
             *cutRowIdx, _simplexTableau._rowInfos[*cutRowIdx]._label);

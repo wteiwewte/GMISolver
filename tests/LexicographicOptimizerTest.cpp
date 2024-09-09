@@ -40,7 +40,7 @@ LexReoptStatistics<T> runDualSimplexWithLexReopt(
       DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option))
-      .run("", DualPhase::TWO);
+      .run("", PrintSimplexOptSummary::YES, DualPhase::TWO);
 
   return LexicographicOptimizer<T, SimplexTraitsT>(
              simplexTableau, reinversionManager,

@@ -150,7 +150,6 @@ template <typename T> struct LPTestBase {
                       instanceSetStats._modelsWithNoAllNonnegativeVariables);
       }
     }
-    SPDLOG_INFO("HALO");
     const bool extendedStatistics = absl::GetFlag(FLAGS_extended_statistics);
     if (!optimizationStatsVec.empty()) {
       OptStatisticsPrinter optStatisticsPrinter;
@@ -158,8 +157,9 @@ template <typename T> struct LPTestBase {
           optimizationStatsVec.front()._optimizationStats);
       for (const auto &optStats : optimizationStatsVec) {
         optStatisticsPrinter.print(optStats._optimizationStats,
-                                   extendedStatistics);
-        optStatisticsPrinter.print(optStats._gurobiStats, false);
+                                   extendedStatistics,
+                                   absl::GetFlag(FLAGS_cut_round_limit) / 10);
+        optStatisticsPrinter.print(optStats._gurobiStats, false, 1);
       }
       SPDLOG_INFO(optStatisticsPrinter.toString());
     }
@@ -191,7 +191,7 @@ template <typename T> struct LPTestBase {
                  const LPOptStatistics<FloatingPointT> &gurobiLPOptStats) {
     const auto &lastRelaxationOptStats =
         ipOptStatistics._lpRelaxationStats.back();
-    compareWithGurobi(lexicographicReoptType, lastRelaxationOptStats,
+    compareWithGurobi(lastRelaxationOptStats._relaxationOptStats,
                       gurobiLPOptStats);
     checkIfSolutionIsInteger(ipOptStatistics);
   }
@@ -199,10 +199,11 @@ template <typename T> struct LPTestBase {
   void checkIfSolutionIsInteger(
       const IPOptStatistics<FloatingPointT> &ipOptStatistics) {
     const auto &optSolution = ipOptStatistics._optimalSolution;
-    EXPECT_TRUE(
-        std::all_of(optSolution.begin(), optSolution.end(), [](const auto &x) {
-          return NumericalTraitsT ::isInteger(x);
-        }));
+    for (int solutionIdx = 0; solutionIdx < optSolution.size(); ++solutionIdx) {
+      ASSERT_TRUE(NumericalTraitsT ::isInteger(optSolution[solutionIdx]))
+          << fmt::format("Value {} at index {} is not integer",
+                         optSolution[solutionIdx], solutionIdx);
+    }
   }
 
   void compareWithGurobi(

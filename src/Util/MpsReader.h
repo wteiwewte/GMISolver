@@ -11,8 +11,10 @@
 
 template <typename T> struct MpsReader {
 public:
-  std::optional<LinearProgram<T>> read(const std::string &filePath,
-                                       const bool addObjectiveRow = false);
+  std::optional<LinearProgram<T>>
+  read(const std::string &filePath,
+       const AddObjectiveRelatedVar addObjectiveRelatedVar =
+           AddObjectiveRelatedVar::NO);
 
 private:
   constexpr static int OBJECTIVE_ROW_CONSTRAINT_IDX = 0;

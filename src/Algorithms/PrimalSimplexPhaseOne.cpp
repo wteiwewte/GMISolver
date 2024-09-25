@@ -54,8 +54,8 @@ LPOptStatistics<T> PrimalSimplexPhaseOne<T, SimplexTraitsT>::run() {
               _simplexTableau._initialProgram.getName(),
               _simplexTableau._rowInfos.size(),
               primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
-  auto artLpOptStats = primalSimplex().runImpl(
-      "PHASE_ONE", PrintSimplexOptSummary::YES, PrimalPhase::ONE);
+  auto artLpOptStats = primalSimplex().run(
+      "PRIMAL_PHASE_ONE", PrintSimplexOptSummary::YES, PrimalPhase::ONE);
 
   if (_simplexTableau._objectiveValue >
       NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE) {

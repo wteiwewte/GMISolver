@@ -13,7 +13,7 @@
 #include <string>
 
 struct OptStatisticsPrinter {
-  constexpr static int LP_NAME_WIDTH = 30;
+  constexpr static int LP_NAME_WIDTH = 35;
   constexpr static int ALGO_TYPE_WIDTH = 71;
   constexpr static int OPT_RESULT_WIDTH = 25;
   constexpr static int OPT_VALUE_WIDTH = 20;

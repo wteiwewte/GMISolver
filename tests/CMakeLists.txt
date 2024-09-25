@@ -27,8 +27,9 @@ target_link_libraries(
             gtest)
 
 add_executable(
-  UnitTests DualSimplexTest.cpp PrimalSimplexTest.cpp DualSimplexGomoryTest.cpp
-            LexicographicOptimizerTest.cpp)
+  UnitTests
+  DualSimplexTest.cpp PrimalSimplexTest.cpp DualSimplexGomoryTest.cpp
+  LexicographicOptimizerTest.cpp PrimalSimplexGomoryTest.cpp PrimalDualTest.cpp)
 include_directories(../src/)
 target_link_libraries(
   UnitTests
@@ -40,6 +41,7 @@ target_link_libraries(
   DualSimplex
   DualSimplexPhaseOne
   PrimalSimplex
+  PrimalSimplexGomory
   PrimalSimplexPhaseOne
   SimplexTableau
   GurobiOptimizer

@@ -34,6 +34,21 @@ target_link_libraries(
   SimplexValidator
   SpdlogHeader
   Time)
+
+add_library(PrimalSimplexGomory PrimalSimplexGomory.h PrimalSimplexGomory.cpp
+                                PrimalSimplexGomory.h)
+target_link_libraries(
+  PrimalSimplexGomory
+  CommonTypes
+  LexicographicOptimizer
+  LPOptStatistics
+  ReinversionManager
+  SimplexTraits
+  SimplexTableau
+  SimplexTableauResizer
+  PrimalSimplex
+  Time)
+
 add_library(PrimalSimplexPhaseOne PrimalSimplexPhaseOne.cpp
                                   PrimalSimplexPhaseOne.h)
 target_link_libraries(

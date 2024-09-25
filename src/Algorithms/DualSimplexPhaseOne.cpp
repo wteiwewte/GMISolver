@@ -205,7 +205,7 @@ DualSimplexPhaseOne<T, SimplexTraitsT>::dualSimplex() const {
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T> DualSimplexPhaseOne<T, SimplexTraitsT>::run() {
   auto phaseOneLPStats = dualSimplex().run(
-      "PHASE_ONE", PrintSimplexOptSummary::YES, DualPhase::ONE);
+      "DUAL_PHASE_ONE", PrintSimplexOptSummary::YES, DualPhase::ONE);
 
   if (phaseOneLPStats._optResult !=
       LPOptimizationResult::BOUNDED_AND_FEASIBLE) {

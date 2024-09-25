@@ -113,6 +113,8 @@ enum class DualPhase : int8_t { ONE = 0, TWO };
 using SimplexPhase = std::variant<PrimalPhase, DualPhase>;
 
 enum class PrintSimplexOptSummary : int8_t { YES = 0, NO };
+enum class AddObjectiveRelatedVar : int8_t { YES = 0, NO };
+enum class isDualProgramOptimized : int8_t { YES = 0, NO };
 
 bool AbslParseFlag(absl::string_view text,
                    ValidateSimplexOption *validateSimplexOption,

@@ -22,11 +22,10 @@ public:
   std::string type() const;
 
   LPOptStatistics<T> runPhaseTwo();
-  LPOptStatistics<T>
-  runImpl(const std::string &lpNameSuffix,
-          const PrintSimplexOptSummary printSimplexOptSummary =
-              PrintSimplexOptSummary::YES,
-          const PrimalPhase primalPhase = PrimalPhase::TWO);
+  LPOptStatistics<T> run(const std::string &lpNameSuffix,
+                         const PrintSimplexOptSummary printSimplexOptSummary =
+                             PrintSimplexOptSummary::YES,
+                         const PrimalPhase primalPhase = PrimalPhase::TWO);
 
 private:
   using VectorT = typename SimplexTraitsT::VectorT;

@@ -168,10 +168,12 @@ template <typename T> struct LPTestBase {
   void compare(const LPOptimizationType lpOptimizationType,
                const LexicographicReoptType lexicographicReoptType,
                const IPOptStatistics<FloatingPointT> &ipOptStatistics,
-               const LPOptStatistics<FloatingPointT> &gurobiLPOptStats) {
+               const LPOptStatistics<FloatingPointT> &gurobiLPOptStats,
+               const isDualProgramOptimized isDualProgramOptimized =
+                   isDualProgramOptimized::NO) {
     if (lpOptimizationType == LPOptimizationType::LINEAR_RELAXATION) {
       compareLPRelaxation(lexicographicReoptType, ipOptStatistics,
-                          gurobiLPOptStats);
+                          gurobiLPOptStats, isDualProgramOptimized);
     } else {
       compareIP(lexicographicReoptType, ipOptStatistics, gurobiLPOptStats);
     }
@@ -180,11 +182,13 @@ template <typename T> struct LPTestBase {
   void
   compareLPRelaxation(const LexicographicReoptType lexicographicReoptType,
                       const IPOptStatistics<FloatingPointT> &ipOptStatistics,
-                      const LPOptStatistics<FloatingPointT> &gurobiLPOptStats) {
+                      const LPOptStatistics<FloatingPointT> &gurobiLPOptStats,
+                      const isDualProgramOptimized isDualProgramOptimized =
+                          isDualProgramOptimized::NO) {
     const auto &firstRelaxationOptStats =
         ipOptStatistics._lpRelaxationStats.front();
     compareWithGurobi(lexicographicReoptType, firstRelaxationOptStats,
-                      gurobiLPOptStats);
+                      gurobiLPOptStats, isDualProgramOptimized);
   }
   void compareIP(const LexicographicReoptType lexicographicReoptType,
                  const IPOptStatistics<FloatingPointT> &ipOptStatistics,
@@ -209,25 +213,33 @@ template <typename T> struct LPTestBase {
   void compareWithGurobi(
       const LexicographicReoptType lexicographicReoptType,
       const LPRelaxationStatistics<FloatingPointT> &lpRelaxationStatistics,
-      const LPOptStatistics<FloatingPointT> &gurobiLPOptStats) {
+      const LPOptStatistics<FloatingPointT> &gurobiLPOptStats,
+      const isDualProgramOptimized isDualProgramOptimized =
+          isDualProgramOptimized::NO) {
     const auto &relaxationOptStats = lpRelaxationStatistics._relaxationOptStats;
     ASSERT_EQ(gurobiLPOptStats._optResult, relaxationOptStats._optResult);
     if (relaxationOptStats._optResult ==
         LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+      const auto optValueWithCorrectSign =
+          isDualProgramOptimized == isDualProgramOptimized::YES
+              ? -relaxationOptStats._optimalValue
+              : relaxationOptStats._optimalValue;
       SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
-      SPDLOG_INFO("SIMPLEX OPT AFTER INITIAL OPT {}",
-                  relaxationOptStats._optimalValue);
-      EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                  relaxationOptStats._optimalValue,
+      SPDLOG_INFO("SIMPLEX OPT AFTER INITIAL OPT {}", optValueWithCorrectSign);
+      EXPECT_NEAR(gurobiLPOptStats._optimalValue, optValueWithCorrectSign,
                   NumericalTraitsT::OPTIMALITY_TOLERANCE);
 
       const auto &optimalValueAfterFirstLexReopt =
           lpRelaxationStatistics._lexicographicReoptStats._optimalValue;
+      const auto optValueAfterFirstLexReoptWithCorrectSign =
+          isDualProgramOptimized == isDualProgramOptimized::YES
+              ? -optimalValueAfterFirstLexReopt
+              : optimalValueAfterFirstLexReopt;
       SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC {} REOPT {}",
                   lexicographicReoptTypeToStr(lexicographicReoptType),
-                  optimalValueAfterFirstLexReopt);
+                  optValueAfterFirstLexReoptWithCorrectSign);
       EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                  optimalValueAfterFirstLexReopt,
+                  optValueAfterFirstLexReoptWithCorrectSign,
                   NumericalTraitsT::OPTIMALITY_TOLERANCE);
     }
   }
@@ -268,6 +280,23 @@ template <typename T> struct LPTestBase {
                   NumericalTraitsT::OPTIMALITY_TOLERANCE);
     }
   }
+
+  void compareWithGurobiDual(
+      const LPOptStatistics<FloatingPointT> &dualProgramLpOptStatistics,
+      const LPOptStatistics<FloatingPointT> &gurobiLPOptStats) {
+    ASSERT_EQ(gurobiLPOptStats._optResult,
+              dualProgramLpOptStatistics._optResult);
+    if (dualProgramLpOptStatistics._optResult ==
+        LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+      SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
+      SPDLOG_INFO("DUAL PROGRAM SIMPLEX OPT {}",
+                  -dualProgramLpOptStatistics._optimalValue);
+      EXPECT_NEAR(gurobiLPOptStats._optimalValue,
+                  -dualProgramLpOptStatistics._optimalValue,
+                  NumericalTraitsT::OPTIMALITY_TOLERANCE);
+    }
+  }
+
   void compareWithGurobi(
       const LexicographicReoptType lexicographicReoptType,
       const LexReoptStatistics<FloatingPointT> &lexReoptStatistics,

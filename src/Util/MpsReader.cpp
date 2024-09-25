@@ -30,8 +30,9 @@ double convert(const std::string &str) { return std::stod(str); }
 } // namespace
 
 template <typename T>
-std::optional<LinearProgram<T>> MpsReader<T>::read(const std::string &filePath,
-                                                   const bool addObjectiveRow) {
+std::optional<LinearProgram<T>>
+MpsReader<T>::read(const std::string &filePath,
+                   const AddObjectiveRelatedVar addObjectiveRelatedVar) {
   std::ifstream fileStream(filePath);
   if (!fileStream.is_open()) {
     SPDLOG_DEBUG("Could not open {} file", filePath);
@@ -44,7 +45,7 @@ std::optional<LinearProgram<T>> MpsReader<T>::read(const std::string &filePath,
   std::string readLine;
 
   std::optional<int> objectiveVarIdx;
-  if (addObjectiveRow) {
+  if (addObjectiveRelatedVar == AddObjectiveRelatedVar::YES) {
     objectiveVarIdx =
         setupObjectiveRowVar(currentSectionIsInteger, linearProgram);
     if (!objectiveVarIdx.has_value())
@@ -151,7 +152,8 @@ std::optional<LinearProgram<T>> MpsReader<T>::read(const std::string &filePath,
   setBoundsForNonFreeVars(linearProgram);
   roundBoundsForIntegerVars(linearProgram);
 
-  if (addObjectiveRow && linearProgram.isPureIP(false) &&
+  if (addObjectiveRelatedVar == AddObjectiveRelatedVar::YES &&
+      linearProgram.isPureIP(false) &&
       linearProgram.allCoefficientsAreIntegers()) {
     linearProgram._variableInfos[*objectiveVarIdx]._type =
         VariableType::INTEGER;

@@ -56,7 +56,7 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
       if (!_simplexTableau._variableInfos[curVarIdxToBeOptimized]._isFixed) {
         _simplexTableau.setObjective(
             singleVarObjective(curVarIdxToBeOptimized));
-        auto lpStatisticsFromSingleVarOpt = primalSimplex().runImpl(
+        auto lpStatisticsFromSingleVarOpt = primalSimplex().run(
             fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized,
                         lexicographicReoptTypeToStr(_lexicographicReoptType)),
             PrintSimplexOptSummary::NO);

@@ -12,6 +12,7 @@
 #include <boost/dynamic_bitset.hpp>
 
 template <typename T, typename SimplexTraitsT> class DualSimplexGomory;
+template <typename T, typename SimplexTraitsT> class PrimalSimplexGomory;
 template <typename T, typename SimplexTraitsT> class LexicographicOptimizer;
 template <typename T, typename SimplexTraitsT> class PrimalSimplex;
 template <typename T, typename SimplexTraitsT> class PrimalSimplexPhaseOne;
@@ -45,6 +46,7 @@ public:
 
 private:
   friend class DualSimplexGomory<T, SimplexTraitsT>;
+  friend class PrimalSimplexGomory<T, SimplexTraitsT>;
   friend class LexicographicOptimizer<T, SimplexTraitsT>;
   friend class PrimalSimplex<T, SimplexTraitsT>;
   friend class PrimalSimplexPhaseOne<T, SimplexTraitsT>;

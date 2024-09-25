@@ -101,11 +101,13 @@ bool LinearProgram<T>::areAllCoefficientsInteger(const int rowIdx) const {
 }
 
 template <typename T>
-std::optional<LinearProgram<T>>
-LinearProgram<T>::dualProgram(const bool addObjValueFirstVar) const {
+std::optional<LinearProgram<T>> LinearProgram<T>::dualProgram(
+    const AddObjectiveRelatedVar addObjectiveRelatedVar) const {
   LinearProgram<T> dualProgram;
   dualProgram._name = _name + "_DUAL";
-  const int indexOffset = (int)addObjValueFirstVar;
+  const bool shouldAddObjValueFirstVar =
+      addObjectiveRelatedVar == AddObjectiveRelatedVar::YES;
+  const int indexOffset = (int)shouldAddObjValueFirstVar;
   const size_t dualVarCount =
       indexOffset + _rightHandSides.size() + 2 * _objective.size();
   const size_t dualRowCount = indexOffset + _objective.size();
@@ -116,13 +118,13 @@ LinearProgram<T>::dualProgram(const bool addObjValueFirstVar) const {
     return indexOffset + _rightHandSides.size() + _objective.size() +
            primalVarIdx;
   };
-  if (addObjValueFirstVar) {
+  if (shouldAddObjValueFirstVar) {
     dualProgram._rightHandSides.push_back(0.0);
   }
   dualProgram._rightHandSides.insert(dualProgram._rightHandSides.end(),
                                      _objective.begin(), _objective.end());
 
-  if (addObjValueFirstVar) {
+  if (shouldAddObjValueFirstVar) {
     dualProgram._objective.push_back(0.0);
   }
   dualProgram._objective.insert(dualProgram._objective.end(),
@@ -145,7 +147,7 @@ LinearProgram<T>::dualProgram(const bool addObjValueFirstVar) const {
   }
 
   dualProgram._constraintMatrix = transpose(_constraintMatrix);
-  if (addObjValueFirstVar) {
+  if (shouldAddObjValueFirstVar) {
     dualProgram._constraintMatrix.insert(dualProgram._constraintMatrix.begin(),
                                          std::vector<T>());
     dualProgram._constraintMatrix[0].push_back(1.0);
@@ -161,7 +163,7 @@ LinearProgram<T>::dualProgram(const bool addObjValueFirstVar) const {
   for (int rowIdx = indexOffset; rowIdx < dualProgram._constraintMatrix.size();
        ++rowIdx) {
     auto &currentRow = dualProgram._constraintMatrix[rowIdx];
-    if (addObjValueFirstVar) {
+    if (shouldAddObjValueFirstVar) {
       currentRow.insert(currentRow.begin(), 0.0);
     }
     currentRow.resize(dualVarCount);
@@ -172,7 +174,7 @@ LinearProgram<T>::dualProgram(const bool addObjValueFirstVar) const {
   dualProgram._variableInfos.resize(dualVarCount);
 
   const auto dualVarLabel = [&](const int dualVarIdx) -> std::string {
-    if (addObjValueFirstVar && dualVarIdx == 0) {
+    if (shouldAddObjValueFirstVar && dualVarIdx == 0) {
       return "DUAL_OBJ";
     }
     if (dualVarIdx < indexOffset + _rightHandSides.size()) {
@@ -193,7 +195,7 @@ LinearProgram<T>::dualProgram(const bool addObjValueFirstVar) const {
     dualProgram._variableInfos[dualVarIdx] = VariableInfo{
         ._label = dualVarLabel(dualVarIdx),
         ._type = VariableType::CONTINUOUS,
-        ._isObjectiveVar = (addObjValueFirstVar && dualVarIdx == 0),
+        ._isObjectiveVar = (shouldAddObjValueFirstVar && dualVarIdx == 0),
         ._isFree = isDualVarFree};
     dualProgram._variableInfos[dualVarIdx]._isFree = isDualVarFree;
   }

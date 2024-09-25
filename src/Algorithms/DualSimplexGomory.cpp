@@ -51,7 +51,7 @@ template <typename T, typename SimplexTraitsT>
 IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
     const LPOptimizationType lpOptimizationType,
     const GomoryCutChoosingRule gomoryCutChoosingRule) {
-  SPDLOG_INFO("GOMORY WITH {} LEXICOGRAPHIC REOPTIMIZATION",
+  SPDLOG_INFO("DUAL GOMORY WITH {} LEXICOGRAPHIC REOPTIMIZATION",
               lexicographicReoptTypeToStr(_lexicographicReoptType));
   IPOptStatistics<T> ipOptStatistics{
       ._lpName = _simplexTableau.getName(),

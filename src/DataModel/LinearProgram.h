@@ -21,7 +21,7 @@ template <typename T> class LinearProgram {
 public:
   void convertToStandardForm();
   std::optional<LinearProgram<T>>
-  dualProgram(const bool addObjValueFirstVar) const;
+  dualProgram(const AddObjectiveRelatedVar addObjectiveRelatedVar) const;
   size_t getOriginalVariablesCount() const;
 
   std::string toString() const;

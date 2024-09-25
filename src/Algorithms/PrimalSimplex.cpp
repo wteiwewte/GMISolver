@@ -29,11 +29,11 @@ std::string PrimalSimplex<T, SimplexTraitsT>::type() const {
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runPhaseTwo() {
   _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
-  return runImpl("PHASE_TWO");
+  return run("PHASE_TWO");
 }
 
 template <typename T, typename SimplexTraitsT>
-LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runImpl(
+LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::run(
     const std::string &lpNameSuffix,
     const PrintSimplexOptSummary printSimplexOptSummary,
     const PrimalPhase primalPhase) {
@@ -53,6 +53,7 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runImpl(
       ._algorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   [[maybe_unused]] int iterCount = 1;
+  //  SPDLOG_INFO("{}\n", _simplexTableau.toString());
   lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
     while (true) {
       const bool iterResult = runOneIteration();
@@ -79,6 +80,10 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runImpl(
 
       if (!checkIterationLimit(iterCount))
         break;
+
+      //      SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
+      //      SPDLOG_INFO(_simplexTableau.toStringSolution());
+      //      SPDLOG_INFO("{}\n", _simplexTableau.toString());
 
       SPDLOG_TRACE("{}\n", _simplexTableau.toString());
     }

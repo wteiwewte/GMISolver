@@ -226,11 +226,23 @@ private:
 
     const auto &simplexBasisData = _simplexTableau._simplexBasisData;
     const auto checkIfAllDistinctBitsetPairsAreDisjoint =
-        [](const BitsetVecT &bitsetVec) -> ExpectedT {
+        [&](const BitsetVecT &bitsetVec) -> ExpectedT {
       for (int bitsetIdx1 = 0; bitsetIdx1 < bitsetVec.size(); ++bitsetIdx1) {
         for (int bitsetIdx2 = bitsetIdx1 + 1; bitsetIdx2 < bitsetVec.size();
              ++bitsetIdx2) {
-          if ((bitsetVec[bitsetIdx1] & bitsetVec[bitsetIdx2]).any()) {
+          const auto multipleStatesBitset =
+              bitsetVec[bitsetIdx1] & bitsetVec[bitsetIdx2];
+          for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
+               ++varIdx) {
+            if (multipleStatesBitset[varIdx]) {
+              SPDLOG_ERROR("Variable (idx, label)=({}, {}) to multiple states "
+                           "in basis, bitsets (idx1, idx2)=({}, {})",
+                           varIdx,
+                           _simplexTableau._variableInfos[varIdx]._label,
+                           bitsetIdx1, bitsetIdx2);
+            }
+          }
+          if (multipleStatesBitset.any()) {
             return tl::unexpected{fmt::format(
                 "Some variables are assigned to multiple states in basis")};
           }
@@ -250,11 +262,21 @@ private:
                isVariableFreeBitset});
         })
         .and_then([&]() -> ExpectedT {
-          if (!(simplexBasisData._isBasicColumnIndexBitset |
-                simplexBasisData._isColumnAtLowerBoundBitset |
-                simplexBasisData._isColumnAtUpperBoundBitset |
-                isVariableFreeBitset)
-                   .all()) {
+          const auto assignedToAnyStateBitset =
+              simplexBasisData._isBasicColumnIndexBitset |
+              simplexBasisData._isColumnAtLowerBoundBitset |
+              simplexBasisData._isColumnAtUpperBoundBitset |
+              isVariableFreeBitset;
+          for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
+               ++varIdx) {
+            if (!assignedToAnyStateBitset[varIdx]) {
+              SPDLOG_ERROR("Variable (idx, label)=({}, {}) not assigned to any "
+                           "state in basis",
+                           varIdx,
+                           _simplexTableau._variableInfos[varIdx]._label);
+            }
+          }
+          if (!assignedToAnyStateBitset.all()) {
             return tl::unexpected{fmt::format(
                 "Some variables aren't assigned to any state in basis")};
           }
@@ -282,16 +304,57 @@ private:
   }
 
   ExpectedT validateRowToColumnMapping() const {
-    const auto &simplexBasisData = _simplexTableau._simplexBasisData;
+    return validateObjectiveRowMapping().and_then(
+        [&] { return validateRowMappingUniqueness(); });
+  }
 
-    // Commented due to dual phase one
-    //    if (_simplexTableau._variableInfos[0]._isObjectiveVar &&
-    //        (simplexBasisData._rowToBasisColumnIdxMap[0] != 0 ||
-    //         !simplexBasisData._isBasicColumnIndexBitset[0]))
-    //      return tl::unexpected{
-    //          fmt::format("Row 0 should be mapped always to column 0 - both
-    //          are "
-    //                      "objective related")};
+  ExpectedT validateObjectiveRowMapping() const {
+    const auto &simplexBasisData = _simplexTableau._simplexBasisData;
+    if (_simplexTableau._rowInfos[0]._isObjectiveRow) {
+      if (!_simplexTableau._variableInfos[0]._isObjectiveVar)
+        return tl::unexpected{
+            fmt::format("Variable 0 should be objective related is row 0 is")};
+
+      if ((simplexBasisData._rowToBasisColumnIdxMap[0] != 0 ||
+           !simplexBasisData._isBasicColumnIndexBitset[0]))
+        return tl::unexpected{
+            fmt::format("Row 0 should be mapped always to column 0 - bot are "
+                        "objective related")};
+    }
+
+    const size_t objectiveRelatedRows = std::count_if(
+        _simplexTableau._rowInfos.begin(), _simplexTableau._rowInfos.end(),
+        [](const RowInfo &rowInfo) {
+          return static_cast<size_t>(rowInfo._isObjectiveRow);
+        });
+    if (objectiveRelatedRows > 1)
+      return tl::unexpected{
+          fmt::format("There should be at most one objective related row")};
+
+    if (objectiveRelatedRows == 1 &&
+        !_simplexTableau._rowInfos[0]._isObjectiveRow)
+      return tl::unexpected{
+          fmt::format("Only 0 row can be objective related row")};
+
+    const size_t objectiveRelatedVars = std::count_if(
+        _simplexTableau._variableInfos.begin(),
+        _simplexTableau._variableInfos.end(), [](const VariableInfo &varInfo) {
+          return static_cast<size_t>(varInfo._isObjectiveVar);
+        });
+    if (objectiveRelatedVars > 1)
+      return tl::unexpected{
+          fmt::format("There should be at most one objective relate var")};
+
+    if (objectiveRelatedVars == 1 &&
+        !_simplexTableau._variableInfos[0]._isObjectiveVar)
+      return tl::unexpected{
+          fmt::format("Only 0 var can be objective related var")};
+
+    return {};
+  }
+
+  ExpectedT validateRowMappingUniqueness() const {
+    const auto &simplexBasisData = _simplexTableau._simplexBasisData;
 
     std::unordered_set<int> uniqueBasicColumnIndices;
     for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
@@ -555,14 +618,17 @@ private:
              expectedNumberOfVars))
       return {};
 
-    return tl::unexpected{
-        fmt::format("Basis state vector sizes ({}, {}, {}, {}) don't match "
-                    "number of rows/variables ({}, {})",
-                    simplexBasisData._rowToBasisColumnIdxMap.size(),
-                    simplexBasisData._isBasicColumnIndexBitset.size(),
-                    simplexBasisData._isColumnAtLowerBoundBitset.size(),
-                    simplexBasisData._isColumnAtUpperBoundBitset.size(),
-                    expectedNumberOfRows, expectedNumberOfVars)};
+    return tl::unexpected{fmt::format(
+        "Basis state vector sizes ({}, {}, {}, {}, {}) don't match "
+        "number of rows/variables ({}, {})",
+        simplexBasisData._rowToBasisColumnIdxMap.size(),
+        simplexBasisData._isBasicColumnIndexBitset.size(),
+        simplexBasisData._isColumnAtLowerBoundBitset.size(),
+        simplexBasisData._isColumnAtUpperBoundBitset.size(),
+        simplexBasisData._isColumnEligibleBitset.has_value()
+            ? simplexBasisData._isColumnEligibleBitset.value().size()
+            : 0,
+        expectedNumberOfRows, expectedNumberOfVars)};
   }
 
   ExpectedT validateBasisReprSizes() const {

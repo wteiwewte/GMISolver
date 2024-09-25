@@ -30,8 +30,8 @@ double convert(const std::string &str) { return std::stod(str); }
 } // namespace
 
 template <typename T>
-std::optional<LinearProgram<T>>
-MpsReader<T>::read(const std::string &filePath) {
+std::optional<LinearProgram<T>> MpsReader<T>::read(const std::string &filePath,
+                                                   const bool addObjectiveRow) {
   std::ifstream fileStream(filePath);
   if (!fileStream.is_open()) {
     SPDLOG_DEBUG("Could not open {} file", filePath);
@@ -43,10 +43,13 @@ MpsReader<T>::read(const std::string &filePath) {
   bool currentSectionIsInteger = false;
   std::string readLine;
 
-  const auto objectiveVarIdx =
-      setupObjectiveRowVar(currentSectionIsInteger, linearProgram);
-  if (!objectiveVarIdx.has_value())
-    return std::nullopt;
+  std::optional<int> objectiveVarIdx;
+  if (addObjectiveRow) {
+    objectiveVarIdx =
+        setupObjectiveRowVar(currentSectionIsInteger, linearProgram);
+    if (!objectiveVarIdx.has_value())
+      return std::nullopt;
+  }
 
   while (std::getline(fileStream, readLine)) {
     if (readLine.empty() || readLine[0] == '*')
@@ -148,7 +151,7 @@ MpsReader<T>::read(const std::string &filePath) {
   setBoundsForNonFreeVars(linearProgram);
   roundBoundsForIntegerVars(linearProgram);
 
-  if (linearProgram.isPureIP(false) &&
+  if (addObjectiveRow && linearProgram.isPureIP(false) &&
       linearProgram.allCoefficientsAreIntegers()) {
     linearProgram._variableInfos[*objectiveVarIdx]._type =
         VariableType::INTEGER;
@@ -171,6 +174,7 @@ MpsReader<T>::setupObjectiveRowVar(const bool currentSectionIsInteger,
 
   linearProgram
       ._constraintMatrix[OBJECTIVE_ROW_CONSTRAINT_IDX][*objectiveVarIdx] = 1;
+  linearProgram._rowInfos[OBJECTIVE_ROW_CONSTRAINT_IDX]._isObjectiveRow = true;
   linearProgram._variableInfos[*objectiveVarIdx]._isObjectiveVar = true;
   linearProgram._variableInfos[*objectiveVarIdx]._isFree = true;
   return objectiveVarIdx;
@@ -546,8 +550,11 @@ bool MpsReader<T>::updateLpMatrix(const std::string &rowLabelStr,
                                   LinearProgram<T> &linearProgram) {
   if (rowLabelStr == linearProgram._objectiveInfo._label) {
     linearProgram._objective[variableIdx] = convert(coefficientValueStr);
-    linearProgram._constraintMatrix[OBJECTIVE_ROW_CONSTRAINT_IDX][variableIdx] =
-        -convert(coefficientValueStr);
+    if (linearProgram._variableInfos[0]._isObjectiveVar) {
+      linearProgram
+          ._constraintMatrix[OBJECTIVE_ROW_CONSTRAINT_IDX][variableIdx] =
+          -convert(coefficientValueStr);
+    }
     return true;
   }
 

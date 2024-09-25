@@ -37,13 +37,22 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runImpl(
     const std::string &lpNameSuffix,
     const PrintSimplexOptSummary printSimplexOptSummary,
     const PrimalPhase primalPhase) {
-  [[maybe_unused]] int iterCount = 1;
+  if (printSimplexOptSummary == PrintSimplexOptSummary::YES) {
+    SPDLOG_INFO(
+        "LP NAME {} BASIS SIZE {}, ROW PIVOT RULE {}",
+        _simplexTableau._initialProgram.getName() +
+            (!lpNameSuffix.empty() ? "_" + lpNameSuffix : ""),
+        _simplexTableau._rowInfos.size(),
+        primalSimplexColumnPivotRuleToStr(_primalSimplexColumnPivotRule));
+  }
   SPDLOG_TRACE("{}\n", _simplexTableau.toString());
+
   LPOptStatistics<T> lpOptStatistics{
       ._lpName = (_simplexTableau.getName() +
                   (!lpNameSuffix.empty() ? "_" + lpNameSuffix : "")),
       ._algorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
+  [[maybe_unused]] int iterCount = 1;
   lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
     while (true) {
       const bool iterResult = runOneIteration();
@@ -247,7 +256,7 @@ PrimalSimplex<T, SimplexTraitsT>::chooseEnteringColumnFirstEligible() {
                  _simplexTableau._simplexBasisData
                      ._isColumnAtUpperBoundBitset[columnIdx]);
 
-    if (!_simplexTableau.isColumnAllowedToEnterBasis(columnIdx))
+    if (!isColumnAllowedToEnterBasis(columnIdx))
       continue;
 
     if (_simplexTableau._reducedCosts[columnIdx] <
@@ -300,7 +309,7 @@ PrimalSimplex<T, SimplexTraitsT>::chooseEnteringColumnBiggestAbsReducedCost() {
 
   for (int columnIdx = 0; columnIdx < _simplexTableau._variableInfos.size();
        ++columnIdx)
-    if (_simplexTableau.isColumnAllowedToEnterBasis(columnIdx))
+    if (isColumnAllowedToEnterBasis(columnIdx))
       tryUpdateBest(columnIdx);
 
   return bestColumnIdx;
@@ -469,6 +478,14 @@ PrimalSimplex<T, SimplexTraitsT>::chooseRowIdx(const int enteringColumnIdx,
 
   return pivotRowData._minRatio.has_value() ? std::optional{pivotRowData}
                                             : std::nullopt;
+}
+
+template <typename T, typename SimplexTraitsT>
+bool PrimalSimplex<T, SimplexTraitsT>::isColumnAllowedToEnterBasis(
+    const int colIdx) const {
+  return !_simplexTableau._variableInfos[colIdx]._isArtificial &&
+         !_simplexTableau._variableInfos[colIdx]._isFixed &&
+         _simplexTableau.isColumnEligibleToEnterBasis(colIdx);
 }
 
 template class PrimalSimplex<

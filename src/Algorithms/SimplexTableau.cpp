@@ -31,10 +31,10 @@ template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables(
     const SimplexType simplexType) {
   const int variableCountAtTheStart = _variableInfos.size();
-  //  const bool isFirstVarObjective = _variableInfos[0]._isObjectiveVar &&
-  //  _variableInfos[0]._isFree;
-  const bool isFirstVarObjective = _variableInfos[0]._isObjectiveVar;
-  const int artificialVarCount = _rowInfos.size() - ((int)isFirstVarObjective);
+  const bool shouldMapZerothVarToZerothRow =
+      shouldMapZerothVarToZerothRowImpl(simplexType);
+  const int artificialVarCount =
+      _rowInfos.size() - ((int)shouldMapZerothVarToZerothRow);
   const int newVariableCount = variableCountAtTheStart + artificialVarCount;
 
   SPDLOG_INFO("ADDING {} ARTIFICIAL VARIABLES", artificialVarCount);
@@ -44,7 +44,7 @@ void SimplexTableau<T, SimplexTraitsT>::addArtificialVariables(
   };
 
   _constraintMatrix[0].resize(newVariableCount);
-  const int firstRowIdx = ((int)isFirstVarObjective);
+  const int firstRowIdx = ((int)shouldMapZerothVarToZerothRow);
   for (int rowIdx = firstRowIdx; rowIdx < _rowInfos.size(); ++rowIdx) {
     _constraintMatrix[rowIdx].resize(newVariableCount);
 
@@ -88,7 +88,8 @@ std::vector<T> SimplexTableau<T, SimplexTraitsT>::originalObjective() const {
 
 template <typename T, typename SimplexTraitsT>
 std::optional<SimplexBasisData>
-SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
+SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars(
+    const SimplexType simplexType) const {
   std::optional<int> firstArtificialIdx;
   for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx)
     if (_variableInfos[varIdx]._isArtificial) {
@@ -107,20 +108,20 @@ SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
   result._isColumnAtUpperBoundBitset.resize(_variableInfos.size(), false);
   result._rowToBasisColumnIdxMap.resize(_rowInfos.size());
 
-  // objective row -> objective var
-  if (_variableInfos[0]._isObjectiveVar) {
-    //  if (_variableInfos[0]._isObjectiveVar && _variableInfos[0]._isFree) {
+  const bool shouldMapZerothVarToZerothRow =
+      shouldMapZerothVarToZerothRowImpl(simplexType);
+  if (shouldMapZerothVarToZerothRow) {
     result._rowToBasisColumnIdxMap[0] = 0;
     result._isBasicColumnIndexBitset[0] = true;
   }
 
-  const int firstVarIdx = ((int)_variableInfos[0]._isObjectiveVar);
+  const int firstVarIdx = ((int)shouldMapZerothVarToZerothRow);
   for (int varIdx = firstVarIdx; varIdx < _variableInfos.size(); ++varIdx) {
     result._isColumnAtLowerBoundBitset[varIdx] =
         !_variableInfos[varIdx]._isFree;
   }
 
-  const int firstRowIdx = ((int)_variableInfos[0]._isObjectiveVar);
+  const int firstRowIdx = ((int)shouldMapZerothVarToZerothRow);
   for (int rowIdx = firstRowIdx; rowIdx < _rowInfos.size(); ++rowIdx) {
     const auto basicColumnIdx = *firstArtificialIdx + rowIdx - firstRowIdx;
     result._rowToBasisColumnIdxMap[rowIdx] = basicColumnIdx;
@@ -132,18 +133,19 @@ SimplexTableau<T, SimplexTraitsT>::createBasisFromArtificialVars() const {
 }
 
 template <typename T, typename SimplexTraitsT>
+bool SimplexTableau<T, SimplexTraitsT>::shouldMapZerothVarToZerothRowImpl(
+    const SimplexType simplexType) const {
+  return simplexType == SimplexType::PRIMAL &&
+         _variableInfos[0]._isObjectiveVar;
+}
+
+template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::init(const SimplexType simplexType) {
-  if (auto simplexBasisData = createBasisFromArtificialVars();
+  if (auto simplexBasisData = createBasisFromArtificialVars(simplexType);
       simplexBasisData.has_value())
     _simplexBasisData = std::move(*simplexBasisData);
 
   initTableau();
-  setObjective((simplexType == SimplexType::PRIMAL) ? artificialObjective()
-                                                    : originalObjective());
-
-  if (simplexType == SimplexType::DUAL) {
-    initBoundsForDualSimplex();
-  }
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -398,78 +400,11 @@ void SimplexTableau<T, SimplexTraitsT>::updateBasisData(
   isBasicColumnIndexBitset[rowToBasisColumnIdxMap[leavingRowIdx]] = false;
   rowToBasisColumnIdxMap[leavingRowIdx] = enteringColumnIdx;
 }
-template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::initBoundsForDualSimplex() {
-  //  const int firstVarIdx = ((int)_variableInfos[0]._isObjectiveVar);
-  for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
-    if (_reducedCosts[varIdx] < 0.0) {
-      if (_variableInfos[varIdx]._isFree) {
-        SPDLOG_ERROR("FREE VARIABLE {} NOT SUPPORTED IN TRIVIAL DUAL PHASE ONE",
-                     varIdx);
-      }
-
-      if (!_variableUpperBounds[varIdx].has_value()) {
-        SPDLOG_ERROR("VAR IDX {} HAS NEGATIVE REDUCED COST, BUT DOESN'T HAVE "
-                     "UPPER BOUND",
-                     varIdx);
-      }
-      _simplexBasisData._isColumnAtLowerBoundBitset[varIdx] = false;
-      _simplexBasisData._isColumnAtUpperBoundBitset[varIdx] = true;
-    }
-  }
-}
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::makeRightHandSidesNonNegative() {
-  const int firstRowIdx = ((int)_variableInfos[0]._isObjectiveVar);
-  const int firstVarIdx = firstRowIdx;
-  for (int rowIdx = firstRowIdx; rowIdx < _rowInfos.size(); ++rowIdx) {
-    typename SimplexTraitsT::CurrentAdder adder;
-    for (int variableIdx = firstVarIdx; variableIdx < _variableInfos.size();
-         ++variableIdx) {
-      adder.addValue(_variableLowerBounds[variableIdx].value_or(0.0) *
-                     _constraintMatrix[rowIdx][variableIdx]);
-    }
-
-    const T diff =
-        NumericalTraitsT::add(_rightHandSides[rowIdx], -adder.currentSum());
-
-    if (diff < 0.0) {
-      for (int variableIdx = firstVarIdx; variableIdx < _variableInfos.size();
-           ++variableIdx)
-        _constraintMatrix[rowIdx][variableIdx] =
-            -_constraintMatrix[rowIdx][variableIdx];
-      _rightHandSides[rowIdx] = -_rightHandSides[rowIdx];
-      _initialRightHandSides[rowIdx] = -_initialRightHandSides[rowIdx];
-    }
-  }
-}
-
-template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::addSingleVarBoundsToMatrix() {
-  for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
-    if (const auto lowerBound = _variableLowerBounds[varIdx];
-        lowerBound.has_value()) {
-      _constraintMatrix.emplace_back(_variableInfos.size())[varIdx] = 1;
-      _rightHandSides.push_back(*lowerBound);
-      _rowInfos.push_back(RowInfo{{}, RowType::GREATER_THAN_OR_EQUAL});
-    }
-
-    if (const auto upperBound = _variableUpperBounds[varIdx];
-        upperBound.has_value()) {
-      _constraintMatrix.emplace_back(_variableInfos.size())[varIdx] = 1;
-      _rightHandSides.push_back(*upperBound);
-      _rowInfos.push_back(RowInfo{{}, RowType::LESS_THAN_OR_EQUAL});
-    }
-  }
-}
-
-template <typename T, typename SimplexTraitsT>
-bool SimplexTableau<T, SimplexTraitsT>::isColumnAllowedToEnterBasis(
+bool SimplexTableau<T, SimplexTraitsT>::isColumnEligibleToEnterBasis(
     const int colIdx) {
-  return !_variableInfos[colIdx]._isArtificial &&
-         !_variableInfos[colIdx]._isFixed &&
-         !_simplexBasisData._isBasicColumnIndexBitset[colIdx] &&
+  return !_simplexBasisData._isBasicColumnIndexBitset[colIdx] &&
          (!_simplexBasisData._isColumnEligibleBitset.has_value() ||
           _simplexBasisData._isColumnEligibleBitset.value()[colIdx]);
 }

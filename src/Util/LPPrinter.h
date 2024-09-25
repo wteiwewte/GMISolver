@@ -70,6 +70,19 @@ struct LPPrinter {
                        : "UPPER_BOUND"),
             _variableWidths[variableIdx]);
       _oss << '\n';
+
+      if (simplexBasisData._isColumnEligibleBitset.has_value()) {
+        _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);
+        for (int variableIdx = 0; variableIdx < _variableInfos.size();
+             ++variableIdx)
+          _oss << fmt::format(
+              "{:^{}}|",
+              simplexBasisData._isColumnEligibleBitset.value()[variableIdx]
+                  ? "ELIGIBLE"
+                  : "NOT ELIGIBLE",
+              _variableWidths[variableIdx]);
+        _oss << '\n';
+      }
     }
   }
 

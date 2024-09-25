@@ -33,6 +33,8 @@ public:
              const bool isPivotRowUnderLowerBound);
 
 private:
+  bool isPivotRowUnderLowerBound(const int pivotRowIdx) const;
+
   void tryLogObjValue(const int iterCount);
   bool tryReinversion(const int iterCount,
                       const LPOptStatistics<T> &lpOptStatistics);
@@ -49,6 +51,8 @@ private:
   std::optional<int>
   chooseEnteringColumnIdx(const int pivotRowIdx, const VectorT &pivotRow,
                           const bool isPivotRowUnderLowerBound);
+
+  bool isColumnAllowedToEnterBasis(const int colIdx) const;
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;

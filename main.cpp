@@ -5,8 +5,8 @@
 #include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Util/GurobiOptimizer.h"
-#include "src/Util/LPOptStatisticsPrinter.h"
 #include "src/Util/MpsReader.h"
+#include "src/Util/OptStatisticsPrinter.h"
 #include "src/Util/SpdlogHeader.h"
 
 #include <filesystem>

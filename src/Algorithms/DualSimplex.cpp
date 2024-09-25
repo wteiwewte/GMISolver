@@ -35,7 +35,8 @@ LPOptStatistics<T> DualSimplex<T, SimplexTraitsT>::run(
     const DualPhase dualPhase) {
   if (printSimplexOptSummary == PrintSimplexOptSummary::YES) {
     SPDLOG_INFO("LP NAME {} BASIS SIZE {}, ROW PIVOT RULE {}",
-                _simplexTableau._initialProgram.getName(),
+                _simplexTableau._initialProgram.getName() +
+                    (!lpNameSuffix.empty() ? "_" + lpNameSuffix : ""),
                 _simplexTableau._rowInfos.size(),
                 dualSimplexRowPivotRuleToStr(_dualSimplexRowPivotRule));
   }
@@ -47,6 +48,7 @@ LPOptStatistics<T> DualSimplex<T, SimplexTraitsT>::run(
       ._algorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   [[maybe_unused]] int iterCount = 1;
+  //  SPDLOG_INFO("{}\n", _simplexTableau.toString());
   lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
     while (true) {
       const bool iterResult = runOneIteration();
@@ -74,7 +76,9 @@ LPOptStatistics<T> DualSimplex<T, SimplexTraitsT>::run(
       if (!checkIterationLimit(iterCount))
         break;
 
-      SPDLOG_TRACE("{}\n", _simplexTableau.toString());
+      //      SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
+      //      SPDLOG_INFO(_simplexTableau.toStringSolution());
+      //      SPDLOG_INFO("{}\n", _simplexTableau.toString());
     }
   });
 
@@ -202,21 +206,29 @@ bool DualSimplex<T, SimplexTraitsT>::runOneIteration() {
     return true;
   }
 
-  SPDLOG_DEBUG("PIVOT ROW IDX {} RHS VALUE {}", *pivotRowIdx,
-               _simplexTableau._rightHandSides[*pivotRowIdx]);
+  return pivot(*pivotRowIdx, std::nullopt,
+               isPivotRowUnderLowerBound(*pivotRowIdx));
+}
+
+template <typename T, typename SimplexTraitsT>
+bool DualSimplex<T, SimplexTraitsT>::isPivotRowUnderLowerBound(
+    const int pivotRowIdx) const {
   const auto basicColumnIdx =
-      _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[*pivotRowIdx];
-  const bool isPivotRowUnderLowerBound =
-      _simplexTableau._rightHandSides[*pivotRowIdx] <
-      *_simplexTableau._variableLowerBounds[basicColumnIdx] -
-          NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE;
-  return pivot(*pivotRowIdx, std::nullopt, isPivotRowUnderLowerBound);
+      _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap[pivotRowIdx];
+  if (!_simplexTableau._variableLowerBounds[basicColumnIdx].has_value())
+    return false;
+
+  return _simplexTableau._rightHandSides[pivotRowIdx] <
+         *_simplexTableau._variableLowerBounds[basicColumnIdx] -
+             NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE;
 }
 
 template <typename T, typename SimplexTraitsT>
 bool DualSimplex<T, SimplexTraitsT>::pivot(
     const int pivotRowIdx, const std::optional<int> customEnteringColumnIdx,
     const bool isPivotRowUnderLowerBound) {
+  SPDLOG_DEBUG("PIVOT ROW IDX {} RHS VALUE {}", *pivotRowIdx,
+               _simplexTableau._rightHandSides[*pivotRowIdx]);
   const auto pivotRowSharedPtr =
       _simplexTableau.computeTableauRowGeneric(pivotRowIdx);
   const auto &pivotRow = *pivotRowSharedPtr;
@@ -355,10 +367,16 @@ std::optional<int> DualSimplex<T, SimplexTraitsT>::chooseEnteringColumnIdx(
 
   for (int columnIdx = 0; columnIdx < _simplexTableau._variableInfos.size();
        ++columnIdx)
-    if (_simplexTableau.isColumnAllowedToEnterBasis(columnIdx))
+    if (isColumnAllowedToEnterBasis(columnIdx))
       tryUpdateBest(columnIdx);
 
   return mostRestrictiveColumnIdx;
+}
+
+template <typename T, typename SimplexTraitsT>
+bool DualSimplex<T, SimplexTraitsT>::isColumnAllowedToEnterBasis(
+    const int colIdx) const {
+  return _simplexTableau.isColumnEligibleToEnterBasis(colIdx);
 }
 
 template class DualSimplex<

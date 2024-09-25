@@ -28,8 +28,6 @@ public:
                  const SimplexType simplexType,
                  const SimplexTableauType simplexTableauType);
 
-  void makeRightHandSidesNonNegative();
-  void addSingleVarBoundsToMatrix();
   void addArtificialVariables(const SimplexType simplexType);
   void init(const SimplexType simplexType);
 
@@ -69,12 +67,14 @@ private:
   using KahanAdderNormal = typename NumericalTraitsT::template KahanAdder<
       typename NumericalTraitsT::NormalAddOp>;
 
-  std::optional<SimplexBasisData> createBasisFromArtificialVars() const;
+  std::optional<SimplexBasisData>
+  createBasisFromArtificialVars(const SimplexType simplexType) const;
+  bool shouldMapZerothVarToZerothRowImpl(const SimplexType simplexType) const;
 
   int basicColumnIdx(const int rowIdx) const {
     return _simplexBasisData._rowToBasisColumnIdxMap[rowIdx];
   }
-  bool isColumnAllowedToEnterBasis(const int colIdx);
+  bool isColumnEligibleToEnterBasis(const int colIdx);
   std::optional<T> curSatisfiedBound(const int varIdx);
 
   VectorT computeTableauColumnGeneric(const int colIdx);
@@ -107,7 +107,6 @@ private:
   void calculateDualExplicit();
   void calculateDualPFI();
   void calculateDualPFISparse();
-  void initBoundsForDualSimplex();
   void initMatrixRepresentations();
 
   void calculateReducedCostsBasedOnDual();

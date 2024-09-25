@@ -7,6 +7,8 @@
 
 #include <optional>
 
+#include <boost/dynamic_bitset.hpp>
+
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
 template <typename T, typename SimplexTraitsT> class ReinversionManager;
 template <typename T, typename SimplexTraitsT> class DualSimplex;
@@ -28,11 +30,13 @@ private:
   using VectorT = typename SimplexTraitsT::VectorT;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
+  void initBoundsForBoxedVars();
   void markBoxedVariablesAsNotEligible();
   void unmarkBoxedVariablesAsNotEligible();
-  void changeBoundsAndRHS();
-  void restoreBoundsAndRHS();
+  void changeBoundsRHSAndObj();
+  void restoreBoundsRHSAndObj();
   void recalculateRHS();
+  std::vector<T> auxiliaryObjective() const;
 
   DualSimplex<T, SimplexTraitsT> dualSimplex() const;
 

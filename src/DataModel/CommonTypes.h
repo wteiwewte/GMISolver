@@ -11,6 +11,7 @@ struct RowInfo {
 
   std::string _label;
   RowType _type = RowType::UNKNOWN;
+  bool _isObjectiveRow{false};
 };
 
 struct VariableInfo {

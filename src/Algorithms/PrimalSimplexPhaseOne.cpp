@@ -18,11 +18,11 @@ PrimalSimplexPhaseOne<T, SimplexTraitsT>::PrimalSimplexPhaseOne(
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _validateSimplexOption(validateSimplexOption) {
-  SPDLOG_INFO("Making RHS non-negative");
-  _simplexTableau.makeRightHandSidesNonNegative();
+  makeRightHandSidesNonNegative();
   _simplexTableau.addArtificialVariables(SimplexType::PRIMAL);
   _simplexTableau.initMatrixRepresentations();
   _simplexTableau.init(SimplexType::PRIMAL);
+  _simplexTableau.setObjective(_simplexTableau.artificialObjective());
 
   _simplexTableau.calculateRHS();
   _simplexTableau.calculateSolution();
@@ -72,6 +72,38 @@ LPOptStatistics<T> PrimalSimplexPhaseOne<T, SimplexTraitsT>::run() {
   artLpOptStats._phaseOneSucceeded =
       simplexTableauResizer.removeArtificialVariablesFromProgram();
   return artLpOptStats;
+}
+
+template <typename T, typename SimplexTraitsT>
+void PrimalSimplexPhaseOne<T, SimplexTraitsT>::makeRightHandSidesNonNegative() {
+  SPDLOG_INFO("Making RHS non-negative");
+  const int firstRowIdx =
+      ((int)_simplexTableau._variableInfos[0]._isObjectiveVar);
+  const int firstVarIdx = firstRowIdx;
+  for (int rowIdx = firstRowIdx; rowIdx < _simplexTableau._rowInfos.size();
+       ++rowIdx) {
+    typename SimplexTraitsT::CurrentAdder adder;
+    for (int variableIdx = firstVarIdx;
+         variableIdx < _simplexTableau._variableInfos.size(); ++variableIdx) {
+      adder.addValue(
+          _simplexTableau._variableLowerBounds[variableIdx].value_or(0.0) *
+          _simplexTableau._constraintMatrix[rowIdx][variableIdx]);
+    }
+
+    const T diff = NumericalTraitsT::add(
+        _simplexTableau._rightHandSides[rowIdx], -adder.currentSum());
+
+    if (diff < 0.0) {
+      for (int variableIdx = firstVarIdx;
+           variableIdx < _simplexTableau._variableInfos.size(); ++variableIdx)
+        _simplexTableau._constraintMatrix[rowIdx][variableIdx] =
+            -_simplexTableau._constraintMatrix[rowIdx][variableIdx];
+      _simplexTableau._rightHandSides[rowIdx] =
+          -_simplexTableau._rightHandSides[rowIdx];
+      _simplexTableau._initialRightHandSides[rowIdx] =
+          -_simplexTableau._initialRightHandSides[rowIdx];
+    }
+  }
 }
 
 template class PrimalSimplexPhaseOne<

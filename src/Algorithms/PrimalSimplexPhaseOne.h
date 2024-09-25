@@ -31,6 +31,8 @@ private:
 
   PrimalSimplex<T, SimplexTraitsT> primalSimplex() const;
 
+  void makeRightHandSidesNonNegative();
+
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;
 

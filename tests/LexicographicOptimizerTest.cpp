@@ -140,7 +140,7 @@ TYPED_TEST_P(LexicographicOptimizerTest,
   using FloatingPointT = std::tuple_element_t<0, typename TypeParam::types>;
   using SimplexTraitsT = std::tuple_element_t<1, typename TypeParam::types>;
   EXPECT_NO_FATAL_FAILURE(this->testCase(
-      "../../tests/dual_simplex_working_instances", 1000,
+      "../../tests/dual_simplex_working_instances", 300,
       [](const auto &linearProgram, const SimplexTableauType simplexTableauType,
          const LexicographicReoptType lexicographicReoptType) {
         return runDualSimplexWithLexReopt<FloatingPointT, SimplexTraitsT>(

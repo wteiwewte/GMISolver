@@ -57,6 +57,7 @@ private:
   void moveVarFromOneBoundToAnother(const PivotRowData<T> &pivotRowData,
                                     const int enteringColumnIdx,
                                     const VectorT &enteringColumn);
+  bool isColumnAllowedToEnterBasis(const int colIdx) const;
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;

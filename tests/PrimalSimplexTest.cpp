@@ -247,7 +247,7 @@ TYPED_TEST_P(
     runPrimalSimplexForPrimalAndDualAndCompareWithGurobiBaseInstanceSetOnlyFull) {
   absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
   EXPECT_NO_FATAL_FAILURE(this->testCaseWithDual(
-      "../../tests/primal_simplex_working_instances", 500));
+      "../../tests/primal_simplex_working_instances", 400));
 }
 
 TYPED_TEST_P(

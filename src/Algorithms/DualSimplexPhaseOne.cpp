@@ -15,14 +15,23 @@ DualSimplexPhaseOne<T, SimplexTraitsT>::DualSimplexPhaseOne(
     const int32_t objValueLoggingFrequency,
     const ValidateSimplexOption validateSimplexOption)
     : _simplexTableau(simplexTableau), _reinversionManager(reinversionManager),
+      _phaseOneUtilities(simplexTableau),
       _dualSimplexRowPivotRule(dualSimplexRowPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _validateSimplexOption(validateSimplexOption) {
 
-  _simplexTableau.addArtificialVariables(SimplexType::DUAL);
+  _phaseOneUtilities.addArtificialVariables(SimplexType::DUAL);
   _simplexTableau.initMatrixRepresentations();
 
-  _simplexTableau.init(SimplexType::DUAL);
+  _simplexTableau.initTableau();
+  const auto artificialBasisData =
+      _phaseOneUtilities.createBasisFromArtificialVars(SimplexType::DUAL);
+  if (!artificialBasisData.has_value()) {
+    SPDLOG_ERROR("CREATING INITIAL BASIS FROM ARTIFICIAL DIDN'T SUCCEED");
+  } else {
+    _simplexTableau._simplexBasisData = *artificialBasisData;
+  }
+
   if (_simplexTableau._simplexTableauType == SimplexTableauType::FULL) {
     _simplexTableau.initBasisMatrixInverse();
   }

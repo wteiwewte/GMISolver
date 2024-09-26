@@ -1,6 +1,7 @@
 #ifndef GMISOLVER_DUALSIMPLEXPHASEONE_H
 #define GMISOLVER_DUALSIMPLEXPHASEONE_H
 
+#include "src/Algorithms/PhaseOneUtilities.h"
 #include "src/DataModel/CommonTypes.h"
 #include "src/Util/LPOptStatistics.h"
 #include "src/Util/SimplexTraits.h"
@@ -42,6 +43,7 @@ private:
 
   SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;
+  PhaseOneUtilities<T, SimplexTraitsT> _phaseOneUtilities;
 
   const DualSimplexRowPivotRule _dualSimplexRowPivotRule;
   const int32_t _objValueLoggingFrequency;

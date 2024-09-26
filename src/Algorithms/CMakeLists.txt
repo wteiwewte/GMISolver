@@ -16,12 +16,22 @@ target_link_libraries(
   CommonTypes
   DualSimplex
   LPOptStatistics
+  PhaseOneUtilities
   ReinversionManager
   SimplexTraits
   SimplexTableau
   SimplexValidator
   SpdlogHeader
   Time)
+
+add_library(PhaseOneUtilities PhaseOneUtilities.cpp
+        PhaseOneUtilities.h)
+target_link_libraries(
+        PhaseOneUtilities
+        CommonTypes
+        SimplexBasisData
+        SimplexTraits
+        SimplexTableau)
 
 add_library(PrimalSimplex PrimalSimplex.cpp PrimalSimplex.h)
 target_link_libraries(
@@ -56,6 +66,7 @@ target_link_libraries(
   CommonTypes
   LinearProgram
   LPOptStatistics
+  PhaseOneUtilities
   PrimalSimplex
   ReinversionManager
   SimplexTraits

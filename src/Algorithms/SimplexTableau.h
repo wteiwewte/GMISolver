@@ -18,6 +18,7 @@ template <typename T, typename SimplexTraitsT> class PrimalSimplex;
 template <typename T, typename SimplexTraitsT> class PrimalSimplexPhaseOne;
 template <typename T, typename SimplexTraitsT> class DualSimplex;
 template <typename T, typename SimplexTraitsT> class DualSimplexPhaseOne;
+template <typename T, typename SimplexTraitsT> class PhaseOneUtilities;
 template <typename T, typename SimplexTraitsT> class ReinversionManager;
 template <typename T, typename SimplexTraitsT> class SimplexTableauResizer;
 template <typename T, typename SimplexTraitsT> class SimplexValidator;
@@ -29,10 +30,6 @@ public:
                  const SimplexType simplexType,
                  const SimplexTableauType simplexTableauType);
 
-  void addArtificialVariables(const SimplexType simplexType);
-  void init(const SimplexType simplexType);
-
-  std::vector<T> artificialObjective() const;
   std::vector<T> originalObjective() const;
   void calculateCurrentObjectiveValue();
   void calculateSolution();
@@ -54,6 +51,7 @@ private:
   friend class PrimalSimplexPhaseOne<T, SimplexTraitsT>;
   friend class DualSimplex<T, SimplexTraitsT>;
   friend class DualSimplexPhaseOne<T, SimplexTraitsT>;
+  friend class PhaseOneUtilities<T, SimplexTraitsT>;
   friend class ReinversionManager<T, SimplexTraitsT>;
   friend class SimplexTableauResizer<T, SimplexTraitsT>;
   friend class SimplexValidator<T, SimplexTraitsT>;
@@ -70,10 +68,6 @@ private:
       typename NumericalTraitsT::SafeNumericalAddOp>;
   using KahanAdderNormal = typename NumericalTraitsT::template KahanAdder<
       typename NumericalTraitsT::NormalAddOp>;
-
-  std::optional<SimplexBasisData>
-  createBasisFromArtificialVars(const SimplexType simplexType) const;
-  bool shouldMapZerothVarToZerothRowImpl(const SimplexType simplexType) const;
 
   int basicColumnIdx(const int rowIdx) const {
     return _simplexBasisData._rowToBasisColumnIdxMap[rowIdx];

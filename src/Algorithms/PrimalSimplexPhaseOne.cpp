@@ -3,7 +3,6 @@
 #include "src/Algorithms/PrimalSimplex.h"
 #include "src/Algorithms/SimplexTableau.h"
 #include "src/Algorithms/SimplexTableauResizer.h"
-#include "src/DataModel/LinearProgram.h"
 #include "src/Util/SpdlogHeader.h"
 #include "src/Util/Time.h"
 
@@ -15,18 +14,28 @@ PrimalSimplexPhaseOne<T, SimplexTraitsT>::PrimalSimplexPhaseOne(
     const int32_t objValueLoggingFrequency,
     const ValidateSimplexOption validateSimplexOption)
     : _simplexTableau(simplexTableau), _reinversionManager(reinversionManager),
+      _phaseOneUtilities(simplexTableau),
       _primalSimplexColumnPivotRule(primalSimplexColumnPivotRule),
       _objValueLoggingFrequency(objValueLoggingFrequency),
       _validateSimplexOption(validateSimplexOption) {
   makeRightHandSidesNonNegative();
-  _simplexTableau.addArtificialVariables(SimplexType::PRIMAL);
+  _phaseOneUtilities.addArtificialVariables(SimplexType::PRIMAL);
   _simplexTableau.initMatrixRepresentations();
-  _simplexTableau.init(SimplexType::PRIMAL);
+  _simplexTableau.initTableau();
+
+  const auto artificialBasisData =
+      _phaseOneUtilities.createBasisFromArtificialVars(SimplexType::PRIMAL);
+  if (!artificialBasisData.has_value()) {
+    SPDLOG_ERROR("CREATING INITIAL BASIS FROM ARTIFICIAL DIDN'T SUCCEED");
+  } else {
+    _simplexTableau._simplexBasisData = *artificialBasisData;
+  }
+
   if (_simplexTableau._simplexTableauType == SimplexTableauType::FULL) {
     _simplexTableau.initBasisMatrixInverse();
   }
 
-  _simplexTableau.setObjective(_simplexTableau.artificialObjective());
+  _simplexTableau.setObjective(_phaseOneUtilities.artificialObjective());
 
   _simplexTableau.calculateRHS();
   _simplexTableau.calculateSolution();

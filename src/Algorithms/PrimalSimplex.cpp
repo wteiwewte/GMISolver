@@ -54,38 +54,41 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::run(
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   [[maybe_unused]] int iterCount = 1;
   SPDLOG_DEBUG("{}\n", _simplexTableau.toString());
-  lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
-    while (true) {
-      const bool iterResult = runOneIteration();
-      if (iterResult)
-        break;
 
-      _simplexTableau.calculateSolution();
-      _simplexTableau.calculateCurrentObjectiveValue();
+  if (tryValidateIteration(iterCount, lpOptStatistics, primalPhase)) {
+    lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
+      while (true) {
+        const bool iterResult = runOneIteration();
+        if (iterResult)
+          break;
 
-      lpOptStatistics._consecutiveObjectiveValues.push_back(
-          _simplexTableau._objectiveValue);
+        _simplexTableau.calculateSolution();
+        _simplexTableau.calculateCurrentObjectiveValue();
 
-      ++iterCount;
-      tryLogObjValue(iterCount);
+        lpOptStatistics._consecutiveObjectiveValues.push_back(
+            _simplexTableau._objectiveValue);
 
-      if (!tryValidateIteration(iterCount, lpOptStatistics, primalPhase))
-        break;
+        ++iterCount;
+        tryLogObjValue(iterCount);
 
-      if (!tryReinversion(iterCount, lpOptStatistics, primalPhase))
-        break;
+        if (!tryValidateIteration(iterCount, lpOptStatistics, primalPhase))
+          break;
 
-      if (!checkObjectiveProgress(lpOptStatistics))
-        break;
+        if (!tryReinversion(iterCount, lpOptStatistics, primalPhase))
+          break;
 
-      if (!checkIterationLimit(iterCount))
-        break;
+        if (!checkObjectiveProgress(lpOptStatistics))
+          break;
 
-      SPDLOG_DEBUG(_simplexTableau.toStringObjectiveValue());
-      SPDLOG_DEBUG(_simplexTableau.toStringSolution());
-      SPDLOG_DEBUG("{}\n", _simplexTableau.toString());
-    }
-  });
+        if (!checkIterationLimit(iterCount))
+          break;
+
+        SPDLOG_DEBUG(_simplexTableau.toStringObjectiveValue());
+        SPDLOG_DEBUG(_simplexTableau.toStringSolution());
+        SPDLOG_DEBUG("{}\n", _simplexTableau.toString());
+      }
+    });
+  }
 
   if (_simplexTableau._result == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
     tryValidateOptimalSolutions(lpOptStatistics, primalPhase);

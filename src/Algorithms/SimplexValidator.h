@@ -281,6 +281,18 @@ private:
                 "Some variables aren't assigned to any state in basis")};
           }
           return {};
+        })
+        .and_then([&]() -> ExpectedT {
+          if (!simplexBasisData._isColumnEligibleBitset.has_value())
+            return {};
+
+          auto isColumnIneligibleBitset =
+              *simplexBasisData._isColumnEligibleBitset;
+          isColumnIneligibleBitset.flip();
+
+          return checkIfAllDistinctBitsetPairsAreDisjoint(
+              {simplexBasisData._isBasicColumnIndexBitset,
+               isColumnIneligibleBitset});
         });
   }
 

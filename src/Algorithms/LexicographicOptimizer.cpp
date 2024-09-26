@@ -60,6 +60,11 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
             fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized,
                         lexicographicReoptTypeToStr(_lexicographicReoptType)),
             PrintSimplexOptSummary::NO);
+        if (lpStatisticsFromSingleVarOpt._optResult !=
+            LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+          SPDLOG_ERROR("LEXICOGRAPHIC OPTIMIZATION RETURNED INFEASIBLE");
+          break;
+        }
         lexReoptStats.addLpOptStats(std::move(lpStatisticsFromSingleVarOpt));
         fixNonBasicVariables(varsFixedCount);
         ++optimizedVarCount;
@@ -73,6 +78,7 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
     _simplexTableau.setObjective(
         _simplexTableau._initialProgram.getObjective());
     lexReoptStats._optimalValue = _simplexTableau._objectiveValue;
+    lexReoptStats._optResult = _simplexTableau._result;
     if (saveLexSolution == SaveLexSolution::YES) {
       const bool isFirstVarObjective =
           _simplexTableau._variableInfos[0]._isObjectiveVar;

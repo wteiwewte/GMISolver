@@ -40,6 +40,8 @@ public:
   std::string toString() const;
   std::string toStringObjectiveValue() const;
   std::string toStringSolution() const;
+  std::string
+  toStringSolutionWithDual(const LinearProgram<T> &dualProgram) const;
   std::string toStringLpSolveFormat() const;
 
   const std::string &getName() const { return _initialProgram.getName(); }
@@ -93,6 +95,8 @@ private:
 
   void updateReducedCostsGeneric(const PivotData<T> &pivotData,
                                  const VectorT &pivotRow);
+  void updateDualGeneric(const PivotData<T> &pivotData,
+                         const VectorT &pivotRow);
   void updateInverseMatrixWithRHSGeneric(const PivotData<T> &pivotData,
                                          const VectorT &enteringColumn);
   void pivotGeneric(const int rowIdx, const int enteringColumnIdx,

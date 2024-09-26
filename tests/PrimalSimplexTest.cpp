@@ -124,7 +124,7 @@ protected:
             }
           }
         },
-        false);
+        AllBoundsMustBeSpecified::NO);
   }
 };
 

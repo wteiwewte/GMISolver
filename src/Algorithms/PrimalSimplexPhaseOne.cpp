@@ -22,6 +22,10 @@ PrimalSimplexPhaseOne<T, SimplexTraitsT>::PrimalSimplexPhaseOne(
   _simplexTableau.addArtificialVariables(SimplexType::PRIMAL);
   _simplexTableau.initMatrixRepresentations();
   _simplexTableau.init(SimplexType::PRIMAL);
+  if (_simplexTableau._simplexTableauType == SimplexTableauType::FULL) {
+    _simplexTableau.initBasisMatrixInverse();
+  }
+
   _simplexTableau.setObjective(_simplexTableau.artificialObjective());
 
   _simplexTableau.calculateRHS();

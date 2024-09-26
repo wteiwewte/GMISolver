@@ -17,6 +17,18 @@ std::vector<int> getRandomElement(const std::vector<int> &vec) {
               std::mt19937{std::random_device{}()});
   return out;
 }
+template <typename T>
+bool didReoptResultInInfeasible(
+    const LPRelaxationStatistics<T> &lpRelaxationStatistics) {
+  if (lpRelaxationStatistics._relaxationOptStats._optResult ==
+      LPOptimizationResult::INFEASIBLE)
+    return true;
+
+  const auto &lexReoptStats =
+      lpRelaxationStatistics._lexicographicReoptStats._lexLPReoptStatsVec;
+  return !lexReoptStats.empty() &&
+         lexReoptStats.back()._optResult == LPOptimizationResult::INFEASIBLE;
+}
 } // namespace
 
 template <typename T, typename SimplexTraitsT>
@@ -97,6 +109,12 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       SPDLOG_DEBUG(_simplexTableau.toStringSolution());
 
       ipOptStatistics._lpRelaxationStats.emplace_back() = runImpl(relaxationNo);
+      if (didReoptResultInInfeasible(
+              ipOptStatistics._lpRelaxationStats.back())) {
+        SPDLOG_ERROR("REOPTIMIZATION AFTER CUT ADDITION ENDED WITH INFEASIBLE "
+                     "OPT RESULT");
+        break;
+      }
 
       if (removeCutsInBasis()) {
         SPDLOG_DEBUG("AFTER CUT REMOVAL");
@@ -105,6 +123,13 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
         SPDLOG_DEBUG(_simplexTableau.toStringSolution());
         ipOptStatistics._lpRelaxationStats.emplace_back() =
             runImpl(relaxationNo);
+
+        if (didReoptResultInInfeasible(
+                ipOptStatistics._lpRelaxationStats.back())) {
+          SPDLOG_ERROR("REOPTIMIZATION AFTER CUT REMOVAL ENDED WITH INFEASIBLE "
+                       "OPT RESULT");
+          break;
+        }
       }
     }
   });
@@ -129,6 +154,10 @@ DualSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
       relaxationId(), PrintSimplexOptSummary::NO, DualPhase::TWO);
   SPDLOG_DEBUG(_simplexTableau.toStringObjectiveValue());
   SPDLOG_DEBUG(_simplexTableau.toStringSolution());
+  if (relaxationStats._relaxationOptStats._optResult ==
+      LPOptimizationResult::INFEASIBLE) {
+    return relaxationStats;
+  }
 
   relaxationStats._lexicographicReoptStats =
       lexicographicOptimizer().run(relaxationId());

@@ -48,7 +48,7 @@ LPOptStatistics<T> DualSimplex<T, SimplexTraitsT>::run(
       ._algorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   [[maybe_unused]] int iterCount = 1;
-  //  SPDLOG_INFO("{}\n", _simplexTableau.toString());
+  SPDLOG_DEBUG("{}\n", _simplexTableau.toString());
   lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
     while (true) {
       const bool iterResult = runOneIteration();
@@ -76,9 +76,9 @@ LPOptStatistics<T> DualSimplex<T, SimplexTraitsT>::run(
       if (!checkIterationLimit(iterCount))
         break;
 
-      //      SPDLOG_INFO(_simplexTableau.toStringObjectiveValue());
-      //      SPDLOG_INFO(_simplexTableau.toStringSolution());
-      //      SPDLOG_INFO("{}\n", _simplexTableau.toString());
+      SPDLOG_DEBUG(_simplexTableau.toStringObjectiveValue());
+      SPDLOG_DEBUG(_simplexTableau.toStringSolution());
+      SPDLOG_DEBUG("{}\n", _simplexTableau.toString());
     }
   });
 

@@ -175,6 +175,24 @@ struct LPPrinter {
     _oss << '\n';
   }
 
+  template <typename T>
+  void printDual(const std::vector<T> &y, const LinearProgram<T> &dualProgram) {
+    _oss << "DUAL\n";
+    for (int dualVarIdx = 0; dualVarIdx < dualProgram.getVariableInfos().size();
+         ++dualVarIdx) {
+      _oss << fmt::format("{:^{}}|",
+                          dualProgram.getVariableInfos()[dualVarIdx]._label,
+                          _variableWidths[dualVarIdx]);
+    }
+    _oss << '\n';
+
+    for (int dualVarIdx = 0; dualVarIdx < y.size(); ++dualVarIdx) {
+      _oss << fmt::format("{:>{}}|", (' ' + std::to_string(y[dualVarIdx])),
+                          COEFFICIENT_WIDTH);
+    }
+    _oss << '\n';
+  }
+
   template <typename T> void printSolution(const std::vector<T> &x) {
     _oss << "SOLUTION\n";
     _oss << fmt::format("{:^{}}|", "", _maxVariableWidth);

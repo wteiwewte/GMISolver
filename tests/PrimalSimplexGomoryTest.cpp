@@ -14,18 +14,19 @@
 
 template <typename T, typename SimplexTraitsT>
 IPOptStatistics<T>
-runPrimalSimplexGomory(const LinearProgram<T> &dualProgram,
+runPrimalSimplexGomory(const LinearProgram<T> &primalProgram,
+                       const LinearProgram<T> &dualProgram,
                        const SimplexTableauType simplexTableauType,
                        const LexicographicReoptType lexicographicReoptType,
                        const LPOptimizationType lpOptimizationType,
                        const GomoryCutChoosingRule gomoryCutChoosingRule) {
-  SimplexTableau<T, SimplexTraitsT> simplexTableau(
+  SimplexTableau<T, SimplexTraitsT> dualSimplexTableau(
       dualProgram, SimplexType::PRIMAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
-      simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
+      dualSimplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
 
   PrimalSimplexPhaseOne<T, SimplexTraitsT> primalSimplexPhaseOne(
-      simplexTableau, reinversionManager,
+      dualSimplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option));
@@ -37,7 +38,7 @@ runPrimalSimplexGomory(const LinearProgram<T> &dualProgram,
   }
 
   PrimalSimplexGomory<T, SimplexTraitsT> primalSimplexGomory(
-      simplexTableau, reinversionManager,
+      primalProgram, dualSimplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),
       absl::GetFlag(FLAGS_validate_simplex_option),
@@ -52,11 +53,10 @@ protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex_option,
                   ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
-    absl::SetFlag(&FLAGS_simplex_tableau_types,
-                  {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE});
+    absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
     absl::SetFlag(&FLAGS_slack_cut_removal_condition,
                   SlackCutRemovalCondition::ONLY_WHEN_SLACK_VAR_IS_POSITIVE);
-    absl::SetFlag(&FLAGS_cut_round_limit, 500);
+    absl::SetFlag(&FLAGS_cut_round_limit, 5);
   }
 
   void
@@ -79,18 +79,19 @@ protected:
           for (const auto lexicographicReoptType : lexicographicReoptTypes) {
             IPOptStatistics<FloatingPointT> ipOptStatistics =
                 runPrimalSimplexGomory<FloatingPointT, SimplexTraitsT>(
-                    *dualProgram, simplexTableauType, lexicographicReoptType,
-                    lpOptimizationType, GomoryCutChoosingRule::FIRST);
+                    primalProgram, *dualProgram, simplexTableauType,
+                    lexicographicReoptType, lpOptimizationType,
+                    GomoryCutChoosingRule::FIRST);
             const auto gurobiLPOptStats =
                 GurobiOptimizer("", modelFileMpsPath)
                     .optimize<FloatingPointT>(lpOptimizationType);
             this->compare(lpOptimizationType, lexicographicReoptType,
                           ipOptStatistics, gurobiLPOptStats,
-                          isDualProgramOptimized::YES);
+                          IsDualProgramOptimized::YES);
             optStatsVec.push_back({ipOptStatistics, gurobiLPOptStats});
           }
         },
-        false);
+        AllBoundsMustBeSpecified::NO, DoVarsMustBeNonnegative::NO);
   }
 };
 
@@ -98,7 +99,6 @@ TYPED_TEST_SUITE_P(PrimalSimplexGomoryTest);
 
 TYPED_TEST_P(PrimalSimplexGomoryTest,
              runPrimalSimplexGomoryAndCompareWithGurobi) {
-  absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
   absl::SetFlag(&FLAGS_validate_simplex_option,
                 ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
   absl::SetFlag(&FLAGS_extended_statistics, true);
@@ -109,18 +109,28 @@ TYPED_TEST_P(PrimalSimplexGomoryTest,
 
 TYPED_TEST_P(PrimalSimplexGomoryTest,
              runPrimalSimplexGomoryAndCompareWithGurobiSingleInstance) {
-  absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
   absl::SetFlag(&FLAGS_validate_simplex_option,
                 ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
   absl::SetFlag(&FLAGS_extended_statistics, true);
   EXPECT_NO_FATAL_FAILURE(this->testCase(
-      "../../tests/gomory_single_instance", 1,
+      "../../tests/gomory_single_instance", 50,
       LPOptimizationType::LINEAR_RELAXATION, {LexicographicReoptType::MAX}));
+}
+
+TYPED_TEST_P(PrimalSimplexGomoryTest,
+             runPrimalSimplexGomoryAndCompareWithGurobiSingleInstanceINT) {
+  absl::SetFlag(&FLAGS_validate_simplex_option,
+                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
+  absl::SetFlag(&FLAGS_extended_statistics, true);
+  EXPECT_NO_FATAL_FAILURE(this->testCase(
+      "../../tests/primal_gomory_single_instance", 1,
+      LPOptimizationType::INTEGER_PROGRAM, {LexicographicReoptType::MAX}));
 }
 
 REGISTER_TYPED_TEST_SUITE_P(
     PrimalSimplexGomoryTest, runPrimalSimplexGomoryAndCompareWithGurobi,
-    runPrimalSimplexGomoryAndCompareWithGurobiSingleInstance);
+    runPrimalSimplexGomoryAndCompareWithGurobiSingleInstance,
+    runPrimalSimplexGomoryAndCompareWithGurobiSingleInstanceINT);
 
 using PrimalSimplexGomoryTypes = ::testing::Types<
     TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>>;

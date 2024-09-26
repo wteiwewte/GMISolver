@@ -88,7 +88,7 @@ protected:
             optStatsVec.push_back({ipOptStatistics, gurobiLPOptStats});
           }
         },
-        false);
+        AllBoundsMustBeSpecified::NO);
   }
 };
 

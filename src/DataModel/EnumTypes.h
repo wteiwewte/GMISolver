@@ -114,7 +114,9 @@ using SimplexPhase = std::variant<PrimalPhase, DualPhase>;
 
 enum class PrintSimplexOptSummary : int8_t { YES = 0, NO };
 enum class AddObjectiveRelatedVar : int8_t { YES = 0, NO };
-enum class isDualProgramOptimized : int8_t { YES = 0, NO };
+enum class IsDualProgramOptimized : int8_t { YES = 0, NO };
+enum class DoVarsMustBeNonnegative : int8_t { YES = 0, NO };
+enum class AllBoundsMustBeSpecified : int8_t { YES = 0, NO };
 
 bool AbslParseFlag(absl::string_view text,
                    ValidateSimplexOption *validateSimplexOption,

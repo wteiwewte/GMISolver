@@ -129,7 +129,7 @@ protected:
             optStatsVec.push_back({lexReoptStatistics, gurobiLPOptStats});
           }
         },
-        false);
+        AllBoundsMustBeSpecified::NO);
   }
 };
 

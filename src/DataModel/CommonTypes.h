@@ -40,6 +40,7 @@ struct VariableInfo {
   bool _isObjectiveVar{false};
   bool _isFree{false};
   std::optional<int> _cutRowIdx;
+  bool _isCutVar{false};
 };
 
 template <typename T> struct PivotData {

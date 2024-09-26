@@ -153,7 +153,7 @@ protected:
             }
           }
         },
-        false);
+        AllBoundsMustBeSpecified::NO);
   }
 };
 

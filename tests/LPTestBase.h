@@ -34,12 +34,14 @@ template <typename T> struct LPTestBase {
   using SimplexTraitsT = std::tuple_element_t<1, typename T::types>;
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  bool isInstanceSuitable(const size_t basisSizeLimit,
-                          const LinearProgram<FloatingPointT> &linearProgram,
-                          const std::string &modelName,
-                          const bool isRelaxationOptType,
-                          const bool allBoundsMustBeSpecified,
-                          InstanceSetStats &instanceSetStats) const {
+  bool
+  isInstanceSuitable(const size_t basisSizeLimit,
+                     const LinearProgram<FloatingPointT> &linearProgram,
+                     const std::string &modelName,
+                     const bool isRelaxationOptType,
+                     const AllBoundsMustBeSpecified allBoundsMustBeSpecified,
+                     const DoVarsMustBeNonnegative doVarsMustBeNonnegative,
+                     InstanceSetStats &instanceSetStats) const {
     //        if (modelName != "air04.mps") {
     //          return false;
     //        }
@@ -51,7 +53,7 @@ template <typename T> struct LPTestBase {
       return false;
     }
 
-    if (allBoundsMustBeSpecified &&
+    if (allBoundsMustBeSpecified == AllBoundsMustBeSpecified::YES &&
         !linearProgram.checkIfAllBoundsAreSpeficied()) {
       ++instanceSetStats._modelsWithNoBoundsCount;
       SPDLOG_INFO("SKIPPING MODEL {} BECAUSE NOT ALL VARIABLES HAVE BOUNDS "
@@ -75,7 +77,8 @@ template <typename T> struct LPTestBase {
         return false;
       }
 
-      if (!linearProgram.allVariablesAreNonnegative()) {
+      if (doVarsMustBeNonnegative == DoVarsMustBeNonnegative::YES &&
+          !linearProgram.allVariablesAreNonnegative()) {
         ++instanceSetStats._modelsWithNoAllNonnegativeVariables;
         SPDLOG_INFO(
             "SKIPPING MODEL {} BECAUSE NOT ALL VARIABLES ARE NONNEGATIVE",
@@ -92,7 +95,10 @@ template <typename T> struct LPTestBase {
   void solveAndCompareInstancesFromSets(
       const std::string &dirPath, const size_t basisSizeLimit,
       const LPOptimizationType lpOptimizationType, LPOptFunc lpOptFunc,
-      const bool allBoundsMustBeSpecified = true) {
+      const AllBoundsMustBeSpecified allBoundsMustBeSpecified =
+          AllBoundsMustBeSpecified::YES,
+      const DoVarsMustBeNonnegative doVarsMustBeNonnegative =
+          DoVarsMustBeNonnegative::YES) {
     using OptimizationStatsT = OptimizationStats<UnderlyingStatsT>;
     std::vector<OptimizationStatsT> optimizationStatsVec;
     for (const SimplexTableauType simplexTableauType :
@@ -117,7 +123,7 @@ template <typename T> struct LPTestBase {
 
           if (isInstanceSuitable(basisSizeLimit, *linearProgram, modelName,
                                  isRelaxationOptType, allBoundsMustBeSpecified,
-                                 instanceSetStats)) {
+                                 doVarsMustBeNonnegative, instanceSetStats)) {
             lpOptFunc(*linearProgram, simplexTableauType,
                       lpModelFileEntry.path(), optimizationStatsVec);
           }
@@ -169,8 +175,8 @@ template <typename T> struct LPTestBase {
                const LexicographicReoptType lexicographicReoptType,
                const IPOptStatistics<FloatingPointT> &ipOptStatistics,
                const LPOptStatistics<FloatingPointT> &gurobiLPOptStats,
-               const isDualProgramOptimized isDualProgramOptimized =
-                   isDualProgramOptimized::NO) {
+               const IsDualProgramOptimized isDualProgramOptimized =
+                   IsDualProgramOptimized::NO) {
     if (lpOptimizationType == LPOptimizationType::LINEAR_RELAXATION) {
       compareLPRelaxation(lexicographicReoptType, ipOptStatistics,
                           gurobiLPOptStats, isDualProgramOptimized);
@@ -183,8 +189,8 @@ template <typename T> struct LPTestBase {
   compareLPRelaxation(const LexicographicReoptType lexicographicReoptType,
                       const IPOptStatistics<FloatingPointT> &ipOptStatistics,
                       const LPOptStatistics<FloatingPointT> &gurobiLPOptStats,
-                      const isDualProgramOptimized isDualProgramOptimized =
-                          isDualProgramOptimized::NO) {
+                      const IsDualProgramOptimized isDualProgramOptimized =
+                          IsDualProgramOptimized::NO) {
     const auto &firstRelaxationOptStats =
         ipOptStatistics._lpRelaxationStats.front();
     compareWithGurobi(lexicographicReoptType, firstRelaxationOptStats,
@@ -214,14 +220,14 @@ template <typename T> struct LPTestBase {
       const LexicographicReoptType lexicographicReoptType,
       const LPRelaxationStatistics<FloatingPointT> &lpRelaxationStatistics,
       const LPOptStatistics<FloatingPointT> &gurobiLPOptStats,
-      const isDualProgramOptimized isDualProgramOptimized =
-          isDualProgramOptimized::NO) {
+      const IsDualProgramOptimized isDualProgramOptimized =
+          IsDualProgramOptimized::NO) {
     const auto &relaxationOptStats = lpRelaxationStatistics._relaxationOptStats;
     ASSERT_EQ(gurobiLPOptStats._optResult, relaxationOptStats._optResult);
     if (relaxationOptStats._optResult ==
         LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
       const auto optValueWithCorrectSign =
-          isDualProgramOptimized == isDualProgramOptimized::YES
+          isDualProgramOptimized == IsDualProgramOptimized::YES
               ? -relaxationOptStats._optimalValue
               : relaxationOptStats._optimalValue;
       SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
@@ -232,7 +238,7 @@ template <typename T> struct LPTestBase {
       const auto &optimalValueAfterFirstLexReopt =
           lpRelaxationStatistics._lexicographicReoptStats._optimalValue;
       const auto optValueAfterFirstLexReoptWithCorrectSign =
-          isDualProgramOptimized == isDualProgramOptimized::YES
+          isDualProgramOptimized == IsDualProgramOptimized::YES
               ? -optimalValueAfterFirstLexReopt
               : optimalValueAfterFirstLexReopt;
       SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC {} REOPT {}",

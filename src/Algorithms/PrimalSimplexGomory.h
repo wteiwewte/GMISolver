@@ -5,6 +5,7 @@
 #include "src/Util/IPOptStatistics.h"
 #include "src/Util/SimplexTraits.h"
 
+template <typename T> class LinearProgram;
 template <typename T, typename SimplexTraitsT> class SimplexTableau;
 template <typename T, typename SimplexTraitsT> class LexicographicOptimizer;
 template <typename T, typename SimplexTraitsT> class ReinversionManager;
@@ -14,7 +15,8 @@ template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
 class PrimalSimplexGomory {
 public:
   PrimalSimplexGomory(
-      SimplexTableau<T, SimplexTraitsT> &simplexTableau,
+      const LinearProgram<T> &primalLinearProgram,
+      SimplexTableau<T, SimplexTraitsT> &dualSimplexTableau,
       ReinversionManager<T, SimplexTraitsT> &reinversionManager,
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
       const int32_t objValueLoggingFrequency,
@@ -37,7 +39,14 @@ private:
   PrimalSimplex<T, SimplexTraitsT> primalSimplex() const;
   LexicographicOptimizer<T, SimplexTraitsT> lexicographicOptimizer() const;
 
-  SimplexTableau<T, SimplexTraitsT> &_simplexTableau;
+  std::vector<int> collectFractionalDualCoordinates(
+      const GomoryCutChoosingRule gomoryCutChoosingRule) const;
+
+  void addCutColumns(const int relaxationNo,
+                     const std::vector<int> &fractionalDualCoordinates) const;
+
+  const LinearProgram<T> &_primalLinearProgram;
+  SimplexTableau<T, SimplexTraitsT> &_dualSimplexTableau;
   ReinversionManager<T, SimplexTraitsT> &_reinversionManager;
   const PrimalSimplexColumnPivotRule _primalSimplexColumnPivotRule;
   const int32_t _objValueLoggingFrequency;

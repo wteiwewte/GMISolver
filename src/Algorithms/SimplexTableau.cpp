@@ -197,6 +197,17 @@ std::string SimplexTableau<T, SimplexTraitsT>::toStringSolution() const {
 }
 
 template <typename T, typename SimplexTraitsT>
+std::string SimplexTableau<T, SimplexTraitsT>::toStringSolutionWithDual(
+    const LinearProgram<T> &dualProgram) const {
+  LPPrinter lpPrinter(_variableInfos, _rowInfos);
+  lpPrinter.printDual(_y, dualProgram);
+  lpPrinter.printLineBreak();
+  lpPrinter.printSolution(_x);
+  lpPrinter.printLineBreak();
+  return lpPrinter.toString();
+}
+
+template <typename T, typename SimplexTraitsT>
 std::string SimplexTableau<T, SimplexTraitsT>::toStringLpSolveFormat() const {
   LPPrinter lpPrinter(_variableInfos, _rowInfos);
   lpPrinter.printInLpSolveFormat(_constraintMatrix, _objectiveRow,
@@ -250,7 +261,6 @@ void SimplexTableau<T, SimplexTraitsT>::initBasisMatrixInverse() {
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::initFullTableau() {
   _fullTableau = _constraintMatrix;
-  initBasisMatrixInverse();
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -570,13 +580,28 @@ SimplexTableau<T, SimplexTraitsT>::computeTableauRowPFISparse(
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::updateReducedCostsGeneric(
     const PivotData<T> &pivotData, const VectorT &pivotRow) {
-  const auto &[leavingRowIdx, enteringColumnIdx, pivotingTermInverse] =
-      pivotData;
+  const auto &[_, enteringColumnIdx, pivotingTermInverse] = pivotData;
   const auto commonCoeffReducedCost =
       _reducedCosts[enteringColumnIdx] * pivotingTermInverse;
   for (int j = 0; j < _variableInfos.size(); ++j)
     _reducedCosts[j] = NumericalTraitsT::add(
         _reducedCosts[j], -(commonCoeffReducedCost * pivotRow[j]));
+}
+
+template <typename T, typename SimplexTraitsT>
+void SimplexTableau<T, SimplexTraitsT>::updateDualGeneric(
+    const PivotData<T> &pivotData, const VectorT &pivotRow) {
+  if (_y.empty()) {
+    return;
+  }
+  //  SPDLOG_INFO("Y SIZE {}, ROWS COUNT {}", _y.size(), _rowInfos.size());
+
+  const auto &[_, enteringColumnIdx, pivotingTermInverse] = pivotData;
+  const auto commonCoeffReducedCost =
+      _reducedCosts[enteringColumnIdx] * pivotingTermInverse;
+  for (int j = 0; j < _y.size(); ++j)
+    _y[j] =
+        NumericalTraitsT::add(_y[j], -(commonCoeffReducedCost * pivotRow[j]));
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -623,6 +648,7 @@ void SimplexTableau<T, SimplexTraitsT>::pivotGeneric(
                1.0 / enteringColumn[rowIdx]);
 
   updateReducedCostsGeneric(pivotData, pivotRow);
+  updateDualGeneric(pivotData, pivotRow);
   updateInverseMatrixWithRHSGeneric(pivotData, enteringColumn);
   updateBasisData(pivotData);
 }

@@ -23,6 +23,9 @@ DualSimplexPhaseOne<T, SimplexTraitsT>::DualSimplexPhaseOne(
   _simplexTableau.initMatrixRepresentations();
 
   _simplexTableau.init(SimplexType::DUAL);
+  if (_simplexTableau._simplexTableauType == SimplexTableauType::FULL) {
+    _simplexTableau.initBasisMatrixInverse();
+  }
   markBoxedVariablesAsNotEligible();
   changeBoundsRHSAndObj();
 

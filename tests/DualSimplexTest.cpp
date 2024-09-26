@@ -93,7 +93,7 @@ protected:
                 gurobiInfeasibleResults.contains(gurobiLPOptStats._optResult));
           }
         },
-        false);
+        AllBoundsMustBeSpecified::NO);
   }
 };
 

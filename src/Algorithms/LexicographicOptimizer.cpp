@@ -60,13 +60,14 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
             fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized,
                         lexicographicReoptTypeToStr(_lexicographicReoptType)),
             PrintSimplexOptSummary::NO);
-        //        if (lpStatisticsFromSingleVarOpt._optResult !=
-        //            LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
-        //          SPDLOG_ERROR("LEXICOGRAPHIC OPTIMIZATION RETURNED OPT RESULT
-        //          {} != FEASIBLE",
-        //          lpOptimizationResultToStr(lpStatisticsFromSingleVarOpt._optResult));
-        //          break;
-        //        }
+        if (lpStatisticsFromSingleVarOpt._optResult !=
+            LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+          SPDLOG_ERROR(
+              "LEXICOGRAPHIC OPTIMIZATION RETURNED OPT RESULT {} != FEASIBLE",
+              lpOptimizationResultToStr(
+                  lpStatisticsFromSingleVarOpt._optResult));
+          break;
+        }
         lexReoptStats.addLpOptStats(std::move(lpStatisticsFromSingleVarOpt));
         fixNonBasicVariables(varsFixedCount);
         ++optimizedVarCount;
@@ -118,6 +119,13 @@ std::vector<T> LexicographicOptimizer<T, SimplexTraitsT>::singleVarObjective(
   std::vector<T> result(_simplexTableau._variableInfos.size());
   result[varIdx] =
       _lexicographicReoptType == LexicographicReoptType::MIN ? 1.0 : -1.0;
+
+  const auto siblingVarIdx =
+      _simplexTableau._variableInfos[varIdx]._siblingVarIdx;
+  if (siblingVarIdx.has_value()) {
+    result[*siblingVarIdx] = -result[varIdx];
+  }
+
   return result;
 }
 template <typename T, typename SimplexTraitsT>

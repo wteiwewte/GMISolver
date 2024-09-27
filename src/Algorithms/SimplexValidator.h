@@ -417,6 +417,7 @@ private:
         .and_then([&] { return validateMatrixRepresentationSizes(); })
         .and_then([&] { return validateRHSSize(); })
         .and_then([&] { return validateObjectiveRelatedThingsSizes(); })
+        .and_then([&] { return validateSiblingVariables(); })
         .and_then([&] { return validateSolutionSize(); })
         .and_then([&]() -> ExpectedT {
           if (isPrimalCuttingPlanes == IsPrimalCuttingPlanes::NO)
@@ -623,6 +624,36 @@ private:
 
     return tl::unexpected{fmt::format("Objective row or reduced costs sizes "
                                       "don't match number of variables")};
+  }
+
+  ExpectedT validateSiblingVariables() const {
+    for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
+         ++varIdx) {
+      const auto siblingVarIdx =
+          _simplexTableau._variableInfos[varIdx]._siblingVarIdx;
+      if (!siblingVarIdx.has_value())
+        continue;
+
+      if (*siblingVarIdx >= _simplexTableau._variableInfos.size()) {
+        return tl::unexpected{fmt::format(
+            "Sibling var idx {} of var idx {} is greater than number of "
+            "variables {}",
+            *siblingVarIdx, varIdx, _simplexTableau._variableInfos.size())};
+      }
+
+      const auto currentVarObjectiveCoeff =
+          _simplexTableau._objectiveRow[varIdx];
+      const auto siblingVarObjectiveCoeff =
+          _simplexTableau._objectiveRow[*siblingVarIdx];
+      if (currentVarObjectiveCoeff != -siblingVarObjectiveCoeff) {
+        return tl::unexpected{
+            fmt::format("Var idx {} and its sibling var idx {} "
+                        "don't have opposite objective coeff ({}, {})",
+                        varIdx, *siblingVarIdx, currentVarObjectiveCoeff,
+                        siblingVarObjectiveCoeff)};
+      }
+    }
+    return {};
   }
 
   ExpectedT validateSolutionSize() const {

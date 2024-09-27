@@ -47,7 +47,7 @@ LPOptStatistics<T> DualSimplex<T, SimplexTraitsT>::run(
                  (!lpNameSuffix.empty() ? "_" + lpNameSuffix : ""),
       ._algorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
-  [[maybe_unused]] int iterCount = 1;
+  [[maybe_unused]] int iterCount = 0;
   SPDLOG_DEBUG("{}\n", _simplexTableau.toString());
 
   if (tryValidateIteration(iterCount, lpOptStatistics)) {

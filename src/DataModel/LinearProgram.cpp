@@ -123,6 +123,8 @@ void LinearProgram<T>::addVariablesFromOriginLP(
         auto positiveVarInfo = originLPWithEquality._variableInfos[varIdx];
         positiveVarInfo._isFree = false;
         positiveVarInfo._label += "_PLUS";
+        positiveVarInfo._siblingVarIdx =
+            standardFormLP._variableInfos.size() + 1;
         standardFormLP._variableInfos.push_back(positiveVarInfo);
         standardFormLP._variableLowerBounds.push_back(0.0);
         standardFormLP._variableUpperBounds.push_back(std::nullopt);
@@ -140,6 +142,8 @@ void LinearProgram<T>::addVariablesFromOriginLP(
         auto negativeVarInfo = originLPWithEquality._variableInfos[varIdx];
         negativeVarInfo._isFree = false;
         negativeVarInfo._label += "_MINUS";
+        negativeVarInfo._siblingVarIdx =
+            standardFormLP._variableInfos.size() - 1;
         standardFormLP._variableInfos.push_back(negativeVarInfo);
         standardFormLP._variableLowerBounds.push_back(0.0);
         standardFormLP._variableUpperBounds.push_back(std::nullopt);

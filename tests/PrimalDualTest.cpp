@@ -53,7 +53,13 @@ protected:
     absl::SetFlag(&FLAGS_reinversion_frequency, 60);
   }
 
-  void TearDown() override { absl::SetFlag(&FLAGS_reinversion_frequency, 0); }
+  void TearDown() override {
+    absl::SetFlag(&FLAGS_validate_simplex_option,
+                  ValidateSimplexOption::DONT_VALIDATE);
+    absl::SetFlag(&FLAGS_simplex_tableau_types,
+                  {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE});
+    absl::SetFlag(&FLAGS_reinversion_frequency, 0);
+  }
 
   void testCaseWithDual(const std::string &PrimalDualTestDirPath,
                         const size_t basisSizeLimit) {

@@ -55,6 +55,14 @@ protected:
     absl::SetFlag(&FLAGS_extended_statistics, true);
   }
 
+  void TearDown() override {
+    absl::SetFlag(&FLAGS_validate_simplex_option,
+                  ValidateSimplexOption::DONT_VALIDATE);
+    absl::SetFlag(&FLAGS_simplex_tableau_types,
+                  {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE});
+    absl::SetFlag(&FLAGS_extended_statistics, false);
+  }
+
   void testCase(const std::string &dualSimplexTestDirPath,
                 const size_t basisSizeLimit) {
     using FloatingPointT = std::tuple_element_t<0, typename T::types>;

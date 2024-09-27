@@ -100,6 +100,13 @@ protected:
                    SimplexTableauType::FULL});
   }
 
+  void TearDown() override {
+    absl::SetFlag(&FLAGS_validate_simplex_option,
+                  ValidateSimplexOption::DONT_VALIDATE);
+    absl::SetFlag(&FLAGS_simplex_tableau_types,
+                  {SimplexTableauType::REVISED_PRODUCT_FORM_OF_INVERSE});
+  }
+
   template <typename SimplexFunc>
   void testCase(const std::string &testDirPath, const size_t basisSizeLimit,
                 SimplexFunc simplexFunc) {

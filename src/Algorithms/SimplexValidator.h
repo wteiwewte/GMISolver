@@ -22,7 +22,7 @@ public:
   validatePrimalIteration(const PrimalPhase primalPhase,
                           const IsPrimalCuttingPlanes isPrimalCuttingPlanes =
                               IsPrimalCuttingPlanes::NO) const {
-    return validateTableau()
+    return validateTableau(isPrimalCuttingPlanes)
         .and_then([&] {
           return validatePrimalFeasibility(primalPhase, isPrimalCuttingPlanes);
         })
@@ -42,7 +42,7 @@ public:
                      const SimplexPhase simplexPhase,
                      const IsPrimalCuttingPlanes isPrimalCuttingPlanes =
                          IsPrimalCuttingPlanes::NO) const {
-    return validateTableau()
+    return validateTableau(isPrimalCuttingPlanes)
         .and_then([&] {
           return validatePrimalFeasibility(simplexPhase, isPrimalCuttingPlanes);
         })
@@ -410,13 +410,25 @@ private:
     return {};
   }
 
-  ExpectedT validateTableau() const {
+  ExpectedT validateTableau(const IsPrimalCuttingPlanes isPrimalCuttingPlanes =
+                                IsPrimalCuttingPlanes::NO) const {
     return validateBasis()
         .and_then([&] { return validateSingleVarBoundsSizes(); })
         .and_then([&] { return validateMatrixRepresentationSizes(); })
         .and_then([&] { return validateRHSSize(); })
         .and_then([&] { return validateObjectiveRelatedThingsSizes(); })
-        .and_then([&] { return validateSolutionSize(); });
+        .and_then([&] { return validateSolutionSize(); })
+        .and_then([&]() -> ExpectedT {
+          if (isPrimalCuttingPlanes == IsPrimalCuttingPlanes::NO)
+            return {};
+          return validateTableauDualSolution();
+        });
+  }
+
+  ExpectedT validateTableauDualSolution() const {
+    return validateDualSolutionSize()
+        .and_then([&] { return validateDualSolutionSameObjectiveValue(); })
+        .and_then([&] { return validateComplementarySlackness(); });
   }
 
   ExpectedT validateSingleVarBoundsSizes() const {
@@ -621,6 +633,107 @@ private:
     return tl::unexpected{fmt::format(
         "Solution vector size {} doesn't match number of variables {}",
         _simplexTableau._x.size(), expectedNumberOfVars)};
+  }
+
+  ExpectedT validateDualSolutionSize() const {
+    if (_simplexTableau._y.empty())
+      return tl::unexpected{"Dual solution is empty"};
+
+    const auto expectedNumberOfDualVars = _simplexTableau._rowInfos.size();
+    if (_simplexTableau._y.size() != expectedNumberOfDualVars)
+      return tl::unexpected{fmt::format(
+          "Dual solution size {} doesn't match number of dual variables {}",
+          _simplexTableau._y.size(), expectedNumberOfDualVars)};
+
+    return {};
+  }
+
+  ExpectedT validateDualSolutionSameObjectiveValue() const {
+    typename SimplexTraitsT::CurrentAdder dualObjectiveAdder;
+    for (int dualVarIdx = 0; dualVarIdx < _simplexTableau._y.size();
+         ++dualVarIdx) {
+      dualObjectiveAdder.addValue(
+          _simplexTableau._y[dualVarIdx] *
+          _simplexTableau._initialRightHandSides[dualVarIdx]);
+    }
+
+    const auto dualObjectiveValue = dualObjectiveAdder.currentSum();
+    const auto primalObjectiveValue = _simplexTableau._objectiveValue;
+
+    if (!NumericalTraitsT::equal(
+            dualObjectiveValue, dualObjectiveValue,
+            NumericalTraitsT::OBJECTIVE_MONOTONICITY_TOLERANCE)) {
+      return tl::unexpected{fmt::format(
+          "Dual objective value {} is not equal to primal objective value {}",
+          dualObjectiveValue, primalObjectiveValue)};
+    }
+
+    return {};
+  }
+
+  ExpectedT validateComplementarySlackness() const {
+    return validatePrimalComplementarySlackness().and_then(
+        [&] { return validateDualComplementarySlackness(); });
+  }
+
+  ExpectedT validatePrimalComplementarySlackness() const {
+    for (int primalVarIdx = 0;
+         primalVarIdx < _simplexTableau._variableInfos.size(); ++primalVarIdx) {
+      if (NumericalTraitsT::equal(
+              _simplexTableau._x[primalVarIdx], 0.0,
+              NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE))
+        continue;
+
+      auto dualDifference = _simplexTableau._objectiveRow[primalVarIdx];
+      for (int dualVarIdx = 0; dualVarIdx < _simplexTableau._y.size();
+           ++dualVarIdx) {
+        dualDifference -=
+            _simplexTableau._y[dualVarIdx] *
+            _simplexTableau._constraintMatrix[dualVarIdx][primalVarIdx];
+      }
+
+      if (NumericalTraitsT::equal(dualDifference, 0.0,
+                                  NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE))
+        continue;
+
+      return tl::unexpected{fmt::format(
+          "Primal complementary slackness condition is not satisfied for "
+          "primal var idx {}, x {}, dual diff {}",
+          primalVarIdx, _simplexTableau._x[primalVarIdx], dualDifference)};
+    }
+
+    return {};
+  }
+
+  ExpectedT validateDualComplementarySlackness() const {
+    for (int dualVarIdx = 0; dualVarIdx < _simplexTableau._y.size();
+         ++dualVarIdx) {
+      if (NumericalTraitsT::equal(_simplexTableau._y[dualVarIdx], 0.0,
+                                  NumericalTraitsT::DUAL_FEASIBILITY_TOLERANCE))
+        continue;
+
+      auto primalDifference =
+          -_simplexTableau._initialRightHandSides[dualVarIdx];
+      for (int primalVarIdx = 0;
+           primalVarIdx < _simplexTableau._variableInfos.size();
+           ++primalVarIdx) {
+        primalDifference +=
+            _simplexTableau._x[primalVarIdx] *
+            _simplexTableau._constraintMatrix[dualVarIdx][primalVarIdx];
+      }
+
+      if (NumericalTraitsT::equal(
+              primalDifference, 0.0,
+              NumericalTraitsT::PRIMAL_FEASIBILITY_TOLERANCE))
+        continue;
+
+      return tl::unexpected{fmt::format(
+          "Dual complementary slackness condition is not satisfied for dual "
+          "var idx {}, y {}, primal diff {}",
+          dualVarIdx, _simplexTableau._y[dualVarIdx], primalDifference)};
+    }
+
+    return {};
   }
 
   ExpectedT validateBasisIntegrity() const {

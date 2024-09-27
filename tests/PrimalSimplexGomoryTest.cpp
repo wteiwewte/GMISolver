@@ -122,7 +122,7 @@ TYPED_TEST_P(PrimalSimplexGomoryTest,
 TYPED_TEST_P(PrimalSimplexGomoryTest,
              runPrimalSimplexGomoryAndCompareWithGurobiSingleInstanceINT) {
   absl::SetFlag(&FLAGS_validate_simplex_option,
-                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
+                ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
   absl::SetFlag(&FLAGS_extended_statistics, true);
   EXPECT_NO_FATAL_FAILURE(this->testCase(
       "../../tests/primal_gomory_single_instance", 50,

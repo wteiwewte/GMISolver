@@ -18,9 +18,14 @@ public:
       : _simplexTableau(_simplexTableau),
         _simplexLpOptStats(simplexLpOptStats) {}
 
-  ExpectedT validatePrimalIteration(const PrimalPhase primalPhase) const {
+  ExpectedT
+  validatePrimalIteration(const PrimalPhase primalPhase,
+                          const IsPrimalCuttingPlanes isPrimalCuttingPlanes =
+                              IsPrimalCuttingPlanes::NO) const {
     return validateTableau()
-        .and_then([&] { return validatePrimalFeasibility(primalPhase); })
+        .and_then([&] {
+          return validatePrimalFeasibility(primalPhase, isPrimalCuttingPlanes);
+        })
         .and_then(
             [&] { return validateObjectiveMonotonicity(SimplexType::PRIMAL); });
   }
@@ -32,10 +37,15 @@ public:
             [&] { return validateObjectiveMonotonicity(SimplexType::DUAL); });
   }
 
-  ExpectedT validateOptimality(const SimplexType simplexType,
-                               const SimplexPhase simplexPhase) const {
+  ExpectedT
+  validateOptimality(const SimplexType simplexType,
+                     const SimplexPhase simplexPhase,
+                     const IsPrimalCuttingPlanes isPrimalCuttingPlanes =
+                         IsPrimalCuttingPlanes::NO) const {
     return validateTableau()
-        .and_then([&] { return validatePrimalFeasibility(simplexPhase); })
+        .and_then([&] {
+          return validatePrimalFeasibility(simplexPhase, isPrimalCuttingPlanes);
+        })
         .and_then([&] { return validateDualFeasibility(); })
         .and_then([&] { return validateObjectiveMonotonicity(simplexType); });
   }
@@ -43,13 +53,16 @@ public:
 private:
   using NumericalTraitsT = typename SimplexTraitsT::NumericalTraitsT;
 
-  ExpectedT validatePrimalFeasibility(const SimplexPhase simplexPhase) const {
-    return validateConstraints(simplexPhase).and_then([&] {
-      return validateVariableBounds();
-    });
+  ExpectedT validatePrimalFeasibility(
+      const SimplexPhase simplexPhase,
+      const IsPrimalCuttingPlanes isPrimalCuttingPlanes) const {
+    return validateConstraints(simplexPhase, isPrimalCuttingPlanes)
+        .and_then([&] { return validateVariableBounds(); });
   }
 
-  ExpectedT validateConstraints(const SimplexPhase simplexPhase) const {
+  ExpectedT
+  validateConstraints(const SimplexPhase simplexPhase,
+                      const IsPrimalCuttingPlanes isPrimalCuttingPlanes) const {
     return validateConstraints(
                "initial simplex", _simplexTableau._constraintMatrix,
                _simplexTableau._initialRightHandSides, _simplexTableau._x)
@@ -60,13 +73,14 @@ private:
                     if (primalPhase == PrimalPhase::ONE)
                       return {};
 
-                    return {};
+                    if (isPrimalCuttingPlanes == IsPrimalCuttingPlanes::YES)
+                      return {};
 
-                    //                    return validateConstraints(
-                    //                        "initial lp",
-                    //                        _simplexTableau._initialProgram._constraintMatrix,
-                    //                        _simplexTableau._initialProgram._rightHandSides,
-                    //                        _simplexTableau._x);
+                    return validateConstraints(
+                        "initial lp",
+                        _simplexTableau._initialProgram._constraintMatrix,
+                        _simplexTableau._initialProgram._rightHandSides,
+                        _simplexTableau._x);
                   },
                   [&](const DualPhase dualPhase) -> ExpectedT {
                     if (dualPhase == DualPhase::ONE)

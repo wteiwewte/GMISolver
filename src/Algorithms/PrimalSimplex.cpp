@@ -36,7 +36,8 @@ template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::run(
     const std::string &lpNameSuffix,
     const PrintSimplexOptSummary printSimplexOptSummary,
-    const PrimalPhase primalPhase) {
+    const PrimalPhase primalPhase,
+    const IsPrimalCuttingPlanes isPrimalCuttingPlanes) {
   if (printSimplexOptSummary == PrintSimplexOptSummary::YES) {
     SPDLOG_INFO(
         "LP NAME {} BASIS SIZE {}, ROW PIVOT RULE {}",
@@ -55,7 +56,8 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::run(
   [[maybe_unused]] int iterCount = 1;
   SPDLOG_DEBUG("{}\n", _simplexTableau.toString());
 
-  if (tryValidateIteration(iterCount, lpOptStatistics, primalPhase)) {
+  if (tryValidateIteration(iterCount, lpOptStatistics, primalPhase,
+                           isPrimalCuttingPlanes)) {
     lpOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
       while (true) {
         const bool iterResult = runOneIteration();
@@ -72,10 +74,12 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::run(
         ++iterCount;
         tryLogObjValue(iterCount);
 
-        if (!tryValidateIteration(iterCount, lpOptStatistics, primalPhase))
+        if (!tryValidateIteration(iterCount, lpOptStatistics, primalPhase,
+                                  isPrimalCuttingPlanes))
           break;
 
-        if (!tryReinversion(iterCount, lpOptStatistics, primalPhase))
+        if (!tryReinversion(iterCount, lpOptStatistics, primalPhase,
+                            isPrimalCuttingPlanes))
           break;
 
         if (!checkObjectiveProgress(lpOptStatistics))
@@ -92,7 +96,8 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::run(
   }
 
   if (_simplexTableau._result == LPOptimizationResult::BOUNDED_AND_FEASIBLE)
-    tryValidateOptimalSolutions(lpOptStatistics, primalPhase);
+    tryValidateOptimalSolutions(lpOptStatistics, primalPhase,
+                                isPrimalCuttingPlanes);
 
   if (printSimplexOptSummary == PrintSimplexOptSummary::YES) {
     SPDLOG_INFO("{} ENDED", type());
@@ -125,25 +130,28 @@ void PrimalSimplex<T, SimplexTraitsT>::tryLogObjValue(const int iterCount) {
 template <typename T, typename SimplexTraitsT>
 bool PrimalSimplex<T, SimplexTraitsT>::tryReinversion(
     const int iterCount, const LPOptStatistics<T> &lpOptStatistics,
-    const PrimalPhase primalPhase) {
+    const PrimalPhase primalPhase,
+    const IsPrimalCuttingPlanes isPrimalCuttingPlanes) {
   if (!_reinversionManager.tryReinverse()) {
     SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
     _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
     return false;
   }
 
-  return tryValidateIteration(iterCount, lpOptStatistics, primalPhase);
+  return tryValidateIteration(iterCount, lpOptStatistics, primalPhase,
+                              isPrimalCuttingPlanes);
 }
 template <typename T, typename SimplexTraitsT>
 bool PrimalSimplex<T, SimplexTraitsT>::tryValidateIteration(
     const int iterCount, const LPOptStatistics<T> &lpOptStatistics,
-    const PrimalPhase primalPhase) {
+    const PrimalPhase primalPhase,
+    const IsPrimalCuttingPlanes isPrimalCuttingPlanes) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return true;
 
   const auto validationResult =
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-          .validatePrimalIteration(primalPhase);
+          .validatePrimalIteration(primalPhase, isPrimalCuttingPlanes);
   if (!validationResult) {
     SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
                  validationResult.error());
@@ -160,13 +168,15 @@ bool PrimalSimplex<T, SimplexTraitsT>::tryValidateIteration(
 
 template <typename T, typename SimplexTraitsT>
 void PrimalSimplex<T, SimplexTraitsT>::tryValidateOptimalSolutions(
-    const LPOptStatistics<T> &lpOptStatistics, const PrimalPhase primalPhase) {
+    const LPOptStatistics<T> &lpOptStatistics, const PrimalPhase primalPhase,
+    const IsPrimalCuttingPlanes isPrimalCuttingPlanes) {
   if (_validateSimplexOption == ValidateSimplexOption::DONT_VALIDATE)
     return;
 
   const auto validationResult =
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
-          .validateOptimality(SimplexType::PRIMAL, primalPhase);
+          .validateOptimality(SimplexType::PRIMAL, primalPhase,
+                              isPrimalCuttingPlanes);
   if (!validationResult) {
     SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}", validationResult.error());
     if (_validateSimplexOption ==

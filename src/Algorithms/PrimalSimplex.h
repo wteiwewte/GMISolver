@@ -25,7 +25,9 @@ public:
   LPOptStatistics<T> run(const std::string &lpNameSuffix,
                          const PrintSimplexOptSummary printSimplexOptSummary =
                              PrintSimplexOptSummary::YES,
-                         const PrimalPhase primalPhase = PrimalPhase::TWO);
+                         const PrimalPhase primalPhase = PrimalPhase::TWO,
+                         const IsPrimalCuttingPlanes isPrimalCuttingPlanes =
+                             IsPrimalCuttingPlanes::NO);
 
 private:
   using VectorT = typename SimplexTraitsT::VectorT;
@@ -34,14 +36,17 @@ private:
   void tryLogObjValue(const int iterCount);
   bool tryReinversion(const int iterCount,
                       const LPOptStatistics<T> &lpOptStatistics,
-                      const PrimalPhase primalPhase);
+                      const PrimalPhase primalPhase,
+                      const IsPrimalCuttingPlanes isPrimalCuttingPlanes);
   bool checkIterationLimit(const int iterCount);
   bool checkObjectiveProgress(const LPOptStatistics<T> &lpOptStatistics);
   bool tryValidateIteration(const int iterCount,
                             const LPOptStatistics<T> &lpOptStatistics,
-                            const PrimalPhase primalPhase);
-  void tryValidateOptimalSolutions(const LPOptStatistics<T> &lpOptStatistics,
-                                   const PrimalPhase primalPhase);
+                            const PrimalPhase primalPhase,
+                            const IsPrimalCuttingPlanes isPrimalCuttingPlanes);
+  void tryValidateOptimalSolutions(
+      const LPOptStatistics<T> &lpOptStatistics, const PrimalPhase primalPhase,
+      const IsPrimalCuttingPlanes isPrimalCuttingPlanes);
   bool runOneIteration();
 
   std::optional<int> chooseEnteringColumn();

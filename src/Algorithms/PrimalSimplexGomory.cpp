@@ -133,8 +133,9 @@ PrimalSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
   };
 
   LPRelaxationStatistics<T> relaxationStats;
-  relaxationStats._relaxationOptStats = primalSimplex().run(
-      relaxationId(), PrintSimplexOptSummary::YES, PrimalPhase::TWO);
+  relaxationStats._relaxationOptStats =
+      primalSimplex().run(relaxationId(), PrintSimplexOptSummary::YES,
+                          PrimalPhase::TWO, IsPrimalCuttingPlanes::YES);
   _dualSimplexTableau.calculateSolution();
   _dualSimplexTableau.calculateCurrentObjectiveValue();
   SPDLOG_DEBUG(_dualSimplexTableau.toStringObjectiveValue());

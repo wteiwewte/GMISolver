@@ -58,7 +58,7 @@ IPOptStatistics<T> PrimalSimplexGomory<T, SimplexTraitsT>::run(
       ._algorithmType = type(),
       ._reinversionFrequency = _reinversionManager.reinversionFrequency()};
   _dualSimplexTableau.setObjective(
-      _dualSimplexTableau._initialProgram.getObjective());
+      _dualSimplexTableau._initialProgram.getObjective(), PrimalPhase::TWO);
   _dualSimplexTableau.calculateDualExplicit();
   //  if (_dualSimplexTableau._simplexTableauType == SimplexTableauType::FULL) {
   //    _dualSimplexTableau._basisMatrixInverse.clear();
@@ -103,7 +103,7 @@ IPOptStatistics<T> PrimalSimplexGomory<T, SimplexTraitsT>::run(
       addCutColumns(relaxationNo, fractionalDualCoordinates);
 
       _dualSimplexTableau.calculateSolution();
-      _dualSimplexTableau.calculateCurrentObjectiveValue();
+      _dualSimplexTableau.calculateCurrentObjectiveValue(PrimalPhase::TWO);
 
       SPDLOG_DEBUG("AFTER ADDITION OF NEW CUTS");
       SPDLOG_DEBUG(
@@ -135,7 +135,7 @@ PrimalSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
       primalSimplex().run(relaxationId(), PrintSimplexOptSummary::YES,
                           PrimalPhase::TWO, IsPrimalCuttingPlanes::YES);
   _dualSimplexTableau.calculateSolution();
-  _dualSimplexTableau.calculateCurrentObjectiveValue();
+  _dualSimplexTableau.calculateCurrentObjectiveValue(PrimalPhase::TWO);
   SPDLOG_DEBUG(_dualSimplexTableau.toStringObjectiveValue());
   SPDLOG_DEBUG(_dualSimplexTableau.toStringSolution());
 

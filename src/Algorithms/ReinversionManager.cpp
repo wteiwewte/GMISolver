@@ -10,15 +10,17 @@ ReinversionManager<T, SimplexTraitsT>::ReinversionManager(
       _reinversionFrequency(reinversionFrequency) {}
 
 template <typename T, typename SimplexTraitsT>
-bool ReinversionManager<T, SimplexTraitsT>::tryReinverse() {
+bool ReinversionManager<T, SimplexTraitsT>::tryReinverse(
+    const SimplexPhase simplexPhase) {
   ++_iterCount;
   if (_reinversionFrequency && (_iterCount % _reinversionFrequency == 0)) {
-    return reinverse();
+    return reinverse(simplexPhase);
   }
   return true;
 }
 template <typename T, typename SimplexTraitsT>
-bool ReinversionManager<T, SimplexTraitsT>::reinverse() {
+bool ReinversionManager<T, SimplexTraitsT>::reinverse(
+    const SimplexPhase simplexPhase) {
   const std::optional<bool> basisReinversionResult = reinverseBasis();
   if (!basisReinversionResult.has_value())
     return true;
@@ -26,7 +28,7 @@ bool ReinversionManager<T, SimplexTraitsT>::reinverse() {
   if (!basisReinversionResult.value())
     return basisReinversionResult.value();
 
-  updateTableau();
+  updateTableau(simplexPhase);
   return true;
 }
 
@@ -47,12 +49,13 @@ std::optional<bool> ReinversionManager<T, SimplexTraitsT>::reinverseBasis() {
 }
 
 template <typename T, typename SimplexTraitsT>
-void ReinversionManager<T, SimplexTraitsT>::updateTableau() {
+void ReinversionManager<T, SimplexTraitsT>::updateTableau(
+    const SimplexPhase simplexPhase) {
   _simplexTableau.calculateRHS();
   _simplexTableau.calculateDual();
   _simplexTableau.calculateReducedCostsBasedOnDual();
   _simplexTableau.calculateSolution();
-  _simplexTableau.calculateCurrentObjectiveValue();
+  _simplexTableau.calculateCurrentObjectiveValue(simplexPhase);
 }
 
 template <typename T, typename SimplexTraitsT>

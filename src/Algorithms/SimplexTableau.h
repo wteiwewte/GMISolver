@@ -31,7 +31,7 @@ public:
                  const SimplexTableauType simplexTableauType);
 
   std::vector<T> originalObjective() const;
-  void calculateCurrentObjectiveValue();
+  void calculateCurrentObjectiveValue(const SimplexPhase simplexPhase);
   void calculateSolution();
 
   std::string toString() const;
@@ -118,8 +118,9 @@ private:
   void calculateRHSPFISparse();
   void calculateRHSWithoutInverse();
   void updateBasisData(const PivotData<T> &pivotData);
-  void setObjective(const std::vector<T> &newObjective);
-  void updateTableauForNewObjective();
+  void setObjective(const std::vector<T> &newObjective,
+                    const SimplexPhase simplexPhase);
+  void updateTableauForNewObjective(const SimplexPhase simplexPhase);
   void multiplyByBasisMatrixLeftInverseUsingPFI(std::vector<T> &vec);
   void multiplyByBasisMatrixLeftInverseUsingPFISparse(SparseVector<T> &vec);
   void

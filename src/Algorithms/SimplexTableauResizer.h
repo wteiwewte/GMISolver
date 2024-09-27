@@ -13,7 +13,7 @@ public:
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
       ReinversionManager<T, SimplexTraitsT> &reinversionManager);
 
-  bool removeArtificialVariablesFromProgram();
+  bool removeArtificialVariablesFromProgram(const SimplexPhase simplexPhase);
   void removeRows(const std::vector<bool> &shouldRowBeRemoved);
   void removeVariables(const std::vector<bool> &shouldVarBeRemoved);
 

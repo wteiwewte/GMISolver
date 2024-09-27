@@ -36,14 +36,15 @@ DualSimplexPhaseOne<T, SimplexTraitsT>::DualSimplexPhaseOne(
     _simplexTableau.initBasisMatrixInverse();
   }
   markBoxedVariablesAsNotEligible();
+  const auto auxObjective = auxiliaryObjective();
   changeBoundsRHSAndObj();
 
-  _simplexTableau.setObjective(auxiliaryObjective());
+  _simplexTableau.setObjective(auxObjective, DualPhase::ONE);
   initBoundsForBoxedVars();
 
   _simplexTableau.calculateRHS();
   _simplexTableau.calculateSolution();
-  _simplexTableau.calculateCurrentObjectiveValue();
+  _simplexTableau.calculateCurrentObjectiveValue(DualPhase::ONE);
   SPDLOG_TRACE("Simplex tableau with artificial variables");
   SPDLOG_TRACE(toStringLpSolveFormat());
 }
@@ -165,11 +166,38 @@ void DualSimplexPhaseOne<T, SimplexTraitsT>::restoreBoundsRHSAndObj() {
   _simplexTableau._initialRightHandSides = _originalInitialRightHandSides;
   _simplexTableau._variableInfos = _originalVariableInfos;
 
-  _simplexTableau.setObjective(_simplexTableau.originalObjective());
+  for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
+       ++varIdx) {
+    if (_simplexTableau._simplexBasisData._isBasicColumnIndexBitset[varIdx]) {
+      continue;
+    }
+    if (_simplexTableau._variableLowerBounds[varIdx].has_value() &&
+        !_simplexTableau._variableUpperBounds[varIdx].has_value()) {
+      _simplexTableau._simplexBasisData._isColumnAtLowerBoundBitset[varIdx] =
+          true;
+      _simplexTableau._simplexBasisData._isColumnAtUpperBoundBitset[varIdx] =
+          false;
+    } else if (!_simplexTableau._variableLowerBounds[varIdx].has_value() &&
+               _simplexTableau._variableUpperBounds[varIdx].has_value()) {
+      _simplexTableau._simplexBasisData._isColumnAtLowerBoundBitset[varIdx] =
+          false;
+      _simplexTableau._simplexBasisData._isColumnAtUpperBoundBitset[varIdx] =
+          true;
+    } else if (!_simplexTableau._variableLowerBounds[varIdx].has_value() &&
+               !_simplexTableau._variableUpperBounds[varIdx].has_value()) {
+      _simplexTableau._simplexBasisData._isColumnAtLowerBoundBitset[varIdx] =
+          false;
+      _simplexTableau._simplexBasisData._isColumnAtUpperBoundBitset[varIdx] =
+          false;
+    }
+  }
+
+  _simplexTableau.setObjective(_simplexTableau.originalObjective(),
+                               DualPhase::TWO);
   initBoundsForBoxedVars();
   recalculateRHS();
   _simplexTableau.calculateSolution();
-  _simplexTableau.calculateCurrentObjectiveValue();
+  _simplexTableau.calculateCurrentObjectiveValue(DualPhase::TWO);
   if (_simplexTableau._simplexTableauType == SimplexTableauType::FULL) {
     _simplexTableau._basisMatrixInverse.clear();
   }

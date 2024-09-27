@@ -109,7 +109,7 @@ enum class SlackCutRemovalCondition : int8_t {
 
 enum class SaveLexSolution : int8_t { YES = 0, NO };
 
-enum class PrimalPhase : int8_t { ONE = 0, TWO };
+enum class PrimalPhase : int8_t { ONE = 0, TWO, OTHER };
 enum class DualPhase : int8_t { ONE = 0, TWO };
 using SimplexPhase = std::variant<PrimalPhase, DualPhase>;
 

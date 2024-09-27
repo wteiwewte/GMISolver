@@ -28,7 +28,8 @@ std::string PrimalSimplex<T, SimplexTraitsT>::type() const {
 
 template <typename T, typename SimplexTraitsT>
 LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::runPhaseTwo() {
-  _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective());
+  _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective(),
+                               PrimalPhase::TWO);
   return run("PHASE_TWO");
 }
 
@@ -65,7 +66,7 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::run(
           break;
 
         _simplexTableau.calculateSolution();
-        _simplexTableau.calculateCurrentObjectiveValue();
+        _simplexTableau.calculateCurrentObjectiveValue(primalPhase);
         _simplexTableau.calculateDual();
 
         lpOptStatistics._consecutiveObjectiveValues.push_back(
@@ -132,7 +133,7 @@ bool PrimalSimplex<T, SimplexTraitsT>::tryReinversion(
     const int iterCount, const LPOptStatistics<T> &lpOptStatistics,
     const PrimalPhase primalPhase,
     const IsPrimalCuttingPlanes isPrimalCuttingPlanes) {
-  if (!_reinversionManager.tryReinverse()) {
+  if (!_reinversionManager.tryReinverse(primalPhase)) {
     SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
     _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
     return false;

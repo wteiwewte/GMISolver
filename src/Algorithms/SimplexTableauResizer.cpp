@@ -35,8 +35,8 @@ SimplexTableauResizer<T, SimplexTraitsT>::SimplexTableauResizer(
 }
 
 template <typename T, typename SimplexTraitsT>
-bool SimplexTableauResizer<
-    T, SimplexTraitsT>::removeArtificialVariablesFromProgram() {
+bool SimplexTableauResizer<T, SimplexTraitsT>::
+    removeArtificialVariablesFromProgram(const SimplexPhase simplexPhase) {
   const std::vector<bool> shouldRowBeRemoved =
       moveArtificialVariablesOutOfBasis();
   removeRows(shouldRowBeRemoved);
@@ -50,7 +50,7 @@ bool SimplexTableauResizer<
 
   removeVariables(shouldVarBeRemoved);
   _simplexTableau.initMatrixRepresentations();
-  return _reinversionManager.reinverse();
+  return _reinversionManager.reinverse(simplexPhase);
 }
 
 template <typename T, typename SimplexTraitsT>

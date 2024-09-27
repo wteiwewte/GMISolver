@@ -35,11 +35,12 @@ PrimalSimplexPhaseOne<T, SimplexTraitsT>::PrimalSimplexPhaseOne(
     _simplexTableau.initBasisMatrixInverse();
   }
 
-  _simplexTableau.setObjective(_phaseOneUtilities.artificialObjective());
+  _simplexTableau.setObjective(_phaseOneUtilities.artificialObjective(),
+                               PrimalPhase::ONE);
 
   _simplexTableau.calculateRHS();
   _simplexTableau.calculateSolution();
-  _simplexTableau.calculateCurrentObjectiveValue();
+  _simplexTableau.calculateCurrentObjectiveValue(PrimalPhase::ONE);
   SPDLOG_TRACE("Simplex tableau with artificial variables");
   SPDLOG_TRACE(toString());
   SPDLOG_TRACE(toStringLpSolveFormat());
@@ -83,7 +84,8 @@ LPOptStatistics<T> PrimalSimplexPhaseOne<T, SimplexTraitsT>::run() {
   SimplexTableauResizer simplexTableauResizer(_simplexTableau,
                                               _reinversionManager);
   artLpOptStats._phaseOneSucceeded =
-      simplexTableauResizer.removeArtificialVariablesFromProgram();
+      simplexTableauResizer.removeArtificialVariablesFromProgram(
+          PrimalPhase::ONE);
   return artLpOptStats;
 }
 

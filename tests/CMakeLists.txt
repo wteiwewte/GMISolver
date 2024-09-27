@@ -28,8 +28,13 @@ target_link_libraries(
 
 add_executable(
   UnitTests
-  DualSimplexTest.cpp PrimalSimplexTest.cpp DualSimplexGomoryTest.cpp
-  LexicographicOptimizerTest.cpp PrimalSimplexGomoryTest.cpp PrimalDualTest.cpp)
+  DualSimplexTest.cpp
+  PrimalSimplexTest.cpp
+  DualSimplexGomoryTest.cpp
+  LexicographicOptimizerTest.cpp
+  PrimalSimplexGomoryTest.cpp
+  PrimalDualTest.cpp
+  PrimalSimplexCutsVsDualSimplexCutsTest.cpp)
 include_directories(../src/)
 target_link_libraries(
   UnitTests

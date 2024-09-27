@@ -24,14 +24,9 @@ target_link_libraries(
   SpdlogHeader
   Time)
 
-add_library(PhaseOneUtilities PhaseOneUtilities.cpp
-        PhaseOneUtilities.h)
-target_link_libraries(
-        PhaseOneUtilities
-        CommonTypes
-        SimplexBasisData
-        SimplexTraits
-        SimplexTableau)
+add_library(PhaseOneUtilities PhaseOneUtilities.cpp PhaseOneUtilities.h)
+target_link_libraries(PhaseOneUtilities CommonTypes SimplexBasisData
+                      SimplexTraits SimplexTableau)
 
 add_library(PrimalSimplex PrimalSimplex.cpp PrimalSimplex.h)
 target_link_libraries(

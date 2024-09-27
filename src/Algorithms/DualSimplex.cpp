@@ -58,7 +58,7 @@ LPOptStatistics<T> DualSimplex<T, SimplexTraitsT>::run(
           break;
 
         _simplexTableau.calculateSolution();
-        _simplexTableau.calculateCurrentObjectiveValue();
+        _simplexTableau.calculateCurrentObjectiveValue(dualPhase);
 
         lpOptStatistics._consecutiveObjectiveValues.push_back(
             _simplexTableau._objectiveValue);
@@ -69,7 +69,7 @@ LPOptStatistics<T> DualSimplex<T, SimplexTraitsT>::run(
         if (!tryValidateIteration(iterCount, lpOptStatistics))
           break;
 
-        if (!tryReinversion(iterCount, lpOptStatistics))
+        if (!tryReinversion(iterCount, dualPhase, lpOptStatistics))
           break;
 
         if (!checkObjectiveProgress(lpOptStatistics))
@@ -118,8 +118,9 @@ void DualSimplex<T, SimplexTraitsT>::tryLogObjValue(const int iterCount) {
 
 template <typename T, typename SimplexTraitsT>
 bool DualSimplex<T, SimplexTraitsT>::tryReinversion(
-    const int iterCount, const LPOptStatistics<T> &lpOptStatistics) {
-  if (!_reinversionManager.tryReinverse()) {
+    const int iterCount, const DualPhase dualPhase,
+    const LPOptStatistics<T> &lpOptStatistics) {
+  if (!_reinversionManager.tryReinverse(dualPhase)) {
     SPDLOG_WARN("STOPPING {} BECAUSE OF FAILED REINVERSION", type());
     _simplexTableau._result = LPOptimizationResult::FAILED_REINVERSION;
     return false;

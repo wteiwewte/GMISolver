@@ -19,7 +19,8 @@ template <typename T> struct MpsReader;
 
 template <typename T> class LinearProgram {
 public:
-  void convertToStandardForm();
+  void convertAllConstraintsToEquality();
+  LinearProgram<T> convertToStandardForm() const;
   std::optional<LinearProgram<T>>
   dualProgram(const AddObjectiveRelatedVar addObjectiveRelatedVar) const;
   size_t getOriginalVariablesCount() const;
@@ -39,6 +40,7 @@ public:
   bool isPureIP(const bool checkObjVar = true) const;
   bool allCoefficientsAreIntegers() const;
   bool allVariablesAreNonnegative() const;
+  T objectiveConstant() const { return _objectiveConstant; }
 
 private:
   friend struct MpsReader<T>;
@@ -50,6 +52,12 @@ private:
   void logGeneralInformation() const;
   bool areAllCoefficientsInteger(const int rowIdx) const;
 
+  static void
+  addVariablesFromOriginLP(const LinearProgram<T> &originLPWithEquality,
+                           LinearProgram<T> &standardFormLP);
+  static void negateVariablesIfNeeded(LinearProgram<T> &standardFormLP);
+  static void makeAllVariablesNonnegative(LinearProgram<T> &standardFormLP);
+
   std::string _name;
   std::vector<RowInfo> _rowInfos;
 
@@ -60,6 +68,7 @@ private:
 
   std::vector<T> _objective;
   RowInfo _objectiveInfo;
+  T _objectiveConstant{0};
   Matrix<T> _constraintMatrix;
   std::vector<T> _rightHandSides;
 };

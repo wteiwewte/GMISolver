@@ -36,7 +36,7 @@ private:
   bool isPivotRowUnderLowerBound(const int pivotRowIdx) const;
 
   void tryLogObjValue(const int iterCount);
-  bool tryReinversion(const int iterCount,
+  bool tryReinversion(const int iterCount, const DualPhase dualPhase,
                       const LPOptStatistics<T> &lpOptStatistics);
   bool tryValidateIteration(const int iterCount,
                             const LPOptStatistics<T> &lpOptStatistics);

@@ -11,8 +11,8 @@ public:
   ReinversionManager(SimplexTableau<T, SimplexTraitsT> &simplexTableau,
                      const int32_t reinversionFrequency);
 
-  bool tryReinverse();
-  bool reinverse();
+  bool tryReinverse(const SimplexPhase simplexPhase);
+  bool reinverse(const SimplexPhase simplexPhase);
 
   int reinversionFrequency() const { return _reinversionFrequency; }
 
@@ -25,7 +25,7 @@ private:
   bool reinverseBasisPFI();
   bool reinverseBasisPFISparse();
 
-  void updateTableau();
+  void updateTableau(const SimplexPhase simplexPhase);
 
   template <typename VectorType>
   std::optional<int>

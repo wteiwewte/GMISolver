@@ -54,17 +54,19 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
     while (curVarIdxToBeOptimized < _simplexTableau._variableInfos.size() &&
            varsFixedCount < _simplexTableau._variableInfos.size()) {
       if (!_simplexTableau._variableInfos[curVarIdxToBeOptimized]._isFixed) {
-        _simplexTableau.setObjective(
-            singleVarObjective(curVarIdxToBeOptimized));
+        _simplexTableau.setObjective(singleVarObjective(curVarIdxToBeOptimized),
+                                     PrimalPhase::OTHER);
         auto lpStatisticsFromSingleVarOpt = primalSimplex().run(
             fmt::format("{}_VAR_{}_{}", lexOptId, curVarIdxToBeOptimized,
                         lexicographicReoptTypeToStr(_lexicographicReoptType)),
             PrintSimplexOptSummary::NO);
-        if (lpStatisticsFromSingleVarOpt._optResult !=
-            LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
-          SPDLOG_ERROR("LEXICOGRAPHIC OPTIMIZATION RETURNED INFEASIBLE");
-          break;
-        }
+        //        if (lpStatisticsFromSingleVarOpt._optResult !=
+        //            LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
+        //          SPDLOG_ERROR("LEXICOGRAPHIC OPTIMIZATION RETURNED OPT RESULT
+        //          {} != FEASIBLE",
+        //          lpOptimizationResultToStr(lpStatisticsFromSingleVarOpt._optResult));
+        //          break;
+        //        }
         lexReoptStats.addLpOptStats(std::move(lpStatisticsFromSingleVarOpt));
         fixNonBasicVariables(varsFixedCount);
         ++optimizedVarCount;
@@ -75,8 +77,8 @@ LexReoptStatistics<T> LexicographicOptimizer<T, SimplexTraitsT>::run(
                  "VAR COUNT {}",
                  lexicographicReoptTypeToStr(_lexicographicReoptType),
                  varsFixedCount, _simplexTableau._variableInfos.size());
-    _simplexTableau.setObjective(
-        _simplexTableau._initialProgram.getObjective());
+    _simplexTableau.setObjective(_simplexTableau._initialProgram.getObjective(),
+                                 PrimalPhase::TWO);
     lexReoptStats._optimalValue = _simplexTableau._objectiveValue;
     lexReoptStats._optResult = _simplexTableau._result;
     if (saveLexSolution == SaveLexSolution::YES) {

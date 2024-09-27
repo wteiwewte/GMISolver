@@ -36,13 +36,17 @@ int countFixedVariables(const std::vector<VariableInfo> &variableInfos) {
       variableInfos.begin(), variableInfos.end(),
       [](const VariableInfo &variableInfo) { return variableInfo._isFixed; });
 }
+
 } // namespace
 
-template <typename T> void LinearProgram<T>::convertToStandardForm() {
+template <typename T> void LinearProgram<T>::convertAllConstraintsToEquality() {
   int nonEqualityRows = 0;
   for (const auto &rowInfo : _rowInfos)
     if (!rowInfo.isEqualityRow())
       ++nonEqualityRows;
+
+  if (nonEqualityRows == 0)
+    return;
 
   const int variableCountAtTheStart = _variableInfos.size();
   const int newVariableCount = variableCountAtTheStart + nonEqualityRows;
@@ -84,6 +88,130 @@ template <typename T> void LinearProgram<T>::convertToStandardForm() {
     _objective.push_back(0.0);
     ++newVariableIdx;
     _rowInfos[rowIdx]._type = RowType::EQUALITY;
+  }
+}
+
+template <typename T>
+LinearProgram<T> LinearProgram<T>::convertToStandardForm() const {
+  LinearProgram<T> originLPWithEquality = *this;
+  originLPWithEquality.convertAllConstraintsToEquality();
+
+  LinearProgram<T> standardFormLP;
+  standardFormLP._name = originLPWithEquality._name + "_STD_FORM";
+  standardFormLP._rowInfos = originLPWithEquality._rowInfos;
+  standardFormLP._objectiveInfo = originLPWithEquality._objectiveInfo;
+  standardFormLP._rightHandSides = originLPWithEquality._rightHandSides;
+  standardFormLP._constraintMatrix.resize(
+      originLPWithEquality._constraintMatrix.size());
+
+  addVariablesFromOriginLP(originLPWithEquality, standardFormLP);
+  negateVariablesIfNeeded(standardFormLP);
+  makeAllVariablesNonnegative(standardFormLP);
+
+  standardFormLP.logGeneralInformation();
+  return standardFormLP;
+}
+
+template <typename T>
+void LinearProgram<T>::addVariablesFromOriginLP(
+    const LinearProgram<T> &originLPWithEquality,
+    LinearProgram<T> &standardFormLP) {
+  for (int varIdx = 0; varIdx < originLPWithEquality._variableInfos.size();
+       ++varIdx) {
+    if (originLPWithEquality._variableInfos[varIdx]._isFree) {
+      {
+        auto positiveVarInfo = originLPWithEquality._variableInfos[varIdx];
+        positiveVarInfo._isFree = false;
+        positiveVarInfo._label += "_PLUS";
+        standardFormLP._variableInfos.push_back(positiveVarInfo);
+        standardFormLP._variableLowerBounds.push_back(0.0);
+        standardFormLP._variableUpperBounds.push_back(std::nullopt);
+        standardFormLP._variableLabelSet.insert(positiveVarInfo._label);
+        standardFormLP._objective.push_back(
+            originLPWithEquality._objective[varIdx]);
+        for (int rowIdx = 0; rowIdx < originLPWithEquality._rowInfos.size();
+             ++rowIdx) {
+          standardFormLP._constraintMatrix[rowIdx].push_back(
+              originLPWithEquality._constraintMatrix[rowIdx][varIdx]);
+        }
+      }
+
+      {
+        auto negativeVarInfo = originLPWithEquality._variableInfos[varIdx];
+        negativeVarInfo._isFree = false;
+        negativeVarInfo._label += "_MINUS";
+        standardFormLP._variableInfos.push_back(negativeVarInfo);
+        standardFormLP._variableLowerBounds.push_back(0.0);
+        standardFormLP._variableUpperBounds.push_back(std::nullopt);
+        standardFormLP._variableLabelSet.insert(negativeVarInfo._label);
+        standardFormLP._objective.push_back(
+            -originLPWithEquality._objective[varIdx]);
+        for (int rowIdx = 0; rowIdx < originLPWithEquality._rowInfos.size();
+             ++rowIdx) {
+          standardFormLP._constraintMatrix[rowIdx].push_back(
+              -originLPWithEquality._constraintMatrix[rowIdx][varIdx]);
+        }
+      }
+    } else {
+      standardFormLP._variableInfos.push_back(
+          originLPWithEquality._variableInfos[varIdx]);
+      standardFormLP._variableLowerBounds.push_back(
+          originLPWithEquality._variableLowerBounds[varIdx]);
+      standardFormLP._variableUpperBounds.push_back(
+          originLPWithEquality._variableUpperBounds[varIdx]);
+      standardFormLP._variableLabelSet.insert(
+          originLPWithEquality._variableInfos[varIdx]._label);
+      standardFormLP._objective.push_back(
+          originLPWithEquality._objective[varIdx]);
+      for (int rowIdx = 0; rowIdx < originLPWithEquality._rowInfos.size();
+           ++rowIdx) {
+        standardFormLP._constraintMatrix[rowIdx].push_back(
+            originLPWithEquality._constraintMatrix[rowIdx][varIdx]);
+      }
+    }
+  }
+}
+
+template <typename T>
+void LinearProgram<T>::negateVariablesIfNeeded(
+    LinearProgram<T> &standardFormLP) {
+  for (int standardFormVarIdx = 0;
+       standardFormVarIdx < standardFormLP._variableInfos.size();
+       ++standardFormVarIdx) {
+    if (!standardFormLP._variableLowerBounds[standardFormVarIdx].has_value()) {
+      standardFormLP._variableLowerBounds[standardFormVarIdx] =
+          -standardFormLP._variableUpperBounds[standardFormVarIdx].value();
+      standardFormLP._variableUpperBounds[standardFormVarIdx] = std::nullopt;
+      standardFormLP._objective[standardFormVarIdx] =
+          -standardFormLP._objective[standardFormVarIdx];
+      for (int rowIdx = 0; rowIdx < standardFormLP._rowInfos.size(); ++rowIdx) {
+        standardFormLP._constraintMatrix[rowIdx][standardFormVarIdx] =
+            -standardFormLP._constraintMatrix[rowIdx][standardFormVarIdx];
+      }
+    }
+  }
+}
+
+template <typename T>
+void LinearProgram<T>::makeAllVariablesNonnegative(
+    LinearProgram<T> &standardFormLP) {
+  for (int standardFormVarIdx = 0;
+       standardFormVarIdx < standardFormLP._variableInfos.size();
+       ++standardFormVarIdx) {
+    standardFormLP._objectiveConstant -=
+        (standardFormLP._objective[standardFormVarIdx] *
+         standardFormLP._variableLowerBounds[standardFormVarIdx].value());
+    for (int rowIdx = 0; rowIdx < standardFormLP._rowInfos.size(); ++rowIdx) {
+      standardFormLP._rightHandSides[rowIdx] -=
+          standardFormLP._constraintMatrix[rowIdx][standardFormVarIdx] *
+          standardFormLP._variableLowerBounds[standardFormVarIdx].value();
+    }
+    if (standardFormLP._variableUpperBounds[standardFormVarIdx].has_value()) {
+      standardFormLP._variableUpperBounds[standardFormVarIdx] =
+          standardFormLP._variableUpperBounds[standardFormVarIdx].value() -
+          standardFormLP._variableLowerBounds[standardFormVarIdx].value();
+    }
+    standardFormLP._variableLowerBounds[standardFormVarIdx] = 0.0;
   }
 }
 

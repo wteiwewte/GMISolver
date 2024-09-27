@@ -77,6 +77,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
   ipOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
     int relaxationNo = 1;
+    SPDLOG_DEBUG(_simplexTableau.toString());
     ipOptStatistics._lpRelaxationStats.emplace_back() = runImpl(relaxationNo);
 
     if (lpOptimizationType == LPOptimizationType::LINEAR_RELAXATION)
@@ -88,6 +89,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
           simplexTableauTypeToStr(_simplexTableau._simplexTableauType));
       return;
     }
+    SPDLOG_DEBUG(_simplexTableau.toString());
 
     while (true) {
       ++relaxationNo;
@@ -108,7 +110,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       addSlackVars(relaxationNo, fractionalBasisRows);
 
       _simplexTableau.calculateSolution();
-      _simplexTableau.calculateCurrentObjectiveValue();
+      _simplexTableau.calculateCurrentObjectiveValue(DualPhase::TWO);
 
       SPDLOG_DEBUG("AFTER ADDITION OF NEW CUTS");
       SPDLOG_TRACE(_simplexTableau.toString());
@@ -435,7 +437,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::removeCuts(
   }
   _simplexTableau._simplexBasisData._rowToBasisColumnIdxMap =
       newRowToBasicColumnIdxMap;
-  _reinversionManager.reinverse();
+  _reinversionManager.reinverse(DualPhase::TWO);
 }
 
 template <typename T, typename SimplexTraitsT>

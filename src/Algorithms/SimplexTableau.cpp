@@ -2,6 +2,7 @@
 
 #include "src/DataModel/LinearProgram.h"
 #include "src/Util/LPPrinter.h"
+#include "src/Util/Overloaded.h"
 #include "src/Util/SimplexTraits.h"
 
 template <typename T, typename SimplexTraitsT>
@@ -103,13 +104,30 @@ std::string SimplexTableau<T, SimplexTraitsT>::toStringLpSolveFormat() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::calculateCurrentObjectiveValue() {
+void SimplexTableau<T, SimplexTraitsT>::calculateCurrentObjectiveValue(
+    const SimplexPhase simplexPhase) {
   typename SimplexTraitsT::CurrentAdder adder;
   for (int varIdx = 0; varIdx < _variableInfos.size(); ++varIdx) {
     adder.addValue(_x[varIdx] * _objectiveRow[varIdx]);
   }
 
-  _objectiveValue = adder.currentSum();
+  const auto objectiveConstant =
+      std::visit(overloaded{
+                     [&](const PrimalPhase primalPhase) -> T {
+                       if (primalPhase == PrimalPhase::TWO)
+                         return _initialProgram.objectiveConstant();
+
+                       return 0.0;
+                     },
+                     [&](const DualPhase dualPhase) -> T {
+                       if (dualPhase == DualPhase::TWO)
+                         return _initialProgram.objectiveConstant();
+
+                       return 0.0;
+                     },
+                 },
+                 simplexPhase);
+  _objectiveValue = adder.currentSum() - objectiveConstant;
 }
 
 template <typename T, typename SimplexTraitsT>
@@ -641,14 +659,15 @@ void SimplexTableau<T, SimplexTraitsT>::initMatrixRepresentations() {
 }
 template <typename T, typename SimplexTraitsT>
 void SimplexTableau<T, SimplexTraitsT>::setObjective(
-    const std::vector<T> &newObjective) {
+    const std::vector<T> &newObjective, const SimplexPhase simplexPhase) {
   _objectiveRow = newObjective;
   _objectiveRow.resize(_variableInfos.size());
-  updateTableauForNewObjective();
+  updateTableauForNewObjective(simplexPhase);
 }
 
 template <typename T, typename SimplexTraitsT>
-void SimplexTableau<T, SimplexTraitsT>::updateTableauForNewObjective() {
+void SimplexTableau<T, SimplexTraitsT>::updateTableauForNewObjective(
+    const SimplexPhase simplexPhase) {
   switch (_simplexTableauType) {
   case SimplexTableauType::FULL: {
     calculateReducedCostsFullTableau();
@@ -661,7 +680,7 @@ void SimplexTableau<T, SimplexTraitsT>::updateTableauForNewObjective() {
   }
   }
   calculateSolution();
-  calculateCurrentObjectiveValue();
+  calculateCurrentObjectiveValue(simplexPhase);
 }
 
 template <typename T, typename SimplexTraitsT>

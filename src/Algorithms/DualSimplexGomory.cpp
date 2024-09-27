@@ -24,10 +24,15 @@ bool didReoptResultInInfeasible(
       LPOptimizationResult::INFEASIBLE)
     return true;
 
-  const auto &lexReoptStats =
-      lpRelaxationStatistics._lexicographicReoptStats._lexLPReoptStatsVec;
-  return !lexReoptStats.empty() &&
-         lexReoptStats.back()._optResult == LPOptimizationResult::INFEASIBLE;
+  const auto &lexReoptStats = lpRelaxationStatistics._lexicographicReoptStats;
+
+  if (!lexReoptStats.has_value())
+    return false;
+
+  const auto &lexLPReoptStats = lexReoptStats->_lexLPReoptStatsVec;
+
+  return !lexLPReoptStats.empty() &&
+         lexLPReoptStats.back()._optResult == LPOptimizationResult::INFEASIBLE;
 }
 } // namespace
 
@@ -134,8 +139,8 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
     }
   });
 
-  ipOptStatistics._optimalValue = ipOptStatistics._lpRelaxationStats.back()
-                                      ._lexicographicReoptStats._optimalValue;
+  ipOptStatistics._optimalValue =
+      ipOptStatistics._lpRelaxationStats.back().optimalValue();
   ipOptStatistics._optimalSolution = _simplexTableau._x;
   ipOptStatistics._optResult = _simplexTableau._result;
 

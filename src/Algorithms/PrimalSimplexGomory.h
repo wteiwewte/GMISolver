@@ -43,7 +43,18 @@ private:
       const GomoryCutChoosingRule gomoryCutChoosingRule) const;
 
   void addCutColumns(const int relaxationNo,
-                     const std::vector<int> &fractionalDualCoordinates) const;
+                     const std::vector<int> &fractionalDualIndices);
+
+  std::vector<T> getIthColumnOfBasisInverse(const int dualIdx) const;
+  std::vector<T> getRVec(const std::vector<T> &ithColumnOfBasisInverse) const;
+  std::vector<T> getBWithTildeVec(const int dualIdx,
+                                  const std::vector<T> &rVec) const;
+  T computeYBWithTildeProduct(const int dualIdx,
+                              const std::vector<T> &rVec) const;
+
+  std::string newCutVarLabel(const int relaxationNo, const int dualIdx) const;
+  void addNewVar(const int relaxationNo, const int dualIdx,
+                 const T yBWithTildeProduct);
 
   const LinearProgram<T> &_primalLinearProgram;
   SimplexTableau<T, SimplexTraitsT> &_dualSimplexTableau;

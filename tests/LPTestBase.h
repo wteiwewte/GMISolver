@@ -181,7 +181,8 @@ template <typename T> struct LPTestBase {
       compareLPRelaxation(lexicographicReoptType, ipOptStatistics,
                           gurobiLPOptStats, isDualProgramOptimized);
     } else {
-      compareIP(lexicographicReoptType, ipOptStatistics, gurobiLPOptStats);
+      compareIP(lexicographicReoptType, ipOptStatistics, gurobiLPOptStats,
+                isDualProgramOptimized);
     }
   }
 
@@ -198,11 +199,13 @@ template <typename T> struct LPTestBase {
   }
   void compareIP(const LexicographicReoptType lexicographicReoptType,
                  const IPOptStatistics<FloatingPointT> &ipOptStatistics,
-                 const LPOptStatistics<FloatingPointT> &gurobiLPOptStats) {
+                 const LPOptStatistics<FloatingPointT> &gurobiLPOptStats,
+                 const IsDualProgramOptimized isDualProgramOptimized =
+                     IsDualProgramOptimized::NO) {
     const auto &lastRelaxationOptStats =
         ipOptStatistics._lpRelaxationStats.back();
     compareWithGurobi(lastRelaxationOptStats._relaxationOptStats,
-                      gurobiLPOptStats);
+                      gurobiLPOptStats, isDualProgramOptimized);
     checkIfSolutionIsInteger(ipOptStatistics);
   }
 
@@ -235,30 +238,38 @@ template <typename T> struct LPTestBase {
       EXPECT_NEAR(gurobiLPOptStats._optimalValue, optValueWithCorrectSign,
                   NumericalTraitsT::OPTIMALITY_TOLERANCE);
 
-      const auto &optimalValueAfterFirstLexReopt =
-          lpRelaxationStatistics._lexicographicReoptStats._optimalValue;
-      const auto optValueAfterFirstLexReoptWithCorrectSign =
-          isDualProgramOptimized == IsDualProgramOptimized::YES
-              ? -optimalValueAfterFirstLexReopt
-              : optimalValueAfterFirstLexReopt;
-      SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC {} REOPT {}",
-                  lexicographicReoptTypeToStr(lexicographicReoptType),
-                  optValueAfterFirstLexReoptWithCorrectSign);
-      EXPECT_NEAR(gurobiLPOptStats._optimalValue,
-                  optValueAfterFirstLexReoptWithCorrectSign,
-                  NumericalTraitsT::OPTIMALITY_TOLERANCE);
+      if (lpRelaxationStatistics._lexicographicReoptStats.has_value()) {
+        const auto &optimalValueAfterFirstLexReopt =
+            lpRelaxationStatistics._lexicographicReoptStats->_optimalValue;
+        const auto optValueAfterFirstLexReoptWithCorrectSign =
+            isDualProgramOptimized == IsDualProgramOptimized::YES
+                ? -optimalValueAfterFirstLexReopt
+                : optimalValueAfterFirstLexReopt;
+        SPDLOG_INFO("SIMPLEX OPT AFTER LEXICOGRAPHIC {} REOPT {}",
+                    lexicographicReoptTypeToStr(lexicographicReoptType),
+                    optValueAfterFirstLexReoptWithCorrectSign);
+        EXPECT_NEAR(gurobiLPOptStats._optimalValue,
+                    optValueAfterFirstLexReoptWithCorrectSign,
+                    NumericalTraitsT::OPTIMALITY_TOLERANCE);
+      }
     }
   }
 
   void
   compareWithGurobi(const LPOptStatistics<FloatingPointT> &lpOptStatistics,
-                    const LPOptStatistics<FloatingPointT> &gurobiLPOptStats) {
+                    const LPOptStatistics<FloatingPointT> &gurobiLPOptStats,
+                    const IsDualProgramOptimized isDualProgramOptimized =
+                        IsDualProgramOptimized::NO) {
     ASSERT_EQ(gurobiLPOptStats._optResult, lpOptStatistics._optResult);
     if (lpOptStatistics._optResult ==
         LPOptimizationResult::BOUNDED_AND_FEASIBLE) {
       SPDLOG_INFO("GUROBI OPT {}", gurobiLPOptStats._optimalValue);
-      SPDLOG_INFO("SIMPLEX OPT {}", lpOptStatistics._optimalValue);
-      EXPECT_NEAR(gurobiLPOptStats._optimalValue, lpOptStatistics._optimalValue,
+      const auto optValueWithCorrectSign =
+          isDualProgramOptimized == IsDualProgramOptimized::YES
+              ? -lpOptStatistics._optimalValue
+              : lpOptStatistics._optimalValue;
+      SPDLOG_INFO("SIMPLEX OPT {}", optValueWithCorrectSign);
+      EXPECT_NEAR(gurobiLPOptStats._optimalValue, optValueWithCorrectSign,
                   NumericalTraitsT::OPTIMALITY_TOLERANCE);
     }
   }

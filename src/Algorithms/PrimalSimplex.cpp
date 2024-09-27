@@ -64,6 +64,7 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::run(
 
         _simplexTableau.calculateSolution();
         _simplexTableau.calculateCurrentObjectiveValue();
+        _simplexTableau.calculateDual();
 
         lpOptStatistics._consecutiveObjectiveValues.push_back(
             _simplexTableau._objectiveValue);

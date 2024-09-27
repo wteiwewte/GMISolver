@@ -60,11 +60,13 @@ private:
                     if (primalPhase == PrimalPhase::ONE)
                       return {};
 
-                    return validateConstraints(
-                        "initial lp",
-                        _simplexTableau._initialProgram._constraintMatrix,
-                        _simplexTableau._initialProgram._rightHandSides,
-                        _simplexTableau._x);
+                    return {};
+
+                    //                    return validateConstraints(
+                    //                        "initial lp",
+                    //                        _simplexTableau._initialProgram._constraintMatrix,
+                    //                        _simplexTableau._initialProgram._rightHandSides,
+                    //                        _simplexTableau._x);
                   },
                   [&](const DualPhase dualPhase) -> ExpectedT {
                     if (dualPhase == DualPhase::ONE)

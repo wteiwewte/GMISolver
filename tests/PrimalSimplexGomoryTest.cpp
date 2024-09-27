@@ -53,10 +53,12 @@ protected:
   void SetUp() override {
     absl::SetFlag(&FLAGS_validate_simplex_option,
                   ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
-    absl::SetFlag(&FLAGS_simplex_tableau_types, {SimplexTableauType::FULL});
+    absl::SetFlag(&FLAGS_simplex_tableau_types,
+                  {SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE});
     absl::SetFlag(&FLAGS_slack_cut_removal_condition,
                   SlackCutRemovalCondition::ONLY_WHEN_SLACK_VAR_IS_POSITIVE);
     absl::SetFlag(&FLAGS_cut_round_limit, 5);
+    absl::SetFlag(&FLAGS_reinversion_frequency, 0);
   }
 
   void
@@ -123,7 +125,7 @@ TYPED_TEST_P(PrimalSimplexGomoryTest,
                 ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
   absl::SetFlag(&FLAGS_extended_statistics, true);
   EXPECT_NO_FATAL_FAILURE(this->testCase(
-      "../../tests/primal_gomory_single_instance", 1,
+      "../../tests/primal_gomory_single_instance", 50,
       LPOptimizationType::INTEGER_PROGRAM, {LexicographicReoptType::MAX}));
 }
 

@@ -10,7 +10,14 @@
 
 template <typename T> struct LPRelaxationStatistics {
   LPOptStatistics<T> _relaxationOptStats;
-  LexReoptStatistics<T> _lexicographicReoptStats;
+  std::optional<LexReoptStatistics<T>> _lexicographicReoptStats;
+
+  T optimalValue() const {
+    if (_lexicographicReoptStats.has_value()) {
+      return _lexicographicReoptStats.value()._optimalValue;
+    }
+    return _relaxationOptStats._optimalValue;
+  }
 };
 
 template <typename T> struct IPOptStatistics {
@@ -25,10 +32,14 @@ template <typename T> struct IPOptStatistics {
         _lpRelaxationStats.begin(), _lpRelaxationStats.end(), 0,
         [](const size_t value,
            const LPRelaxationStatistics<T> &lpRelaxationStatistics) {
+          const auto lexIterCount =
+              lpRelaxationStatistics._lexicographicReoptStats.has_value()
+                  ? lpRelaxationStatistics._lexicographicReoptStats
+                        ->totalIterationCount()
+                  : 0;
           return value +
                  lpRelaxationStatistics._relaxationOptStats._iterationCount +
-                 lpRelaxationStatistics._lexicographicReoptStats
-                     .totalIterationCount();
+                 lexIterCount;
         });
   }
 

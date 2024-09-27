@@ -80,7 +80,9 @@ struct OptStatisticsPrinter {
             (relaxIdx == ipOptStatistics._lpRelaxationStats.size() - 1) ||
             (relaxIdx % printRelaxationWindow == 0)) {
           print(lpRelaxationStats._relaxationOptStats, false, 1);
-          print(lpRelaxationStats._lexicographicReoptStats, false, 1);
+          if (lpRelaxationStats._lexicographicReoptStats.has_value()) {
+            print(*lpRelaxationStats._lexicographicReoptStats, false, 1);
+          }
         }
         ++relaxIdx;
       }

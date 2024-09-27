@@ -139,6 +139,8 @@ lpOptimizationResultToStr(const LPOptimizationResult lpOptimizationResult) {
     return "FAILED_REINVERSION";
   case LPOptimizationResult::REACHED_ITERATION_LIMIT:
     return "REACHED_ITERATION_LIMIT";
+  case LPOptimizationResult::REACHED_CUT_ROUND_LIMIT:
+    return "REACHED_CUT_ROUND_LIMIT";
   case LPOptimizationResult::COULD_NOT_LOAD:
     return "COULD_NOT_LOAD";
   case LPOptimizationResult::FAILED_VALIDATION:

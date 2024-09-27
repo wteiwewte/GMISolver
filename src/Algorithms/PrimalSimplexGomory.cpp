@@ -81,8 +81,11 @@ IPOptStatistics<T> PrimalSimplexGomory<T, SimplexTraitsT>::run(
 
     while (true) {
       ++relaxationNo;
-      if (relaxationNo > _cutRoundLimit)
+      if (relaxationNo > _cutRoundLimit) {
+        _dualSimplexTableau._result =
+            LPOptimizationResult::REACHED_CUT_ROUND_LIMIT;
         break;
+      }
       SPDLOG_DEBUG(
           _dualSimplexTableau.toStringSolutionWithDual(_primalLinearProgram));
       SPDLOG_DEBUG(_dualSimplexTableau.toString());
@@ -102,18 +105,13 @@ IPOptStatistics<T> PrimalSimplexGomory<T, SimplexTraitsT>::run(
       _dualSimplexTableau.calculateSolution();
       _dualSimplexTableau.calculateCurrentObjectiveValue();
 
-      SPDLOG_INFO("AFTER ADDITION OF NEW CUTS");
+      SPDLOG_DEBUG("AFTER ADDITION OF NEW CUTS");
       SPDLOG_DEBUG(
           _dualSimplexTableau.toStringSolutionWithDual(_primalLinearProgram));
       SPDLOG_DEBUG(_dualSimplexTableau.toString());
       SPDLOG_DEBUG(_dualSimplexTableau.toStringObjectiveValue());
 
       ipOptStatistics._lpRelaxationStats.emplace_back() = runImpl(relaxationNo);
-      SPDLOG_INFO("AFTER REOPT");
-      SPDLOG_DEBUG(
-          _dualSimplexTableau.toStringSolutionWithDual(_primalLinearProgram));
-      SPDLOG_DEBUG(_dualSimplexTableau.toString());
-      SPDLOG_DEBUG(_dualSimplexTableau.toStringObjectiveValue());
     }
   });
 

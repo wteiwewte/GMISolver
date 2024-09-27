@@ -91,8 +91,10 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
     while (true) {
       ++relaxationNo;
-      if (relaxationNo > _cutRoundLimit)
+      if (relaxationNo > _cutRoundLimit) {
+        _simplexTableau._result = LPOptimizationResult::REACHED_CUT_ROUND_LIMIT;
         break;
+      }
       SPDLOG_DEBUG("{}TH GOMORY ROUND", relaxationNo);
       checkIfNonBasicVarsAreIntegral();
       const auto fractionalBasisRows =

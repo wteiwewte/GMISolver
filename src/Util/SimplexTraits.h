@@ -15,7 +15,7 @@ template <typename T> struct NumericalTraits {
   constexpr static T PRIMAL_FEASIBILITY_TOLERANCE = 1e-6;
   constexpr static T DUAL_FEASIBILITY_TOLERANCE = 1e-6;
   constexpr static T OBJECTIVE_MONOTONICITY_TOLERANCE = 1e-6;
-  constexpr static T INTEGRALITY_TOLERANCE = 1e-5;
+  constexpr static T INTEGRALITY_TOLERANCE = 1e-2;
   constexpr static T OPTIMALITY_TOLERANCE = 1e-5;
 
   constexpr static T ABSOLUTE_EPSILON = 1e-9;
@@ -134,6 +134,37 @@ struct SimplexTraits {
                          SparseElementaryMatrix<T>, ElementaryMatrix<T>>;
   using VectorT = std::conditional_t<useSparseRepresentationValue,
                                      SparseVector<T>, std::vector<T>>;
+
+  static bool isCutNumericallyAcceptable(const std::vector<T> &varCoefficients,
+                                         const T rhs) {
+    T smallestAbsolutValue = std::numeric_limits<T>::max();
+    T biggestAbsolutValue = 0.0;
+
+    const auto updateSmallestAndBiggest = [&](const auto currentAbsValue) {
+      if (currentAbsValue == 0.0)
+        return;
+
+      if (currentAbsValue < smallestAbsolutValue) {
+        smallestAbsolutValue = currentAbsValue;
+      } else if (currentAbsValue > biggestAbsolutValue) {
+        biggestAbsolutValue = currentAbsValue;
+      }
+    };
+
+    for (int varIdx = 0; varIdx < varCoefficients.size(); ++varIdx) {
+      updateSmallestAndBiggest(std::fabs(varCoefficients[varIdx]));
+    }
+    updateSmallestAndBiggest(std::fabs(rhs));
+
+    if (smallestAbsolutValue == std::numeric_limits<T>::max())
+      return false;
+
+    const auto biggestToSmallestRatio =
+        biggestAbsolutValue / smallestAbsolutValue;
+    constexpr static T MAX_CUT_DYNAMISM = 1e6;
+
+    return biggestToSmallestRatio < MAX_CUT_DYNAMISM;
+  }
 
   template <typename AdderT = CurrentAdder>
   static T dotProduct(const std::vector<T> &vec1, const std::vector<T> &vec2) {

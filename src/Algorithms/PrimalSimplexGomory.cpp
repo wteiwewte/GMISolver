@@ -91,12 +91,12 @@ IPOptStatistics<T> PrimalSimplexGomory<T, SimplexTraitsT>::run(
       SPDLOG_DEBUG(_dualSimplexTableau.toString());
       SPDLOG_DEBUG(_dualSimplexTableau.toStringObjectiveValue());
 
-      SPDLOG_INFO("{}TH PRIMAL GOMORY ROUND", relaxationNo);
+      //      SPDLOG_INFO("{}TH PRIMAL GOMORY ROUND", relaxationNo);
       const auto fractionalDualCoordinates =
           collectFractionalDualCoordinates(gomoryCutChoosingRule);
-      SPDLOG_INFO("FOUND {} FRACTIONAL VARIABLES - DUAL VAR IDXS [{}]",
-                  fractionalDualCoordinates.size(),
-                  fmt::join(fractionalDualCoordinates, ", "));
+      //      SPDLOG_INFO("FOUND {} FRACTIONAL VARIABLES - DUAL VAR IDXS [{}]",
+      //                  fractionalDualCoordinates.size(),
+      //                  fmt::join(fractionalDualCoordinates, ", "));
       if (fractionalDualCoordinates.empty())
         break;
 
@@ -132,7 +132,7 @@ PrimalSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
 
   LPRelaxationStatistics<T> relaxationStats;
   relaxationStats._relaxationOptStats =
-      primalSimplex().run(relaxationId(), PrintSimplexOptSummary::YES,
+      primalSimplex().run(relaxationId(), PrintSimplexOptSummary::NO,
                           PrimalPhase::TWO, IsPrimalCuttingPlanes::YES);
   _dualSimplexTableau.calculateSolution();
   _dualSimplexTableau.calculateCurrentObjectiveValue(PrimalPhase::TWO);
@@ -197,14 +197,21 @@ template <typename T, typename SimplexTraitsT>
 void PrimalSimplexGomory<T, SimplexTraitsT>::addCutColumns(
     const int relaxationNo, const std::vector<int> &fractionalDualIndices) {
   for (const auto dualIdx : fractionalDualIndices) {
-    SPDLOG_INFO("FRACTION DUAL VAR IDX {} VALUE {}", dualIdx,
-                _dualSimplexTableau._y[dualIdx]);
+    //    SPDLOG_INFO("FRACTION DUAL VAR IDX {} VALUE {} {}", dualIdx,
+    //                _dualSimplexTableau._y[dualIdx],
+    //                _dualSimplexTableau._variableInfos.size());
     const std::vector<T> ithColumnOfBasisInverse =
         getIthColumnOfBasisInverse(dualIdx);
     const std::vector<T> rVec = getRVec(ithColumnOfBasisInverse);
     const std::vector<T> bWithTilde = getBWithTildeVec(dualIdx, rVec);
 
     const T yBWithTildeProduct = computeYBWithTildeProduct(dualIdx, rVec);
+
+    if (!SimplexTraitsT::isCutNumericallyAcceptable(
+            bWithTilde, std::floor(yBWithTildeProduct))) {
+      continue;
+    }
+
     addNewVar(relaxationNo, dualIdx, yBWithTildeProduct);
     for (int rowIdx = 0; rowIdx < _dualSimplexTableau._rowInfos.size();
          ++rowIdx) {
@@ -298,8 +305,8 @@ void PrimalSimplexGomory<T, SimplexTraitsT>::addNewVar(
   _dualSimplexTableau._simplexBasisData
       ._isColumnAtLowerBoundBitset[_dualSimplexTableau._variableInfos.size() -
                                    1] = true;
-  SPDLOG_INFO("HALOOO {} {}", yBWithTildeProduct,
-              std::floor(yBWithTildeProduct) - yBWithTildeProduct);
+  //  SPDLOG_INFO("HALOOO {} {}", yBWithTildeProduct,
+  //              std::floor(yBWithTildeProduct) - yBWithTildeProduct);
   _dualSimplexTableau._objectiveRow.push_back(std::floor(yBWithTildeProduct));
   _dualSimplexTableau._reducedCosts.push_back(std::floor(yBWithTildeProduct) -
                                               yBWithTildeProduct);

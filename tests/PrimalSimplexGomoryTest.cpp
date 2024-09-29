@@ -92,7 +92,7 @@ protected:
                 runPrimalSimplexGomory<FloatingPointT, SimplexTraitsT>(
                     primalProgram, *dualProgram, simplexTableauType,
                     lexicographicReoptType, lpOptimizationType,
-                    GomoryCutChoosingRule::FIRST);
+                    GomoryCutChoosingRule::ALL);
             const auto gurobiLPOptStats =
                 GurobiOptimizer("", modelFileMpsPath)
                     .optimize<FloatingPointT>(lpOptimizationType);

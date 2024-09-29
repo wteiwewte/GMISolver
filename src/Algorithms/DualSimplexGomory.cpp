@@ -232,6 +232,11 @@ DualSimplexGomory<T, SimplexTraitsT>::collectFractionalBasisRowIndices(
         continue;
       }
 
+      const auto [cut, cutRhs] = getCutCoeffs(rowIdx);
+      if (!SimplexTraitsT::isCutNumericallyAcceptable(cut, cutRhs)) {
+        continue;
+      }
+
       fractionalBasisVarsRowIndices.push_back(rowIdx);
     }
   }
@@ -246,6 +251,27 @@ DualSimplexGomory<T, SimplexTraitsT>::collectFractionalBasisRowIndices(
   case GomoryCutChoosingRule::RANDOM:
     return getRandomElement(fractionalBasisVarsRowIndices);
   }
+}
+
+template <typename T, typename SimplexTraitsT>
+std::pair<std::vector<T>, T>
+DualSimplexGomory<T, SimplexTraitsT>::getCutCoeffs(const int rowIdx) const {
+  std::vector<T> cut(_simplexTableau._variableInfos.size(), 0.0);
+  const auto tableauRow = *_simplexTableau.computeTableauRowGeneric(rowIdx);
+  for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
+       ++varIdx) {
+    if (!_simplexTableau._simplexBasisData._isBasicColumnIndexBitset[varIdx]) {
+      if (_simplexTableau._simplexBasisData
+              ._isColumnAtLowerBoundBitset[varIdx] ||
+          _simplexTableau._variableInfos[varIdx]._isFree) {
+        cut[varIdx] = std::floor(tableauRow[varIdx]);
+      } else {
+        cut[varIdx] = std::floor(-tableauRow[varIdx]);
+      }
+    }
+  }
+  const auto cutRhs = std::floor(_simplexTableau._rightHandSides[rowIdx]);
+  return {cut, cutRhs};
 }
 
 template <typename T, typename SimplexTraitsT>

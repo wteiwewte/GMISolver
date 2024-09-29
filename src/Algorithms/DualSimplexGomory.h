@@ -43,6 +43,8 @@ private:
   std::vector<int> collectFractionalBasisRowIndices(
       const GomoryCutChoosingRule gomoryCutChoosingRule) const;
 
+  std::pair<std::vector<T>, T> getCutCoeffs(const int rowIdx) const;
+
   void addCutRows(const int relaxationNo,
                   const std::vector<int> &fractionalBasisVarsRowIndices) const;
   void

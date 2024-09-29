@@ -100,6 +100,13 @@ public:
     return solution;
   }
 
+  void storePresolvedModelInMPSFile(std::filesystem::path modelFileMpsPath) {
+    modelFileMpsPath.replace_extension("");
+    modelFileMpsPath += "_presolved.mps";
+    auto presolvedModel = _grbModel.presolve();
+    return _grbModel.write(modelFileMpsPath);
+  }
+
 private:
   LPOptimizationResult gurobiStatusToLPOptResult(const int gurobiStatus) {
     switch (gurobiStatus) {

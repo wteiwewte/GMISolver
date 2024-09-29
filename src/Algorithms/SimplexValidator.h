@@ -641,6 +641,20 @@ private:
             *siblingVarIdx, varIdx, _simplexTableau._variableInfos.size())};
       }
 
+      const auto siblingVarOfSibling =
+          _simplexTableau._variableInfos[*siblingVarIdx]._siblingVarIdx;
+      if (!siblingVarOfSibling.has_value()) {
+        return tl::unexpected{fmt::format("Sibling var idx {} of var idx {} "
+                                          "doesn't have set sibling var member",
+                                          *siblingVarIdx, varIdx)};
+      }
+
+      if (*siblingVarOfSibling != varIdx) {
+        return tl::unexpected{fmt::format(
+            "Sibling var idx {} of var idx {} doesn not equal to var idx {}",
+            *siblingVarIdx, varIdx, *siblingVarOfSibling)};
+      }
+
       const auto currentVarObjectiveCoeff =
           _simplexTableau._objectiveRow[varIdx];
       const auto siblingVarObjectiveCoeff =

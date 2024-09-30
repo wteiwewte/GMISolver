@@ -93,7 +93,7 @@ LPOptStatistics<T> DualSimplex<T, SimplexTraitsT>::run(
     SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
                 lpOptimizationResultToStr(_simplexTableau._result),
                 _simplexTableau._objectiveValue);
-    SPDLOG_INFO("ELAPSED TIME {} SECONDS, ITERATION COUNT {}",
+    SPDLOG_INFO("ELAPSED TIME {} SECONDS, SIMPLEX ITERATION COUNT {}",
                 lpOptStatistics._elapsedTimeSec, iterCount);
   }
 
@@ -139,8 +139,8 @@ bool DualSimplex<T, SimplexTraitsT>::tryValidateIteration(
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
           .validateDualIteration();
   if (!validationResult) {
-    SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
-                 validationResult.error());
+    //    SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
+    //                 validationResult.error());
 
     if (_validateSimplexOption ==
         ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR) {
@@ -162,7 +162,8 @@ void DualSimplex<T, SimplexTraitsT>::tryValidateOptimalSolutions(
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
           .validateOptimality(SimplexType::DUAL, dualPhase);
   if (!validationResult) {
-    SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}", validationResult.error());
+    //    SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}",
+    //    validationResult.error());
     if (_validateSimplexOption ==
         ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR) {
       _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;

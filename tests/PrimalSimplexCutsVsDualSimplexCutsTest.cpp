@@ -131,7 +131,7 @@ protected:
                       primalProgram, *dualProgram,
                       SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE,
                       lexicographicReoptType, lpOptimizationType,
-                      GomoryCutChoosingRule::FIRST);
+                      GomoryCutChoosingRule::ALL);
               LPOptStatistics<FloatingPointT> gurobiLPOptStats;
               if (modelFileMpsPath.extension().string() == ".mps") {
                 gurobiLPOptStats =
@@ -155,7 +155,7 @@ protected:
                                                      SimplexTraitsT>(
                       primalProgramInStandardForm, SimplexTableauType::FULL,
                       lexicographicReoptType, lpOptimizationType,
-                      GomoryCutChoosingRule::FIRST);
+                      GomoryCutChoosingRule::ALL);
               LPOptStatistics<FloatingPointT> gurobiLPOptStats;
               if (modelFileMpsPath.extension().string() == ".mps") {
                 gurobiLPOptStats =
@@ -194,9 +194,20 @@ TYPED_TEST_P(PrimalSimplexCutsVsDualSimplexCutsTest,
       LPOptimizationType::INTEGER_PROGRAM, {LexicographicReoptType::MAX}));
 }
 
+TYPED_TEST_P(PrimalSimplexCutsVsDualSimplexCutsTest,
+             runBothApproachesForMiplib2) {
+  absl::SetFlag(&FLAGS_validate_simplex_option,
+                ValidateSimplexOption::VALIDATE_AND_DONT_STOP_ON_ERROR);
+  absl::SetFlag(&FLAGS_extended_statistics, true);
+  EXPECT_NO_FATAL_FAILURE(this->testCase("../../tests/all_miplib2_instances", 1,
+                                         LPOptimizationType::INTEGER_PROGRAM,
+                                         {LexicographicReoptType::MAX}));
+}
+
 REGISTER_TYPED_TEST_SUITE_P(PrimalSimplexCutsVsDualSimplexCutsTest,
                             runBothApproaches,
-                            runBothApproachesForMaximumWeightMatching);
+                            runBothApproachesForMaximumWeightMatching,
+                            runBothApproachesForMiplib2);
 
 using SimplexTableuTypes = ::testing::Types<
     TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>>;

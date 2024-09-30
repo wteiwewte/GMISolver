@@ -106,6 +106,8 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
                    fmt::join(fractionalBasisRows, ", "));
       if (fractionalBasisRows.empty())
         break;
+      ipOptStatistics._cutCount += fractionalBasisRows.size();
+      ipOptStatistics._cutRoundsCount++;
       addCutRows(relaxationNo, fractionalBasisRows);
       addSlackVars(relaxationNo, fractionalBasisRows);
 
@@ -147,6 +149,16 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
       ipOptStatistics._lpRelaxationStats.back().optimalValue();
   ipOptStatistics._optimalSolution = _simplexTableau._x;
   ipOptStatistics._optResult = _simplexTableau._result;
+
+  SPDLOG_INFO("{} ENDED", type());
+  SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
+              lpOptimizationResultToStr(_simplexTableau._result),
+              _simplexTableau._objectiveValue);
+  SPDLOG_INFO("ELAPSED TIME {} SECONDS, SIMPLEX ITERATION COUNT {}, CUT ROUND "
+              "COUNT {}, CUT COUNT {}",
+              ipOptStatistics._elapsedTimeSec,
+              ipOptStatistics.totalIterationCount(),
+              ipOptStatistics._cutRoundsCount, ipOptStatistics._cutCount);
 
   return ipOptStatistics;
 }

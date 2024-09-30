@@ -105,7 +105,7 @@ LPOptStatistics<T> PrimalSimplex<T, SimplexTraitsT>::run(
     SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
                 lpOptimizationResultToStr(_simplexTableau._result),
                 _simplexTableau._objectiveValue);
-    SPDLOG_INFO("ELAPSED TIME {} SECONDS, ITERATION COUNT {}",
+    SPDLOG_INFO("ELAPSED TIME {} SECONDS, SIMPLEX ITERATION COUNT {}",
                 lpOptStatistics._elapsedTimeSec, iterCount);
   }
 
@@ -154,8 +154,8 @@ bool PrimalSimplex<T, SimplexTraitsT>::tryValidateIteration(
       SimplexValidator<T, SimplexTraitsT>(_simplexTableau, lpOptStatistics)
           .validatePrimalIteration(primalPhase, isPrimalCuttingPlanes);
   if (!validationResult) {
-    SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
-                 validationResult.error());
+    //    SPDLOG_ERROR("ITERATION {} VALIDATION FAILED - {}", iterCount,
+    //                 validationResult.error());
 
     if (_validateSimplexOption ==
         ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR) {
@@ -179,7 +179,8 @@ void PrimalSimplex<T, SimplexTraitsT>::tryValidateOptimalSolutions(
           .validateOptimality(SimplexType::PRIMAL, primalPhase,
                               isPrimalCuttingPlanes);
   if (!validationResult) {
-    SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}", validationResult.error());
+    //    SPDLOG_ERROR("OPTIMALITY VALIDATION FAILED - {}",
+    //    validationResult.error());
     if (_validateSimplexOption ==
         ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR) {
       _simplexTableau._result = LPOptimizationResult::FAILED_VALIDATION;

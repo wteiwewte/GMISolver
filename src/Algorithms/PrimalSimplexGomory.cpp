@@ -60,9 +60,6 @@ IPOptStatistics<T> PrimalSimplexGomory<T, SimplexTraitsT>::run(
   _dualSimplexTableau.setObjective(
       _dualSimplexTableau._initialProgram.getObjective(), PrimalPhase::TWO);
   _dualSimplexTableau.calculateDualExplicit();
-  //  if (_dualSimplexTableau._simplexTableauType == SimplexTableauType::FULL) {
-  //    _dualSimplexTableau._basisMatrixInverse.clear();
-  //  } TODO NEEDED FOR CUT GENERATION?
 
   ipOptStatistics._elapsedTimeSec = executeAndMeasureTime([&] {
     int relaxationNo = 1;
@@ -91,16 +88,17 @@ IPOptStatistics<T> PrimalSimplexGomory<T, SimplexTraitsT>::run(
       SPDLOG_DEBUG(_dualSimplexTableau.toString());
       SPDLOG_DEBUG(_dualSimplexTableau.toStringObjectiveValue());
 
-      //      SPDLOG_INFO("{}TH PRIMAL GOMORY ROUND", relaxationNo);
+      SPDLOG_DEBUG("{}TH PRIMAL GOMORY ROUND", relaxationNo);
       const auto fractionalDualCoordinates =
           collectFractionalDualCoordinates(gomoryCutChoosingRule);
-      //      SPDLOG_INFO("FOUND {} FRACTIONAL VARIABLES - DUAL VAR IDXS [{}]",
-      //                  fractionalDualCoordinates.size(),
-      //                  fmt::join(fractionalDualCoordinates, ", "));
+      SPDLOG_DEBUG("FOUND {} FRACTIONAL VARIABLES - DUAL VAR IDXS [{}]",
+                   fractionalDualCoordinates.size(),
+                   fmt::join(fractionalDualCoordinates, ", "));
       if (fractionalDualCoordinates.empty())
         break;
 
-      addCutColumns(relaxationNo, fractionalDualCoordinates);
+      ipOptStatistics._cutRoundsCount++;
+      addCutColumns(relaxationNo, fractionalDualCoordinates, ipOptStatistics);
 
       _dualSimplexTableau.calculateSolution();
       _dualSimplexTableau.calculateCurrentObjectiveValue(PrimalPhase::TWO);
@@ -119,6 +117,16 @@ IPOptStatistics<T> PrimalSimplexGomory<T, SimplexTraitsT>::run(
                                       ._relaxationOptStats._optimalValue;
   ipOptStatistics._optimalSolution = _dualSimplexTableau._y;
   ipOptStatistics._optResult = _dualSimplexTableau._result;
+
+  SPDLOG_INFO("{} ENDED", type());
+  SPDLOG_INFO("LP OPT RESULT {}, OPT VALUE {}",
+              lpOptimizationResultToStr(_dualSimplexTableau._result),
+              _dualSimplexTableau._objectiveValue);
+  SPDLOG_INFO("ELAPSED TIME {} SECONDS, SIMPLEX ITERATION COUNT {}, CUT ROUND "
+              "COUNT {}, CUT COUNT {}",
+              ipOptStatistics._elapsedTimeSec,
+              ipOptStatistics.totalIterationCount(),
+              ipOptStatistics._cutRoundsCount, ipOptStatistics._cutCount);
 
   return ipOptStatistics;
 }
@@ -195,11 +203,9 @@ PrimalSimplexGomory<T, SimplexTraitsT>::collectFractionalDualCoordinates(
 
 template <typename T, typename SimplexTraitsT>
 void PrimalSimplexGomory<T, SimplexTraitsT>::addCutColumns(
-    const int relaxationNo, const std::vector<int> &fractionalDualIndices) {
+    const int relaxationNo, const std::vector<int> &fractionalDualIndices,
+    IPOptStatistics<T> &ipOptStatistics) {
   for (const auto dualIdx : fractionalDualIndices) {
-    //    SPDLOG_INFO("FRACTION DUAL VAR IDX {} VALUE {} {}", dualIdx,
-    //                _dualSimplexTableau._y[dualIdx],
-    //                _dualSimplexTableau._variableInfos.size());
     const std::vector<T> ithColumnOfBasisInverse =
         getIthColumnOfBasisInverse(dualIdx);
     const std::vector<T> rVec = getRVec(ithColumnOfBasisInverse);
@@ -219,6 +225,7 @@ void PrimalSimplexGomory<T, SimplexTraitsT>::addCutColumns(
           bWithTilde[rowIdx]);
     }
     _dualSimplexTableau.initMatrixRepresentations();
+    ipOptStatistics._cutCount++;
   }
 }
 
@@ -294,19 +301,17 @@ void PrimalSimplexGomory<T, SimplexTraitsT>::addNewVar(
   _dualSimplexTableau._variableInfos.push_back(
       VariableInfo{._label = newCutVarLabelStr,
                    ._type = VariableType::CONTINUOUS,
-                   ._isSlack = true, // TODO ???
+                   ._isSlack = true,
                    ._isCutVar = true});
 
   _dualSimplexTableau._variableLabelSet.insert(newCutVarLabelStr);
-  _dualSimplexTableau._variableLowerBounds.push_back(0);            // TODO ??
-  _dualSimplexTableau._variableUpperBounds.push_back(std::nullopt); // TODO ??
+  _dualSimplexTableau._variableLowerBounds.push_back(0);
+  _dualSimplexTableau._variableUpperBounds.push_back(std::nullopt);
   _dualSimplexTableau._simplexBasisData.resizeVarCount(
       _dualSimplexTableau._variableInfos.size());
   _dualSimplexTableau._simplexBasisData
       ._isColumnAtLowerBoundBitset[_dualSimplexTableau._variableInfos.size() -
                                    1] = true;
-  //  SPDLOG_INFO("HALOOO {} {}", yBWithTildeProduct,
-  //              std::floor(yBWithTildeProduct) - yBWithTildeProduct);
   _dualSimplexTableau._objectiveRow.push_back(std::floor(yBWithTildeProduct));
   _dualSimplexTableau._reducedCosts.push_back(std::floor(yBWithTildeProduct) -
                                               yBWithTildeProduct);

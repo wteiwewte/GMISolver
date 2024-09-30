@@ -18,14 +18,17 @@ struct OptStatisticsPrinter {
   constexpr static int OPT_RESULT_WIDTH = 25;
   constexpr static int OPT_VALUE_WIDTH = 25;
   constexpr static int OPT_COUNT_WIDTH = 11;
-  constexpr static int ITERATION_COUNT_WIDTH = 12;
+  constexpr static int TOTAL_ITERATION_COUNT_WIDTH = 18;
+  constexpr static int CUT_ROUND_COUNT_WIDTH = 12;
+  constexpr static int CUT_COUNT_WIDTH = 12;
   constexpr static int ELAPSED_TIME_WIDTH = 20;
   constexpr static int REINVERSION_FREQUENCY_WIDTH = 12;
   constexpr static int FLOAT_NUMBERS_PRECISION = 6;
 
   OptStatisticsPrinter() {
     _totalWidth = LP_NAME_WIDTH + ALGO_TYPE_WIDTH + OPT_RESULT_WIDTH +
-                  OPT_VALUE_WIDTH + ITERATION_COUNT_WIDTH +
+                  OPT_VALUE_WIDTH + TOTAL_ITERATION_COUNT_WIDTH +
+                  CUT_ROUND_COUNT_WIDTH + CUT_COUNT_WIDTH +
                   REINVERSION_FREQUENCY_WIDTH;
 
     _oss << '\n';
@@ -36,7 +39,10 @@ struct OptStatisticsPrinter {
     _oss << fmt::format("{:^{}}|", "ALGO TYPE", ALGO_TYPE_WIDTH);
     _oss << fmt::format("{:^{}}|", "OPT RESULT", OPT_RESULT_WIDTH);
     _oss << fmt::format("{:^{}}|", "OPT VALUE", OPT_VALUE_WIDTH);
-    _oss << fmt::format("{:^{}}|", "ITER COUNT", ITERATION_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", "TOTAL ITER COUNT",
+                        TOTAL_ITERATION_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", "CUT ROUND COUNT", CUT_ROUND_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", "CUT COUNT", CUT_COUNT_WIDTH);
     _oss << fmt::format("{:^{}}|", "ELP TIME SECONDS", ELAPSED_TIME_WIDTH);
     _oss << fmt::format("{:^{}}|", "REINV FREQ", REINVERSION_FREQUENCY_WIDTH);
   }
@@ -56,7 +62,9 @@ struct OptStatisticsPrinter {
                         OPT_RESULT_WIDTH);
     _oss << valueWithPrecision(lpOptStatistics._optimalValue, OPT_VALUE_WIDTH);
     _oss << fmt::format("{:^{}}|", lpOptStatistics._iterationCount,
-                        ITERATION_COUNT_WIDTH);
+                        TOTAL_ITERATION_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", "NONE", CUT_ROUND_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", "NONE", CUT_COUNT_WIDTH);
     _oss << valueWithPrecision(lpOptStatistics._elapsedTimeSec,
                                ELAPSED_TIME_WIDTH);
     _oss << fmt::format("{:^{}}|", lpOptStatistics._reinversionFrequency,
@@ -95,11 +103,12 @@ struct OptStatisticsPrinter {
                         OPT_RESULT_WIDTH);
     _oss << valueWithPrecision(ipOptStatistics._optimalValue, OPT_VALUE_WIDTH);
     _oss << fmt::format("{:^{}}|", ipOptStatistics.totalIterationCount(),
-                        ITERATION_COUNT_WIDTH);
+                        TOTAL_ITERATION_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", ipOptStatistics._cutRoundsCount,
+                        CUT_ROUND_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", ipOptStatistics._cutCount, CUT_COUNT_WIDTH);
     _oss << valueWithPrecision(ipOptStatistics._elapsedTimeSec,
                                ELAPSED_TIME_WIDTH);
-    _oss << fmt::format("{:^{}}|", ipOptStatistics._reinversionFrequency,
-                        REINVERSION_FREQUENCY_WIDTH);
     _oss << fmt::format("{:^{}}|",
                         ipOptStatistics.relaxationOptimizationCount(),
                         OPT_COUNT_WIDTH);
@@ -124,7 +133,9 @@ struct OptStatisticsPrinter {
     _oss << valueWithPrecision(lexReoptStatistics._optimalValue,
                                OPT_VALUE_WIDTH);
     _oss << fmt::format("{:^{}}|", lexReoptStatistics.totalIterationCount(),
-                        ITERATION_COUNT_WIDTH);
+                        TOTAL_ITERATION_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", "NONE", CUT_ROUND_COUNT_WIDTH);
+    _oss << fmt::format("{:^{}}|", "NONE", CUT_COUNT_WIDTH);
     _oss << valueWithPrecision(lexReoptStatistics._elapsedTimeSec,
                                ELAPSED_TIME_WIDTH);
     _oss << fmt::format("{:^{}}|", lexReoptStatistics._reinversionFrequency,

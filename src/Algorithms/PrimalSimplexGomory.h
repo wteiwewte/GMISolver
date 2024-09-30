@@ -43,7 +43,8 @@ private:
       const GomoryCutChoosingRule gomoryCutChoosingRule) const;
 
   void addCutColumns(const int relaxationNo,
-                     const std::vector<int> &fractionalDualIndices);
+                     const std::vector<int> &fractionalDualIndices,
+                     IPOptStatistics<T> &ipOptStatistics);
 
   std::vector<T> getIthColumnOfBasisInverse(const int dualIdx) const;
   std::vector<T> getRVec(const std::vector<T> &ithColumnOfBasisInverse) const;

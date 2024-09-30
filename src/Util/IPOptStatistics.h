@@ -51,6 +51,8 @@ template <typename T> struct IPOptStatistics {
   double _elapsedTimeSec{0.0};
   std::vector<LPRelaxationStatistics<T>> _lpRelaxationStats;
   int32_t _reinversionFrequency;
+  int32_t _cutRoundsCount{0};
+  int32_t _cutCount{0};
 };
 
 template <typename T>

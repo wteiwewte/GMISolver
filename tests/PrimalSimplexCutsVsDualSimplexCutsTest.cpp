@@ -132,12 +132,16 @@ protected:
                       SimplexTableauType::REVISED_BASIS_MATRIX_INVERSE,
                       lexicographicReoptType, lpOptimizationType,
                       GomoryCutChoosingRule::FIRST);
-              const auto gurobiLPOptStats =
-                  GurobiOptimizer("", modelFileMpsPath)
-                      .optimize<FloatingPointT>(lpOptimizationType);
-              this->compare(lpOptimizationType, lexicographicReoptType,
-                            ipOptStatistics, gurobiLPOptStats,
-                            IsDualProgramOptimized::YES);
+              LPOptStatistics<FloatingPointT> gurobiLPOptStats;
+              if (modelFileMpsPath.extension().string() == ".mps") {
+                gurobiLPOptStats =
+                    GurobiOptimizer("", modelFileMpsPath)
+                        .optimize<FloatingPointT>(lpOptimizationType);
+                this->compare(lpOptimizationType, lexicographicReoptType,
+                              ipOptStatistics, gurobiLPOptStats,
+                              IsDualProgramOptimized::YES);
+              }
+              this->checkIfSolutionIsInteger(ipOptStatistics);
               optStatsVec.push_back({ipOptStatistics, gurobiLPOptStats});
             }
           }
@@ -152,11 +156,15 @@ protected:
                       primalProgramInStandardForm, SimplexTableauType::FULL,
                       lexicographicReoptType, lpOptimizationType,
                       GomoryCutChoosingRule::FIRST);
-              const auto gurobiLPOptStats =
-                  GurobiOptimizer("", modelFileMpsPath)
-                      .optimize<FloatingPointT>(lpOptimizationType);
-              this->compare(lpOptimizationType, lexicographicReoptType,
-                            ipOptStatistics, gurobiLPOptStats);
+              LPOptStatistics<FloatingPointT> gurobiLPOptStats;
+              if (modelFileMpsPath.extension().string() == ".mps") {
+                gurobiLPOptStats =
+                    GurobiOptimizer("", modelFileMpsPath)
+                        .optimize<FloatingPointT>(lpOptimizationType);
+                this->compare(lpOptimizationType, lexicographicReoptType,
+                              ipOptStatistics, gurobiLPOptStats);
+              }
+              this->checkIfSolutionIsInteger(ipOptStatistics);
               optStatsVec.push_back({ipOptStatistics, gurobiLPOptStats});
             }
           }
@@ -176,8 +184,19 @@ TYPED_TEST_P(PrimalSimplexCutsVsDualSimplexCutsTest, runBothApproaches) {
       LPOptimizationType::INTEGER_PROGRAM, {LexicographicReoptType::MAX}));
 }
 
+TYPED_TEST_P(PrimalSimplexCutsVsDualSimplexCutsTest,
+             runBothApproachesForMaximumWeightMatching) {
+  absl::SetFlag(&FLAGS_validate_simplex_option,
+                ValidateSimplexOption::VALIDATE_AND_STOP_ON_ERROR);
+  absl::SetFlag(&FLAGS_extended_statistics, true);
+  EXPECT_NO_FATAL_FAILURE(this->testCase(
+      "../../tests/maximum_weight_matching", 500,
+      LPOptimizationType::INTEGER_PROGRAM, {LexicographicReoptType::MAX}));
+}
+
 REGISTER_TYPED_TEST_SUITE_P(PrimalSimplexCutsVsDualSimplexCutsTest,
-                            runBothApproaches);
+                            runBothApproaches,
+                            runBothApproachesForMaximumWeightMatching);
 
 using SimplexTableuTypes = ::testing::Types<
     TypeTuple<double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>>;

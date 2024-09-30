@@ -16,6 +16,7 @@
 #include <boost/dynamic_bitset.hpp>
 
 template <typename T> struct MpsReader;
+template <typename T> struct MatchingEdgeFormatReader;
 
 template <typename T> class LinearProgram {
 public:
@@ -44,6 +45,7 @@ public:
 
 private:
   friend struct MpsReader<T>;
+  friend struct MatchingEdgeFormatReader<T>;
   template <typename U, typename ComparisonTraitsU> friend class SimplexTableau;
   template <typename U, typename ComparisonTraitsU>
   friend class SimplexValidator;

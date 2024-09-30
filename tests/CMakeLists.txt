@@ -52,6 +52,7 @@ target_link_libraries(
   GurobiOptimizer
   LPOptStatistics
   MpsReader
+  MatchingEdgeFormatReader
   LPTestBase
   IPOptStatistics)
 enable_testing()

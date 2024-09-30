@@ -5,6 +5,7 @@
 #include "src/DataModel/EnumTypes.h"
 #include "src/Util/IPOptStatistics.h"
 #include "src/Util/LPOptStatistics.h"
+#include "src/Util/MatchingEdgeFormatReader.h"
 #include "src/Util/OptStatisticsPrinter.h"
 #include "src/Util/SpdlogHeader.h"
 #include "tests/CommonDefs.h"
@@ -117,8 +118,14 @@ template <typename T> struct LPTestBase {
              std::filesystem::directory_iterator(lpModelSetDirectory)) {
           const std::string modelName = lpModelFileEntry.path().filename();
           SPDLOG_INFO("MODEL {}", modelName);
-          auto linearProgram =
-              MpsReader<FloatingPointT>().read(lpModelFileEntry.path());
+          std::optional<LinearProgram<FloatingPointT>> linearProgram;
+          if (lpModelFileEntry.path().extension().string() == ".mps") {
+            linearProgram =
+                MpsReader<FloatingPointT>().read(lpModelFileEntry.path());
+          } else if (lpModelFileEntry.path().extension().string() == ".edge") {
+            linearProgram = MatchingEdgeFormatReader<FloatingPointT>().read(
+                lpModelFileEntry.path());
+          }
           ASSERT_TRUE(linearProgram.has_value());
 
           if (isInstanceSuitable(basisSizeLimit, *linearProgram, modelName,

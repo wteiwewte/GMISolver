@@ -4,6 +4,11 @@ add_library(MpsReader MpsReader.cpp MpsReader.h)
 target_link_libraries(MpsReader CommonFunctions EnumTypes LinearProgram
                       SpdlogHeader)
 
+add_library(MatchingEdgeFormatReader MatchingEdgeFormatReader.cpp
+                                     MatchingEdgeFormatReader.h)
+target_link_libraries(MatchingEdgeFormatReader CommonFunctions EnumTypes
+                      LinearProgram SpdlogHeader)
+
 add_library(LPPrinter INTERFACE LPPrinter.h)
 target_link_libraries(
   LPPrinter INTERFACE CommonTypes MatrixTypes SimplexBasisData SpdlogHeader

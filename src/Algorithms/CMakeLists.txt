@@ -40,8 +40,8 @@ target_link_libraries(
   SpdlogHeader
   Time)
 
-add_library(PrimalSimplexGomory PrimalSimplexGomory.h PrimalSimplexGomory.cpp
-                                PrimalSimplexGomory.h)
+add_library(PrimalSimplexGomory PrimalSimplexCuts.h PrimalSimplexCuts.cpp
+        PrimalSimplexCuts.h)
 target_link_libraries(
   PrimalSimplexGomory
   CommonTypes

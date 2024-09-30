@@ -1,4 +1,4 @@
-#include "src/Algorithms/PrimalSimplexGomory.h"
+#include "src/Algorithms/PrimalSimplexCuts.h"
 
 #include "src/Algorithms/LexicographicOptimizer.h"
 #include "src/Algorithms/PrimalSimplex.h"
@@ -19,7 +19,7 @@ std::vector<int> getRandomElement(const std::vector<int> &vec) {
 } // namespace
 
 template <typename T, typename SimplexTraitsT>
-PrimalSimplexGomory<T, SimplexTraitsT>::PrimalSimplexGomory(
+PrimalSimplexCuts<T, SimplexTraitsT>::PrimalSimplexCuts(
     const LinearProgram<T> &primalLinearProgram,
     SimplexTableau<T, SimplexTraitsT> &dualSimplexTableau,
     ReinversionManager<T, SimplexTraitsT> &reinversionManager,
@@ -40,7 +40,7 @@ PrimalSimplexGomory<T, SimplexTraitsT>::PrimalSimplexGomory(
       _cutRoundLimit(cutRoundLimit) {}
 
 template <typename T, typename SimplexTraitsT>
-std::string PrimalSimplexGomory<T, SimplexTraitsT>::type() const {
+std::string PrimalSimplexCuts<T, SimplexTraitsT>::type() const {
   return fmt::format(
       "PRIMAL SIMPLEX GOMORY WITH DUAL CUTS ({}, {})",
       simplexTableauTypeToStr(_dualSimplexTableau._simplexTableauType),
@@ -48,7 +48,7 @@ std::string PrimalSimplexGomory<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-IPOptStatistics<T> PrimalSimplexGomory<T, SimplexTraitsT>::run(
+IPOptStatistics<T> PrimalSimplexCuts<T, SimplexTraitsT>::run(
     const LPOptimizationType lpOptimizationType,
     const GomoryCutChoosingRule gomoryCutChoosingRule) {
   SPDLOG_INFO("PRIMAL GOMORY WITH {} LEXICOGRAPHIC REOPTIMIZATION",
@@ -133,7 +133,7 @@ IPOptStatistics<T> PrimalSimplexGomory<T, SimplexTraitsT>::run(
 
 template <typename T, typename SimplexTraitsT>
 LPRelaxationStatistics<T>
-PrimalSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
+PrimalSimplexCuts<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
   const auto relaxationId = [&relaxationNo] {
     return fmt::format("{}TH_RELAX", relaxationNo);
   };
@@ -156,7 +156,7 @@ PrimalSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
 
 template <typename T, typename SimplexTraitsT>
 PrimalSimplex<T, SimplexTraitsT>
-PrimalSimplexGomory<T, SimplexTraitsT>::primalSimplex() const {
+PrimalSimplexCuts<T, SimplexTraitsT>::primalSimplex() const {
   return PrimalSimplex<T, SimplexTraitsT>(
       _dualSimplexTableau, _reinversionManager, _primalSimplexColumnPivotRule,
       _objValueLoggingFrequency, _validateSimplexOption);
@@ -164,7 +164,7 @@ PrimalSimplexGomory<T, SimplexTraitsT>::primalSimplex() const {
 
 template <typename T, typename SimplexTraitsT>
 LexicographicOptimizer<T, SimplexTraitsT>
-PrimalSimplexGomory<T, SimplexTraitsT>::lexicographicOptimizer() const {
+PrimalSimplexCuts<T, SimplexTraitsT>::lexicographicOptimizer() const {
   return LexicographicOptimizer<T, SimplexTraitsT>(
       _dualSimplexTableau, _reinversionManager, _primalSimplexColumnPivotRule,
       _objValueLoggingFrequency, _validateSimplexOption,
@@ -173,7 +173,7 @@ PrimalSimplexGomory<T, SimplexTraitsT>::lexicographicOptimizer() const {
 
 template <typename T, typename SimplexTraitsT>
 std::vector<int>
-PrimalSimplexGomory<T, SimplexTraitsT>::collectFractionalDualCoordinates(
+PrimalSimplexCuts<T, SimplexTraitsT>::collectFractionalDualCoordinates(
     const GomoryCutChoosingRule gomoryCutChoosingRule) const {
   std::vector<int> fractionalDualCoordinates;
   for (int dualIdx = 0;
@@ -202,7 +202,7 @@ PrimalSimplexGomory<T, SimplexTraitsT>::collectFractionalDualCoordinates(
 }
 
 template <typename T, typename SimplexTraitsT>
-void PrimalSimplexGomory<T, SimplexTraitsT>::addCutColumns(
+void PrimalSimplexCuts<T, SimplexTraitsT>::addCutColumns(
     const int relaxationNo, const std::vector<int> &fractionalDualIndices,
     IPOptStatistics<T> &ipOptStatistics) {
   for (const auto dualIdx : fractionalDualIndices) {
@@ -230,8 +230,7 @@ void PrimalSimplexGomory<T, SimplexTraitsT>::addCutColumns(
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T>
-PrimalSimplexGomory<T, SimplexTraitsT>::getIthColumnOfBasisInverse(
+std::vector<T> PrimalSimplexCuts<T, SimplexTraitsT>::getIthColumnOfBasisInverse(
     const int dualIdx) const {
   std::vector<T> ithColumnOfBasisInverse(_dualSimplexTableau._rowInfos.size());
   for (int k = 0; k < _dualSimplexTableau._rowInfos.size(); ++k) {
@@ -242,7 +241,7 @@ PrimalSimplexGomory<T, SimplexTraitsT>::getIthColumnOfBasisInverse(
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T> PrimalSimplexGomory<T, SimplexTraitsT>::getRVec(
+std::vector<T> PrimalSimplexCuts<T, SimplexTraitsT>::getRVec(
     const std::vector<T> &ithColumnOfBasisInverse) const {
   std::vector<T> rVec(_dualSimplexTableau._rowInfos.size());
   for (int k = 0; k < _dualSimplexTableau._rowInfos.size(); ++k) {
@@ -252,7 +251,7 @@ std::vector<T> PrimalSimplexGomory<T, SimplexTraitsT>::getRVec(
 }
 
 template <typename T, typename SimplexTraitsT>
-std::vector<T> PrimalSimplexGomory<T, SimplexTraitsT>::getBWithTildeVec(
+std::vector<T> PrimalSimplexCuts<T, SimplexTraitsT>::getBWithTildeVec(
     const int dualIdx, const std::vector<T> &rVec) const {
   std::vector<T> bWithTilde(_dualSimplexTableau._rowInfos.size());
   for (int k = 0; k < _dualSimplexTableau._rowInfos.size(); ++k) {
@@ -269,7 +268,7 @@ std::vector<T> PrimalSimplexGomory<T, SimplexTraitsT>::getBWithTildeVec(
 }
 
 template <typename T, typename SimplexTraitsT>
-T PrimalSimplexGomory<T, SimplexTraitsT>::computeYBWithTildeProduct(
+T PrimalSimplexCuts<T, SimplexTraitsT>::computeYBWithTildeProduct(
     const int dualIdx, const std::vector<T> &rVec) const {
   T yBWithTildeProduct{0};
   typename SimplexTraitsT::CurrentAdder adder;
@@ -285,8 +284,9 @@ T PrimalSimplexGomory<T, SimplexTraitsT>::computeYBWithTildeProduct(
 }
 
 template <typename T, typename SimplexTraitsT>
-std::string PrimalSimplexGomory<T, SimplexTraitsT>::newCutVarLabel(
-    const int relaxationNo, const int dualIdx) const {
+std::string
+PrimalSimplexCuts<T, SimplexTraitsT>::newCutVarLabel(const int relaxationNo,
+                                                     const int dualIdx) const {
   const std::string firstPattern =
       fmt::format("CUT_ROUND_{}_S_{}", relaxationNo, dualIdx + 1);
   return (_dualSimplexTableau._variableLabelSet.find(firstPattern) ==
@@ -295,7 +295,7 @@ std::string PrimalSimplexGomory<T, SimplexTraitsT>::newCutVarLabel(
              : firstPattern + Constants::SLACK_SUFFIX;
 }
 template <typename T, typename SimplexTraitsT>
-void PrimalSimplexGomory<T, SimplexTraitsT>::addNewVar(
+void PrimalSimplexCuts<T, SimplexTraitsT>::addNewVar(
     const int relaxationNo, const int dualIdx, const T yBWithTildeProduct) {
   const auto newCutVarLabelStr = newCutVarLabel(relaxationNo, dualIdx);
   _dualSimplexTableau._variableInfos.push_back(
@@ -318,7 +318,7 @@ void PrimalSimplexGomory<T, SimplexTraitsT>::addNewVar(
   _dualSimplexTableau._x.push_back(0.0);
 }
 
-template class PrimalSimplexGomory<
+template class PrimalSimplexCuts<
     double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
-template class PrimalSimplexGomory<
+template class PrimalSimplexCuts<
     double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;

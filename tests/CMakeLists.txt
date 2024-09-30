@@ -32,7 +32,7 @@ add_executable(
   PrimalSimplexTest.cpp
         DualSimplexCuts.cpp
   LexicographicOptimizerTest.cpp
-  PrimalSimplexGomoryTest.cpp
+        PrimalSimplexCutsTest.cpp
   PrimalDualTest.cpp
   PrimalSimplexCutsVsDualSimplexCutsTest.cpp)
 include_directories(../src/)

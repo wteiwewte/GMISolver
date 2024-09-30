@@ -1,5 +1,5 @@
-#ifndef GMISOLVER_PRIMALSIMPLEXGOMORY_H
-#define GMISOLVER_PRIMALSIMPLEXGOMORY_H
+#ifndef GMISOLVER_PRIMALSIMPLEXCUTS_H
+#define GMISOLVER_PRIMALSIMPLEXCUTS_H
 
 #include "src/DataModel/CommonTypes.h"
 #include "src/Util/IPOptStatistics.h"
@@ -12,9 +12,9 @@ template <typename T, typename SimplexTraitsT> class ReinversionManager;
 template <typename T, typename SimplexTraitsT> class PrimalSimplex;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
-class PrimalSimplexGomory {
+class PrimalSimplexCuts {
 public:
-  PrimalSimplexGomory(
+  PrimalSimplexCuts(
       const LinearProgram<T> &primalLinearProgram,
       SimplexTableau<T, SimplexTraitsT> &dualSimplexTableau,
       ReinversionManager<T, SimplexTraitsT> &reinversionManager,
@@ -68,4 +68,4 @@ private:
   const int _cutRoundLimit;
 };
 
-#endif // GMISOLVER_PRIMALSIMPLEXGOMORY_H
+#endif // GMISOLVER_PRIMALSIMPLEXCUTS_H

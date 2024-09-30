@@ -1,6 +1,6 @@
 #include "src/Algorithms/DualSimplexCuts.h"
 #include "src/Algorithms/DualSimplexPhaseOne.h"
-#include "src/Algorithms/PrimalSimplexGomory.h"
+#include "src/Algorithms/PrimalSimplexCuts.h"
 #include "src/Algorithms/PrimalSimplexPhaseOne.h"
 #include "src/Algorithms/ReinversionManager.h"
 #include "src/Algorithms/SimplexTableau.h"
@@ -39,7 +39,7 @@ runPrimalSimplexGomory(const LinearProgram<T> &primalProgram,
     return {};
   }
 
-  PrimalSimplexGomory<T, SimplexTraitsT> primalSimplexGomory(
+  PrimalSimplexCuts<T, SimplexTraitsT> primalSimplexGomory(
       primalProgram, dualSimplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
       absl::GetFlag(FLAGS_obj_value_logging_frequency),

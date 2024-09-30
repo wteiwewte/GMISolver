@@ -1,5 +1,5 @@
-#ifndef GMISOLVER_DUALSIMPLEXGOMORY_H
-#define GMISOLVER_DUALSIMPLEXGOMORY_H
+#ifndef GMISOLVER_DUALSIMPLEXCUTS_H
+#define GMISOLVER_DUALSIMPLEXCUTS_H
 
 #include "src/DataModel/CommonTypes.h"
 #include "src/Util/IPOptStatistics.h"
@@ -12,9 +12,9 @@ template <typename T, typename SimplexTraitsT> class DualSimplex;
 template <typename T, typename SimplexTraitsT> class PrimalSimplex;
 
 template <typename T, typename SimplexTraitsT = SimplexTraits<T>>
-class DualSimplexGomory {
+class DualSimplexCuts {
 public:
-  DualSimplexGomory(
+  DualSimplexCuts(
       SimplexTableau<T, SimplexTraitsT> &simplexTableau,
       ReinversionManager<T, SimplexTraitsT> &reinversionManager,
       const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
@@ -75,4 +75,4 @@ private:
   const int _cutRoundLimit;
 };
 
-#endif // GMISOLVER_DUALSIMPLEXGOMORY_H
+#endif // GMISOLVER_DUALSIMPLEXCUTS_H

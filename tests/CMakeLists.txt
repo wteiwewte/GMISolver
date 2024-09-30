@@ -30,7 +30,7 @@ add_executable(
   UnitTests
   DualSimplexTest.cpp
   PrimalSimplexTest.cpp
-  DualSimplexGomoryTest.cpp
+        DualSimplexCuts.cpp
   LexicographicOptimizerTest.cpp
   PrimalSimplexGomoryTest.cpp
   PrimalDualTest.cpp

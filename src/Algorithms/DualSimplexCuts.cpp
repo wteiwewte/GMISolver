@@ -1,4 +1,4 @@
-#include "src/Algorithms/DualSimplexGomory.h"
+#include "src/Algorithms/DualSimplexCuts.h"
 
 #include "src/Algorithms/DualSimplex.h"
 #include "src/Algorithms/LexicographicOptimizer.h"
@@ -37,7 +37,7 @@ bool didReoptResultInInfeasible(
 } // namespace
 
 template <typename T, typename SimplexTraitsT>
-DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
+DualSimplexCuts<T, SimplexTraitsT>::DualSimplexCuts(
     SimplexTableau<T, SimplexTraitsT> &simplexTableau,
     ReinversionManager<T, SimplexTraitsT> &reinversionManager,
     const PrimalSimplexColumnPivotRule primalSimplexColumnPivotRule,
@@ -57,7 +57,7 @@ DualSimplexGomory<T, SimplexTraitsT>::DualSimplexGomory(
       _cutRoundLimit(cutRoundLimit) {}
 
 template <typename T, typename SimplexTraitsT>
-std::string DualSimplexGomory<T, SimplexTraitsT>::type() const {
+std::string DualSimplexCuts<T, SimplexTraitsT>::type() const {
   return fmt::format(
       "DUAL SIMPLEX GOMORY WITH PRIMAL CUTS ({}, {})",
       simplexTableauTypeToStr(_simplexTableau._simplexTableauType),
@@ -65,7 +65,7 @@ std::string DualSimplexGomory<T, SimplexTraitsT>::type() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
+IPOptStatistics<T> DualSimplexCuts<T, SimplexTraitsT>::run(
     const LPOptimizationType lpOptimizationType,
     const GomoryCutChoosingRule gomoryCutChoosingRule) {
   SPDLOG_INFO("DUAL GOMORY WITH {} LEXICOGRAPHIC REOPTIMIZATION",
@@ -165,7 +165,7 @@ IPOptStatistics<T> DualSimplexGomory<T, SimplexTraitsT>::run(
 
 template <typename T, typename SimplexTraitsT>
 LPRelaxationStatistics<T>
-DualSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
+DualSimplexCuts<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
   const auto relaxationId = [&relaxationNo] {
     return fmt::format("{}TH_RELAX", relaxationNo);
   };
@@ -189,7 +189,7 @@ DualSimplexGomory<T, SimplexTraitsT>::runImpl(const int relaxationNo) {
 
 template <typename T, typename SimplexTraitsT>
 DualSimplex<T, SimplexTraitsT>
-DualSimplexGomory<T, SimplexTraitsT>::dualSimplex() const {
+DualSimplexCuts<T, SimplexTraitsT>::dualSimplex() const {
   return DualSimplex<T, SimplexTraitsT>(
       _simplexTableau, _reinversionManager, _dualSimplexRowPivotRule,
       _objValueLoggingFrequency, _validateSimplexOption);
@@ -197,7 +197,7 @@ DualSimplexGomory<T, SimplexTraitsT>::dualSimplex() const {
 
 template <typename T, typename SimplexTraitsT>
 LexicographicOptimizer<T, SimplexTraitsT>
-DualSimplexGomory<T, SimplexTraitsT>::lexicographicOptimizer() const {
+DualSimplexCuts<T, SimplexTraitsT>::lexicographicOptimizer() const {
   return LexicographicOptimizer<T, SimplexTraitsT>(
       _simplexTableau, _reinversionManager, _primalSimplexColumnPivotRule,
       _objValueLoggingFrequency, _validateSimplexOption,
@@ -205,7 +205,7 @@ DualSimplexGomory<T, SimplexTraitsT>::lexicographicOptimizer() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-void DualSimplexGomory<T, SimplexTraitsT>::checkIfNonBasicVarsAreIntegral()
+void DualSimplexCuts<T, SimplexTraitsT>::checkIfNonBasicVarsAreIntegral()
     const {
   for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
        ++varIdx) {
@@ -227,7 +227,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::checkIfNonBasicVarsAreIntegral()
 
 template <typename T, typename SimplexTraitsT>
 std::vector<int>
-DualSimplexGomory<T, SimplexTraitsT>::collectFractionalBasisRowIndices(
+DualSimplexCuts<T, SimplexTraitsT>::collectFractionalBasisRowIndices(
     const GomoryCutChoosingRule gomoryCutChoosingRule) const {
   std::vector<int> fractionalBasisVarsRowIndices;
   for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
@@ -267,7 +267,7 @@ DualSimplexGomory<T, SimplexTraitsT>::collectFractionalBasisRowIndices(
 
 template <typename T, typename SimplexTraitsT>
 std::pair<std::vector<T>, T>
-DualSimplexGomory<T, SimplexTraitsT>::getCutCoeffs(const int rowIdx) const {
+DualSimplexCuts<T, SimplexTraitsT>::getCutCoeffs(const int rowIdx) const {
   std::vector<T> cut(_simplexTableau._variableInfos.size(), 0.0);
   const auto tableauRow = *_simplexTableau.computeTableauRowGeneric(rowIdx);
   for (int varIdx = 0; varIdx < _simplexTableau._variableInfos.size();
@@ -287,7 +287,7 @@ DualSimplexGomory<T, SimplexTraitsT>::getCutCoeffs(const int rowIdx) const {
 }
 
 template <typename T, typename SimplexTraitsT>
-void DualSimplexGomory<T, SimplexTraitsT>::addCutRows(
+void DualSimplexCuts<T, SimplexTraitsT>::addCutRows(
     const int relaxationNo,
     const std::vector<int> &fractionalBasisVarsRowIndices) const {
   const auto oldBasisSize = _simplexTableau._rowInfos.size();
@@ -341,7 +341,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::addCutRows(
 }
 
 template <typename T, typename SimplexTraitsT>
-void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
+void DualSimplexCuts<T, SimplexTraitsT>::addSlackVars(
     const int relaxationNo,
     const std::vector<int> &fractionalBasisVarsRowIndices) const {
   const auto oldVarCount = _simplexTableau._variableInfos.size();
@@ -384,7 +384,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::addSlackVars(
   }
 }
 template <typename T, typename SimplexTraitsT>
-bool DualSimplexGomory<T, SimplexTraitsT>::removeCutsInBasis() const {
+bool DualSimplexCuts<T, SimplexTraitsT>::removeCutsInBasis() const {
   bool atleastOneCutRemoved = false;
   while (true) {
     for (int rowIdx = 0; rowIdx < _simplexTableau._rowInfos.size(); ++rowIdx) {
@@ -412,7 +412,7 @@ bool DualSimplexGomory<T, SimplexTraitsT>::removeCutsInBasis() const {
 }
 
 template <typename T, typename SimplexTraitsT>
-bool DualSimplexGomory<T, SimplexTraitsT>::shouldCutBeRemoved(
+bool DualSimplexCuts<T, SimplexTraitsT>::shouldCutBeRemoved(
     const int slackVarIdx) const {
   switch (_slackCutRemovalCondition) {
   case SlackCutRemovalCondition::ALWAYS: {
@@ -429,7 +429,7 @@ bool DualSimplexGomory<T, SimplexTraitsT>::shouldCutBeRemoved(
 }
 
 template <typename T, typename SimplexTraitsT>
-void DualSimplexGomory<T, SimplexTraitsT>::removeCutFromBasis(
+void DualSimplexCuts<T, SimplexTraitsT>::removeCutFromBasis(
     const int basisRowIdxMappedToCutVar, const int cutVarIdx,
     const int cutRowIdx) const {
   std::vector<bool> shouldVarBeRemoved(_simplexTableau._variableInfos.size(),
@@ -441,7 +441,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::removeCutFromBasis(
 }
 
 template <typename T, typename SimplexTraitsT>
-void DualSimplexGomory<T, SimplexTraitsT>::removeCuts(
+void DualSimplexCuts<T, SimplexTraitsT>::removeCuts(
     const std::vector<bool> &shouldVarBeRemoved,
     const std::vector<bool> &shouldRowBeRemoved) const {
   std::vector<int> oldRowIdxToNewRowIdx(_simplexTableau._rowInfos.size());
@@ -479,7 +479,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::removeCuts(
 }
 
 template <typename T, typename SimplexTraitsT>
-void DualSimplexGomory<T, SimplexTraitsT>::debugLogOldAndNewBasis(
+void DualSimplexCuts<T, SimplexTraitsT>::debugLogOldAndNewBasis(
     const std::vector<int> &oldRowIdxToNewRowIdx,
     const std::vector<int> &newRowToBasicColumnIdxMap,
     const std::vector<bool> &shouldRowBeRemoved) const {
@@ -498,7 +498,7 @@ void DualSimplexGomory<T, SimplexTraitsT>::debugLogOldAndNewBasis(
   }
 }
 
-template class DualSimplexGomory<
+template class DualSimplexCuts<
     double, SimplexTraits<double, MatrixRepresentationType::SPARSE>>;
-template class DualSimplexGomory<
+template class DualSimplexCuts<
     double, SimplexTraits<double, MatrixRepresentationType::NORMAL>>;

@@ -76,7 +76,7 @@ add_library(LexicographicOptimizer LexicographicOptimizer.cpp
 target_link_libraries(LexicographicOptimizer CommonTypes LexReoptStatistics
                       SimplexTraits SimplexTableau PrimalSimplex)
 
-add_library(DualSimplexGomory DualSimplexGomory.h DualSimplexGomory.cpp)
+add_library(DualSimplexGomory DualSimplexCuts.h DualSimplexCuts.cpp)
 target_link_libraries(
   DualSimplexGomory
   CommonTypes

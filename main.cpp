@@ -1,5 +1,5 @@
 #include "src/Algorithms/DualSimplex.h"
-#include "src/Algorithms/DualSimplexGomory.h"
+#include "src/Algorithms/DualSimplexCuts.h"
 #include "src/Algorithms/PrimalSimplex.h"
 #include "src/Algorithms/PrimalSimplexPhaseOne.h"
 #include "src/Algorithms/ReinversionManager.h"
@@ -104,7 +104,7 @@ void runDualSimplexGomoryWithPrimalCuts(
       linearProgram, SimplexType::DUAL, simplexTableauType);
   ReinversionManager<T, SimplexTraitsT> reinversionManager(
       simplexTableau, absl::GetFlag(FLAGS_reinversion_frequency));
-  DualSimplexGomory<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(
+  DualSimplexCuts<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(
       simplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
       DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,

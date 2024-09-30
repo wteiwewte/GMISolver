@@ -1,4 +1,4 @@
-#include "src/Algorithms/DualSimplexGomory.h"
+#include "src/Algorithms/DualSimplexCuts.h"
 #include "src/Algorithms/DualSimplexPhaseOne.h"
 #include "src/Algorithms/PrimalSimplexGomory.h"
 #include "src/Algorithms/PrimalSimplexPhaseOne.h"
@@ -72,7 +72,7 @@ IPOptStatistics<T> runDualSimplexGomoryWithPrimalCuts(
     return {};
   }
 
-  DualSimplexGomory<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(
+  DualSimplexCuts<T, SimplexTraitsT> dualSimplexGomoryWithPrimalCuts(
       simplexTableau, reinversionManager,
       PrimalSimplexColumnPivotRule::BIGGEST_ABSOLUTE_REDUCED_COST,
       DualSimplexRowPivotRule::BIGGEST_BOUND_VIOLATION,

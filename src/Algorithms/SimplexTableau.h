@@ -11,7 +11,7 @@
 
 #include <boost/dynamic_bitset.hpp>
 
-template <typename T, typename SimplexTraitsT> class DualSimplexGomory;
+template <typename T, typename SimplexTraitsT> class DualSimplexCuts;
 template <typename T, typename SimplexTraitsT> class PrimalSimplexGomory;
 template <typename T, typename SimplexTraitsT> class LexicographicOptimizer;
 template <typename T, typename SimplexTraitsT> class PrimalSimplex;
@@ -44,7 +44,7 @@ public:
   const std::string &getName() const { return _initialProgram.getName(); }
 
 private:
-  friend class DualSimplexGomory<T, SimplexTraitsT>;
+  friend class DualSimplexCuts<T, SimplexTraitsT>;
   friend class PrimalSimplexGomory<T, SimplexTraitsT>;
   friend class LexicographicOptimizer<T, SimplexTraitsT>;
   friend class PrimalSimplex<T, SimplexTraitsT>;
